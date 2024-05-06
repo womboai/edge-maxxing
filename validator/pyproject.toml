@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "apple-silicon-training-subnet-validator"
+
+version = "1.0.0"
+
+description = "The validator which checks models and checkpoints provided by miners"
+
+readme = "../README.md"
+
+requires-python = ">=3.10"
+
+license = { file = "../LICENSE.txt" }
+
+authors = [
+    { name = "WOMBO", email = "hello@w.ai" }
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "apple-silicon-training-subnet",
+]
+
+[project.scripts]
+validator = "validator:main"
