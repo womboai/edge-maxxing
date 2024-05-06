@@ -6,8 +6,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import Response
 from requests_toolbelt import MultipartEncoder
 
-from miner.miner.miner import Miner
-from neuron.neuron.config import get_config
+from miner.miner import Miner
+from neuron.config import get_config
 
 app = FastAPI()
 scheduler = AsyncIOScheduler()
