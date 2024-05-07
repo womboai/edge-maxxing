@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "apple-silicon-training-subnet"
+name = "apple-silicon-training-subnet-neuron"
 
 version = "1.0.0"
 
@@ -10,6 +10,8 @@ readme = "../README.md"
 license = "MIT"
 
 authors = ["WOMBO <hello@w.ai>"]
+
+packages = [{ include = "neuron" }]
 
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -30,10 +32,12 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<=3.12"
+python = ">=3.10,<3.13"
 bittensor="6.12.0"
 diffusers="0.27.2"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry-monorepo.deps]

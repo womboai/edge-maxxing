@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "apple-silicon-training-subnet"
+
+version = "1.0.0"
+
+description = "A Bittensor subnet designed to incentivice optimization of checkpoints and models"
+
+readme = "README.md"
+
+license = "MIT"
+
+authors = ["WOMBO <hello@w.ai>"]
+
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry-monorepo.deps]

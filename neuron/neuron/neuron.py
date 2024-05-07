@@ -22,6 +22,13 @@ class Neuron:
         argument_parser.add_argument("--netuid", dest="netuid", type=int, required=False)
 
         argument_parser.add_argument(
+            "--neuron.epoch_length",
+            type=int,
+            help="The default epoch length (how often we pull the metagraph, measured in 12 second blocks).",
+            default=100,
+        )
+
+        argument_parser.add_argument(
             "--neuron.device",
             type=str,
             help="Device to run on.",

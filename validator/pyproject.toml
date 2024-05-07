@@ -10,6 +10,7 @@ readme = "../README.md"
 license = "MIT"
 
 authors = ["WOMBO <hello@w.ai>"]
+packages = [{ include = "validator" }]
 
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -27,9 +28,11 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<=3.12"
-apple-silicon-training-subnet = { path = "../neuron", develop = true }
+apple-silicon-training-subnet-neuron = { path = "../neuron", develop = true }
+python = ">=3.10,<3.13"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry-monorepo.deps]

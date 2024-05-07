@@ -19,6 +19,8 @@ class Validator(Neuron):
         self.session = ClientSession()
         self.scores = zeros_like(self.metagraph.n)
 
+        self.uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
+
         self.step = 0
 
     async def get_checkpoint(self, uid: int) -> tuple[bytes, float]:
@@ -64,3 +66,8 @@ class Validator(Neuron):
         checkpoint = LatentConsistencyModelPipeline.from_single_file(file_name)
 
         self.scores[uid] = compare_checkpoints(self.pipeline, checkpoint)
+
+        if self.subtensor.get_current_block() - self.metagraph.last_update[self.uid] >= self.config.neuron.epoch_length:
+            self.metagraph.sync(subtensor=self.subtensor)
+
+            # TODO set weights

@@ -11,6 +11,8 @@ license = "MIT"
 
 authors = ["WOMBO <hello@w.ai>"]
 
+packages = [{ include = "miner" }]
+
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -27,11 +29,13 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<=3.12"
-apple-silicon-training-subnet = { path = "../neuron", develop = true }
+python = ">=3.10,<3.13"
+apple-silicon-training-subnet-neuron = { path = "../neuron", develop = true }
 requests-toolbelt = "1.0.0"
 APScheduler = "3.10.4"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry-monorepo.deps]

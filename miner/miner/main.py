@@ -21,7 +21,11 @@ def startup():
 
     app.state.miner = miner
 
-    scheduler.add_job(lambda: miner.metagraph.sync(subtensor=miner.subtensor), trigger="cron", minute="*/20")
+    scheduler.add_job(
+        lambda: miner.metagraph.sync(subtensor=miner.subtensor),
+        trigger="cron",
+        second=f"*/{miner.config.neuron.epoch_length * 12}",
+    )
 
     scheduler.start()
 
