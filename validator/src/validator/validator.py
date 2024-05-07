@@ -1,13 +1,13 @@
 from typing import cast
 
 from aiohttp import ClientSession, MultipartReader
-from aiohttp.multipart import MultipartResponseWrapper, BodyPartReader
+from aiohttp.multipart import BodyPartReader
 from diffusers import LatentConsistencyModelPipeline
 from torch import zeros_like
 
-from neuron.neuron.config import get_config
-from neuron.neuron.neuron import Neuron
-from neuron.neuron.pipeline import load_pipeline
+from neuron import get_config, Neuron, load_pipeline
+
+from . import compare_checkpoints
 
 
 class Validator(Neuron):
@@ -63,4 +63,4 @@ class Validator(Neuron):
 
         checkpoint = LatentConsistencyModelPipeline.from_single_file(file_name)
 
-        chec
+        self.scores[uid] = compare_checkpoints(self.pipeline, checkpoint)

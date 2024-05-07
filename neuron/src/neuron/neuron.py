@@ -1,7 +1,6 @@
 from argparse import ArgumentParser
 
 from bittensor import metagraph, subtensor, config, wallet
-from diffusers import LatentConsistencyModelPipeline
 
 
 class Neuron:

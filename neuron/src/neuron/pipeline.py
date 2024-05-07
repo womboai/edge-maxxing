@@ -8,6 +8,8 @@ from diffusers import LatentConsistencyModelPipeline
 BASELINE_CHECKPOINT = \
     "https://huggingface.co/SimianLuo/LCM_Dreamshaper_v7/resolve/main/LCM_Dreamshaper_v7_4k.safetensors?download=true"
 
+AVERAGE_TIME = 30.0
+
 
 def load_pipeline(device: str):
     output_file = Path(__file__).parent.parent.parent / "checkpoints" / basename(urlparse(BASELINE_CHECKPOINT).path)

@@ -6,8 +6,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import Response
 from requests_toolbelt import MultipartEncoder
 
-from miner.miner import Miner
-from neuron.config import get_config
+from . import Miner
+from neuron import get_config, AVERAGE_TIME
 
 app = FastAPI()
 scheduler = AsyncIOScheduler()
@@ -30,7 +30,7 @@ def startup():
 def get_checkpoint(request: Request) -> Response:
     response = MultipartEncoder(
         fields={
-            "average_speed": (None, str(30), "application/json"),
+            "average_speed": (None, str(AVERAGE_TIME), "application/json"),
 
             "checkpoint": (
                 basename(request.app.state.miner.checkpoint_path),
