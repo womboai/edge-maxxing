@@ -31,3 +31,7 @@ python = ">=3.10,<=3.12"
 apple-silicon-training-subnet = { path = "../neuron", develop = true }
 requests-toolbelt = "1.0.0"
 APScheduler = "3.10.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
