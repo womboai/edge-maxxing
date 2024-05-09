@@ -27,7 +27,7 @@ class Neuron:
     def __init__(self, config: config):
         self.config = config
 
-        if config.logging.debug:
+        if config.logging and config.logging.debug:
             logging.basicConfig(level=logging.DEBUG)
         else:
             logging.basicConfig(level=logging.INFO)
