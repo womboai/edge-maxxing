@@ -90,6 +90,7 @@ class Neuron:
             default=False,
         )
 
+        logging.add_args(argument_parser)
         subtensor.add_args(argument_parser)
         wallet.add_args(argument_parser)
 
