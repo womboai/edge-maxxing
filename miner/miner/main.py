@@ -19,7 +19,7 @@ def startup():
     scheduler.add_job(
         miner.sync,
         trigger="cron",
-        second=f"*/{miner.config.neuron.epoch_length * 12}",
+        minutes=f"*/{(miner.config.neuron.epoch_length * 12) / 60}",
     )
 
     scheduler.start()
