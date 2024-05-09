@@ -8,7 +8,7 @@ from neuron import Neuron, BASELINE_CHECKPOINT
 
 class Miner(Neuron):
     def __init__(self, config: config):
-        super().__init__(config)
+        super().__init__(config, "miner")
 
         self.checkpoint = BASELINE_CHECKPOINT
 

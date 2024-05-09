@@ -10,7 +10,7 @@ from . import compare_checkpoints
 
 class Validator(Neuron):
     def __init__(self):
-        super().__init__(get_config(type(self)))
+        super().__init__(get_config(type(self)), "validator")
 
         self.pipeline = LatentConsistencyModelPipeline.from_pretrained(BASELINE_CHECKPOINT).to(self.device)
 

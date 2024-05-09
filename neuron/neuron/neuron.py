@@ -25,7 +25,7 @@ class Neuron:
     metagraph: metagraph
     wallet: wallet
 
-    def __init__(self, config: config):
+    def __init__(self, config: config, name: str):
         self.config = config
 
         r"""Checks/validates the config namespace object."""
@@ -37,7 +37,7 @@ class Neuron:
                 config.wallet.name,
                 config.wallet.hotkey,
                 config.netuid,
-                config.neuron.name,
+                name,
             )
         )
         print("full path:", full_path)
