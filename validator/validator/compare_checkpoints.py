@@ -1,12 +1,13 @@
 import logging
 from os import urandom
-from os.path import basename
 from random import sample, shuffle
 from time import perf_counter
 
 from diffusers import LatentConsistencyModelPipeline
-import nltk
 from torch import Generator, cosine_similarity
+from neuron import AVERAGE_TIME
+
+import nltk
 
 nltk.download('words')
 nltk.download('universal_tagset')
@@ -15,9 +16,8 @@ nltk.download('averaged_perceptron_tagger')
 from nltk.corpus import words
 from nltk import pos_tag
 
-from neuron import AVERAGE_TIME
 
-logger = logging.getLogger(basename(__file__))
+logger = logging.getLogger(__name__)
 
 WORDS = [word for word, tag in pos_tag(words.words(), tagset='universal') if tag == "ADJ" or tag == "NOUN"]
 SAMPLE_COUNT = 10

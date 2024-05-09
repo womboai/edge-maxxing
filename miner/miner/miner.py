@@ -1,13 +1,12 @@
 import logging
 from argparse import ArgumentParser
-from os.path import basename
 
 from bittensor import axon, config
 from bittensor.utils.networking import get_external_ip
 
 from neuron import Neuron, BASELINE_CHECKPOINT
 
-logger = logging.getLogger(basename(__file__))
+logger = logging.getLogger(__name__)
 
 
 class Miner(Neuron):

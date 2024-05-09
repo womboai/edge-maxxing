@@ -1,5 +1,4 @@
 import logging
-from os.path import basename
 
 from aiohttp import ClientSession, MultipartReader
 from diffusers import LatentConsistencyModelPipeline
@@ -10,7 +9,7 @@ from neuron import get_config, CheckpointInfo, Neuron, BASELINE_CHECKPOINT
 from . import compare_checkpoints
 
 
-logger = logging.getLogger(basename(__file__))
+logger = logging.getLogger(__name__)
 
 
 class Validator(Neuron):

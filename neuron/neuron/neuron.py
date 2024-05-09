@@ -1,12 +1,11 @@
 import logging
 from argparse import ArgumentParser
-from os.path import basename
 
 from bittensor import metagraph, subtensor, config, wallet
 
 from pydantic import BaseModel
 
-logger = logging.getLogger(basename(__file__))
+logger = logging.getLogger(__name__)
 
 
 BASELINE_CHECKPOINT = "SimianLuo/LCM_Dreamshaper_v7"
@@ -27,6 +26,11 @@ class Neuron:
 
     def __init__(self, config: config):
         self.config = config
+
+        if config.logging.debug:
+            logging.basicConfig(level=logging.DEBUG)
+        else:
+            logging.basicConfig(level=logging.INFO)
 
         self.subtensor = subtensor(config=self.config)
         self.metagraph = self.subtensor.metagraph(netuid=self.config.netuid)
