@@ -1,8 +1,12 @@
 from argparse import ArgumentParser
+from os import makedirs
+from os.path import expanduser, exists, join
 
 from bittensor import metagraph, subtensor, config, wallet, logging
 
 from pydantic import BaseModel
+
+from loguru import logger
 
 
 BASELINE_CHECKPOINT = "SimianLuo/LCM_Dreamshaper_v7"
@@ -23,6 +27,38 @@ class Neuron:
 
     def __init__(self, config: config):
         self.config = config
+
+        r"""Checks/validates the config namespace object."""
+        logging.check_config(config)
+
+        full_path = expanduser(
+            "{}/{}/{}/netuid{}/{}".format(
+                config.logging.logging_dir,  # TODO: change from ~/.bittensor/miners to ~/.bittensor/neurons
+                config.wallet.name,
+                config.wallet.hotkey,
+                config.netuid,
+                config.neuron.name,
+            )
+        )
+        print("full path:", full_path)
+        config.neuron.full_path = expanduser(full_path)
+        if not exists(config.neuron.full_path):
+            makedirs(config.neuron.full_path, exist_ok=True)
+
+        if not config.neuron.dont_save_events:
+            # Add custom event logger for the events.
+            logger.level("EVENTS", no=38, icon="📝")
+            logger.add(
+                join(config.neuron.full_path, "events.log"),
+                rotation=config.neuron.events_retention_size,
+                serialize=True,
+                enqueue=True,
+                backtrace=False,
+                diagnose=False,
+                level="EVENTS",
+                format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}",
+            )
+
         self.subtensor = subtensor(config=self.config)
         self.metagraph = self.subtensor.metagraph(netuid=self.config.netuid)
         self.wallet = wallet(config=config)
@@ -45,6 +81,13 @@ class Neuron:
             type=str,
             help="Device to run on.",
             default="mps",
+        )
+
+        argument_parser.add_argument(
+            "--neuron.dont_save_events",
+            action="store_true",
+            help="If set, we dont save events to a log file.",
+            default=False,
         )
 
         subtensor.add_args(argument_parser)
