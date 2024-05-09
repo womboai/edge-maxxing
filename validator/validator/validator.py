@@ -10,17 +10,11 @@ from neuron import get_config, Neuron, download_pipeline
 from . import compare_checkpoints
 
 
-def load_pipeline(device: str):
-    pipeline = LatentConsistencyModelPipeline.from_single_file(download_pipeline()).to(device)
-
-    return pipeline
-
-
 class Validator(Neuron):
     def __init__(self):
         super().__init__(get_config(type(self)))
 
-        self.pipeline = load_pipeline(self.device)
+        self.pipeline = LatentConsistencyModelPipeline.from_single_file(download_pipeline()).to(self.device)
 
         self.session = ClientSession()
         self.scores = zeros_like(self.metagraph.n)
