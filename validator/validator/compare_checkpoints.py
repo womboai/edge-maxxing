@@ -1,5 +1,6 @@
-from bittensor import logging
+import logging
 from os import urandom
+from os.path import basename
 from random import sample, shuffle
 from time import perf_counter
 
@@ -15,6 +16,8 @@ from nltk.corpus import words
 from nltk import pos_tag
 
 from neuron import AVERAGE_TIME
+
+logger = logging.getLogger(basename(__file__))
 
 WORDS = [word for word, tag in pos_tag(words.words(), tagset='universal') if tag == "ADJ" or tag == "NOUN"]
 SAMPLE_COUNT = 10
@@ -46,7 +49,7 @@ def compare_checkpoints(
         generator = Generator().manual_seed(seed)
         output_type = "latent"
 
-        logging.info(f"Sample {i}, prompt {prompt} and seed {seed}")
+        logger.info(f"Sample {i}, prompt {prompt} and seed {seed}")
 
         base_output = baseline(
             prompt=prompt,
@@ -65,7 +68,7 @@ def compare_checkpoints(
         gen_time = perf_counter() - start
         similarity = pow(cosine_similarity(base_output.flatten(), output.flatten(), eps=1e-3, dim=0).item(), 4)
 
-        logging.info(f"Sample {i} generated with generation time of {gen_time} and similarity {similarity}")
+        logger.info(f"Sample {i} generated with generation time of {gen_time} and similarity {similarity}")
 
         generated = i
         remaining = SAMPLE_COUNT - generated
@@ -92,7 +95,7 @@ def compare_checkpoints(
             # Deviating too much from original quality
             break
 
-    logging.info(
+    logger.info(
         f"Tested {i + 1} samples, "
         f"average similarity of {average_similarity}, "
         f"and speed of {average_time}"

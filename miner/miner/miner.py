@@ -1,25 +1,29 @@
+import logging
 from argparse import ArgumentParser
+from os.path import basename
 
-from bittensor import axon, config, logging
+from bittensor import axon, config
 from bittensor.utils.networking import get_external_ip
 
 from neuron import Neuron, BASELINE_CHECKPOINT
 
+logger = logging.getLogger(basename(__file__))
+
 
 class Miner(Neuron):
     def __init__(self, config: config):
-        super().__init__(config, "miner")
+        super().__init__(config)
 
         self.checkpoint = BASELINE_CHECKPOINT
 
         # Warn if allowing incoming requests from anyone.
         if not self.config.blacklist.force_validator_permit:
-            logging.warning(
+            logger.warning(
                 "You are allowing non-validators to send requests to your miner. This is a security risk."
             )
 
         if self.config.blacklist.allow_non_registered:
-            logging.warning(
+            logger.warning(
                 "You are allowing non-registered entities to send requests to your miner. This is a security risk."
             )
 

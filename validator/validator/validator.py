@@ -1,16 +1,21 @@
+import logging
+from os.path import basename
+
 from aiohttp import ClientSession, MultipartReader
 from diffusers import LatentConsistencyModelPipeline
 from torch import zeros_like, float32
 
 from neuron import get_config, CheckpointInfo, Neuron, BASELINE_CHECKPOINT
-from bittensor import logging
 
 from . import compare_checkpoints
 
 
+logger = logging.getLogger(basename(__file__))
+
+
 class Validator(Neuron):
     def __init__(self):
-        super().__init__(get_config(type(self)), "validator")
+        super().__init__(get_config(type(self)))
 
         self.pipeline = LatentConsistencyModelPipeline.from_pretrained(BASELINE_CHECKPOINT).to(self.device)
 
@@ -36,11 +41,11 @@ class Validator(Neuron):
         axon = self.metagraph.axons[uid]
 
         try:
-            logging.info(f"Checking miner {uid}, hotkey: {axon.hotkey}")
+            logger.info(f"Checking miner {uid}, hotkey: {axon.hotkey}")
 
             checkpoint_info = await self.get_checkpoint(uid)
 
-            logging.info(
+            logger.info(
                 f"Miner {uid} returned {checkpoint_info.repository} as the model, "
                 f"with a reported speed of {checkpoint_info.average_time}"
             )
@@ -48,7 +53,7 @@ class Validator(Neuron):
             checkpoint = LatentConsistencyModelPipeline.from_pretrained(checkpoint_info.repository)
         except Exception as e:
             self.scores[uid] = 0.0
-            logging.info(f"Failed to query miner {uid}", e)
+            logger.info(f"Failed to query miner {uid}", exc_info=e)
         else:
             self.scores[uid] = compare_checkpoints(self.pipeline, checkpoint, checkpoint_info.average_time)
 
@@ -64,4 +69,4 @@ class Validator(Neuron):
             try:
                 await self.do_step()
             except Exception as e:
-                logging.error(e)
+                logger.error(f"Error during validation step {self.step}", exc_info=e)
