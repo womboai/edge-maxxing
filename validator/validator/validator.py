@@ -3,6 +3,7 @@ from diffusers import LatentConsistencyModelPipeline
 from torch import zeros_like
 
 from neuron import get_config, CheckpointInfo, Neuron, BASELINE_CHECKPOINT
+from bittensor import logging
 
 from . import compare_checkpoints
 
@@ -33,11 +34,15 @@ class Validator(Neuron):
     async def run(self):
         uid = 0
 
-        checkpoint_info = await self.get_checkpoint(uid)
+        try:
+            checkpoint_info = await self.get_checkpoint(uid)
 
-        checkpoint = LatentConsistencyModelPipeline.from_pretrained(checkpoint_info.repository)
-
-        self.scores[uid] = compare_checkpoints(self.pipeline, checkpoint, checkpoint_info.average_time)
+            checkpoint = LatentConsistencyModelPipeline.from_pretrained(checkpoint_info.repository)
+        except Exception as e:
+            self.scores[uid] = 0.0
+            logging.info(f"Failed to query miner {uid} ", e)
+        else:
+            self.scores[uid] = compare_checkpoints(self.pipeline, checkpoint, checkpoint_info.average_time)
 
         if self.subtensor.get_current_block() - self.metagraph.last_update[self.uid] >= self.config.neuron.epoch_length:
             self.sync()
