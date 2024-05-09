@@ -5,9 +5,15 @@ from aiohttp.multipart import BodyPartReader
 from diffusers import LatentConsistencyModelPipeline
 from torch import zeros_like
 
-from neuron import get_config, Neuron, load_pipeline
+from neuron import get_config, Neuron, download_pipeline
 
 from . import compare_checkpoints
+
+
+def load_pipeline(device: str):
+    pipeline = LatentConsistencyModelPipeline.from_single_file(download_pipeline()).to(device)
+
+    return pipeline
 
 
 class Validator(Neuron):

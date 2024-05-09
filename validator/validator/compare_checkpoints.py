@@ -47,7 +47,7 @@ def compare_checkpoints(baseline: LatentConsistencyModelPipeline, miner_checkpoi
 
         start = perf_counter()
 
-        output = baseline(
+        output = miner_checkpoint(
             prompt=prompt,
             generator=generator,
             output_type=output_type,
@@ -77,4 +77,4 @@ def compare_checkpoints(baseline: LatentConsistencyModelPipeline, miner_checkpoi
             # Deviating too much from original quality
             break
 
-    return min(0, average_time - AVERAGE_TIME) * average_similarity
+    return min(0, AVERAGE_TIME - average_time) * average_similarity

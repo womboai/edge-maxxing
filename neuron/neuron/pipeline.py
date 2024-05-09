@@ -3,8 +3,6 @@ from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import urlretrieve
 
-from diffusers import LatentConsistencyModelPipeline
-
 BASELINE_CHECKPOINT = \
     "https://huggingface.co/SimianLuo/LCM_Dreamshaper_v7/resolve/main/LCM_Dreamshaper_v7_4k.safetensors?download=true"
 
@@ -17,9 +15,3 @@ def download_pipeline() -> Path:
     urlretrieve(BASELINE_CHECKPOINT, output_file)
 
     return output_file
-
-
-def load_pipeline(device: str):
-    pipeline = LatentConsistencyModelPipeline.from_single_file(download_pipeline()).to(device)
-
-    return pipeline
