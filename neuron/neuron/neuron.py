@@ -2,6 +2,18 @@ from argparse import ArgumentParser
 
 from bittensor import metagraph, subtensor, config, wallet, logging
 
+from pydantic import BaseModel
+
+
+BASELINE_CHECKPOINT = "SimianLuo/LCM_Dreamshaper_v7"
+
+AVERAGE_TIME = 30.0
+
+
+class CheckpointInfo(BaseModel):
+    repository: str
+    average_time: float
+
 
 class Neuron:
     config: config

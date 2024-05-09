@@ -1,17 +1,12 @@
-from os.path import basename
-
 import uvicorn
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Request
-from fastapi.responses import Response
-from requests_toolbelt import MultipartEncoder
 
 from . import Miner
-from neuron import get_config, AVERAGE_TIME
+from neuron import get_config, AVERAGE_TIME, CheckpointInfo
 
 app = FastAPI()
 scheduler = AsyncIOScheduler()
-
 
 @app.on_event("startup")
 def startup():
@@ -31,20 +26,11 @@ def startup():
 
 
 @app.get("checkpoint")
-def get_checkpoint(request: Request) -> Response:
-    response = MultipartEncoder(
-        fields={
-            "average_speed": (None, str(AVERAGE_TIME), "application/json"),
-
-            "checkpoint": (
-                basename(request.app.state.miner.checkpoint_path),
-                open(request.app.state.miner.checkpoint_path, "rb"),
-                "application/octet-stream"
-            ),
-        },
+def get_checkpoint(request: Request) -> CheckpointInfo:
+    return CheckpointInfo(
+        repository=request.app.state.miner.checkpoint,
+        average_time=AVERAGE_TIME,
     )
-
-    return Response(response.to_string(), media_type=response.content_type)
 
 
 def main():

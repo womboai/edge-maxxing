@@ -15,7 +15,6 @@ from nltk import pos_tag
 
 from neuron import AVERAGE_TIME
 
-
 WORDS = [word for word, tag in pos_tag(words.words(), tagset='universal') if tag == "ADJ" or tag == "NOUN"]
 SAMPLE_COUNT = 10
 
@@ -27,7 +26,14 @@ def __generate_random_prompt():
     return ", ".join(words)
 
 
-def compare_checkpoints(baseline: LatentConsistencyModelPipeline, miner_checkpoint: LatentConsistencyModelPipeline):
+def compare_checkpoints(
+    baseline: LatentConsistencyModelPipeline,
+    miner_checkpoint: LatentConsistencyModelPipeline,
+    reported_average_time: float,
+) -> float:
+    if reported_average_time > AVERAGE_TIME:
+        return 0.0
+
     average_time = AVERAGE_TIME
     average_similarity = 1.0
 
@@ -61,6 +67,10 @@ def compare_checkpoints(baseline: LatentConsistencyModelPipeline, miner_checkpoi
 
         average_time = (average_time * generated + gen_time) / (generated + 1)
         average_similarity = (average_similarity * generated + similarity) / (generated + 1)
+
+        if average_time >= reported_average_time * 1.125:
+            # Too slow compared to reported speed, rank immediately based on current time
+            break
 
         if average_time < AVERAGE_TIME:
             # So far, the average time is better than the baseline, so we can continue
