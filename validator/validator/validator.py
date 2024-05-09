@@ -1,7 +1,5 @@
 import logging
-from bisect import bisect
-from itertools import accumulate
-from random import random, choices, choice
+from random import choices, choice
 
 from aiohttp import ClientSession
 from diffusers import LatentConsistencyModelPipeline
@@ -102,7 +100,7 @@ class Validator(Neuron):
             checkpoint = LatentConsistencyModelPipeline.from_pretrained(checkpoint_info.repository)
         except Exception as e:
             self.scores[uid] = 0.0
-            logger.info(f"Failed to query miner {uid}, ", str(e))
+            logger.info(f"Failed to query miner {uid}, {str(e)}")
             logger.debug(f"Miner {uid} error", exc_info=e)
         else:
             self.scores[uid] = compare_checkpoints(self.pipeline, checkpoint, checkpoint_info.average_time)
