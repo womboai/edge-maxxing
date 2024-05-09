@@ -1,6 +1,6 @@
 from aiohttp import ClientSession, MultipartReader
 from diffusers import LatentConsistencyModelPipeline
-from torch import zeros_like
+from torch import zeros_like, float32
 
 from neuron import get_config, CheckpointInfo, Neuron, BASELINE_CHECKPOINT
 from bittensor import logging
@@ -15,7 +15,7 @@ class Validator(Neuron):
         self.pipeline = LatentConsistencyModelPipeline.from_pretrained(BASELINE_CHECKPOINT).to(self.device)
 
         self.session = ClientSession()
-        self.scores = zeros_like(self.metagraph.n)
+        self.scores = zeros_like(self.metagraph.S, dtype=float32)
 
         self.uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
 
