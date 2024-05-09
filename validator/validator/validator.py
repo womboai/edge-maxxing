@@ -1,13 +1,14 @@
 import logging
+from bisect import bisect
+from itertools import accumulate
+from random import random, choices
 
-from aiohttp import ClientSession, MultipartReader
+from aiohttp import ClientSession
 from diffusers import LatentConsistencyModelPipeline
-from torch import zeros_like, float32
+from torch import zeros_like, float32, int64
 
 from neuron import get_config, CheckpointInfo, Neuron, BASELINE_CHECKPOINT
-
 from . import compare_checkpoints
-
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +21,51 @@ class Validator(Neuron):
 
         self.session = ClientSession()
         self.scores = zeros_like(self.metagraph.S, dtype=float32)
+        self.miner_last_checked = zeros_like(self.metagraph.S, dtype=int64)
 
-        self.uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
+        self.hotkeys = self.metagraph.hotkeys
+
+        self.uid = self.hotkeys.index(self.wallet.hotkey.ss58_address)
 
         self.step = 0
+
+    def get_next_uid(self) -> int | None:
+        miner_uids = [
+            uid
+            for uid in range(self.metagraph.n.item())
+            if self.metagraph.axons[uid].is_serving
+        ]
+
+        if not len(miner_uids):
+            return None
+
+        return choices(miner_uids, weights=[self.miner_last_checked[uid].item() for uid in miner_uids])[0]
+
+    def sync(self):
+        super().sync()
+
+        self.set_weights()
+
+    def set_weights(self):
+        if len(self.hotkeys) != len(self.metagraph.hotkeys):
+            # resize
+            new_scores = zeros_like(self.metagraph.S, dtype=float32)
+            new_miner_last_checked = zeros_like(self.metagraph.S, dtype=int64)
+
+            length = len(self.hotkeys)
+            new_scores[:length] = self.scores[:length]
+            new_miner_last_checked[:length] = self.miner_last_checked[:length]
+
+            self.scores = new_scores
+            self.miner_last_checked = new_miner_last_checked
+
+        for uid, hotkey in enumerate(self.hotkeys):
+            if hotkey != self.metagraph.hotkeys[uid]:
+                # hotkey has been replaced
+                self.scores[uid] = 0.0
+                self.miner_last_checked[uid] = 0
+
+        # TODO set weights
 
     async def get_checkpoint(self, uid: int) -> CheckpointInfo:
         axon = self.metagraph.axons[uid]
@@ -36,7 +78,7 @@ class Validator(Neuron):
             return CheckpointInfo.parse_obj(await response.json())
 
     async def do_step(self):
-        uid = 0
+        uid = self.get_next_uid()
         axon = self.metagraph.axons[uid]
 
         try:
@@ -56,10 +98,12 @@ class Validator(Neuron):
         else:
             self.scores[uid] = compare_checkpoints(self.pipeline, checkpoint, checkpoint_info.average_time)
 
-        if self.subtensor.get_current_block() - self.metagraph.last_update[self.uid] >= self.config.neuron.epoch_length:
-            self.sync()
+        block = self.subtensor.get_current_block()
 
-            # TODO set weights
+        self.miner_last_checked[uid] = block
+
+        if block - self.metagraph.last_update[self.uid] >= self.config.neuron.epoch_length:
+            self.sync()
 
         self.step += 1
 
