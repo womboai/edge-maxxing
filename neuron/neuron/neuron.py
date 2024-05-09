@@ -36,5 +36,4 @@ class Neuron:
         )
 
         subtensor.add_args(argument_parser)
-        metagraph.add_args(argument_parser)
         wallet.add_args(argument_parser)
