@@ -31,7 +31,7 @@ class Validator(Neuron):
 
             return CheckpointInfo.parse_obj(await response.json())
 
-    async def run(self):
+    async def do_step(self):
         uid = 0
         axon = self.metagraph.axons[uid]
 
@@ -56,3 +56,12 @@ class Validator(Neuron):
             self.sync()
 
             # TODO set weights
+
+        self.step += 1
+
+    async def run(self):
+        while True:
+            try:
+                await self.do_step()
+            except Exception as e:
+                logging.error(e)
