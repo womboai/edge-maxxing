@@ -10,7 +10,10 @@ AVERAGE_TIME = 30.0
 
 
 def download_pipeline() -> Path:
-    output_file = Path(__file__).parent.parent.parent / "checkpoints" / basename(urlparse(BASELINE_CHECKPOINT).path)
+    directory = Path(__file__).parent.parent.parent / "checkpoints"
+    output_file = directory / basename(urlparse(BASELINE_CHECKPOINT).path)
+
+    directory.mkdir(parents=True, exist_ok=True)
 
     urlretrieve(BASELINE_CHECKPOINT, output_file)
 
