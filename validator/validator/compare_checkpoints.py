@@ -1,3 +1,4 @@
+from bittensor import logging
 from os import urandom
 from random import sample, shuffle
 from time import perf_counter
@@ -45,6 +46,8 @@ def compare_checkpoints(
         generator = Generator().manual_seed(seed)
         output_type = "latent"
 
+        logging.info(f"Sample {i}, prompt {prompt} and seed {seed}")
+
         base_output = baseline(
             prompt=prompt,
             generator=generator,
@@ -61,6 +64,8 @@ def compare_checkpoints(
 
         gen_time = perf_counter() - start
         similarity = pow(cosine_similarity(base_output.flatten(), output.flatten(), eps=1e-3, dim=0).item(), 4)
+
+        logging.info(f"Sample {i} generated with generation time of {gen_time} and similarity {similarity}")
 
         generated = i
         remaining = SAMPLE_COUNT - generated
@@ -86,5 +91,11 @@ def compare_checkpoints(
         if average_similarity < 0.85:
             # Deviating too much from original quality
             break
+
+    logging.info(
+        f"Tested {i + 1} samples, "
+        f"average similarity of {average_similarity}, "
+        f"and speed of {average_time}"
+    )
 
     return min(0, AVERAGE_TIME - average_time) * average_similarity

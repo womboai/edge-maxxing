@@ -33,14 +33,22 @@ class Validator(Neuron):
 
     async def run(self):
         uid = 0
+        axon = self.metagraph.axons[uid]
 
         try:
+            logging.info(f"Checking miner {uid}, hotkey: {axon.hotkey}")
+
             checkpoint_info = await self.get_checkpoint(uid)
+
+            logging.info(
+                f"Miner {uid} returned {checkpoint_info.repository} as the model, "
+                f"with a reported speed of {checkpoint_info.average_time}"
+            )
 
             checkpoint = LatentConsistencyModelPipeline.from_pretrained(checkpoint_info.repository)
         except Exception as e:
             self.scores[uid] = 0.0
-            logging.info(f"Failed to query miner {uid} ", e)
+            logging.info(f"Failed to query miner {uid}", e)
         else:
             self.scores[uid] = compare_checkpoints(self.pipeline, checkpoint, checkpoint_info.average_time)
 
