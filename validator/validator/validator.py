@@ -14,7 +14,7 @@ class Validator(Neuron):
     def __init__(self):
         super().__init__(get_config(type(self)))
 
-        self.pipeline, _ = load_pipeline(self.device)
+        self.pipeline = load_pipeline(self.device)
 
         self.session = ClientSession()
         self.scores = zeros_like(self.metagraph.n)

@@ -11,11 +11,15 @@ BASELINE_CHECKPOINT = \
 AVERAGE_TIME = 30.0
 
 
-def load_pipeline(device: str):
+def download_pipeline() -> Path:
     output_file = Path(__file__).parent.parent.parent / "checkpoints" / basename(urlparse(BASELINE_CHECKPOINT).path)
 
     urlretrieve(BASELINE_CHECKPOINT, output_file)
 
-    pipeline = LatentConsistencyModelPipeline.from_single_file(output_file).to(device)
+    return output_file
 
-    return pipeline, output_file
+
+def load_pipeline(device: str):
+    pipeline = LatentConsistencyModelPipeline.from_single_file(download_pipeline()).to(device)
+
+    return pipeline

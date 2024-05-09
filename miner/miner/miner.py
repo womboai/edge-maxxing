@@ -3,15 +3,14 @@ from argparse import ArgumentParser
 from bittensor import axon, config, logging
 from bittensor.utils.networking import get_external_ip
 
-from neuron.neuron.neuron import Neuron
-from neuron.neuron.pipeline import load_pipeline
+from neuron import Neuron, download_pipeline
 
 
 class Miner(Neuron):
     def __init__(self, config: config):
         super().__init__(config)
 
-        self.pipeline, self.checkpoint_path = load_pipeline(self.device)
+        self.checkpoint_path = download_pipeline()
 
         # Warn if allowing incoming requests from anyone.
         if not self.config.blacklist.force_validator_permit:
