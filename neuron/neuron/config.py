@@ -3,7 +3,7 @@ from typing import TypeVar
 
 from bittensor import config
 
-from . import Neuron
+from .neuron import Neuron
 
 T: TypeVar = TypeVar("T", bound=Neuron)
 
