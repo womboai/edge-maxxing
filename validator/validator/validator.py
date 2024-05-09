@@ -1,7 +1,7 @@
 import logging
 from bisect import bisect
 from itertools import accumulate
-from random import random, choices
+from random import random, choices, choice
 
 from aiohttp import ClientSession
 from diffusers import LatentConsistencyModelPipeline
@@ -39,7 +39,15 @@ class Validator(Neuron):
         if not len(miner_uids):
             return None
 
-        return choices(miner_uids, weights=[self.miner_last_checked[uid].item() for uid in miner_uids])[0]
+        blocks = [self.miner_last_checked[uid].item() for uid in miner_uids]
+
+        if sum(blocks) == 0:
+            return choice(miner_uids)
+
+        last_block = max(blocks)
+        weights = [last_block - block for block in blocks]
+
+        return choices(miner_uids, weights=weights)[0]
 
     def sync(self):
         super().sync()
