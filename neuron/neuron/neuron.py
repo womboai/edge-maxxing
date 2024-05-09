@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 
-from bittensor import metagraph, subtensor, config, wallet
+from bittensor import metagraph, subtensor, config, wallet, logging
 
 
 class Neuron:
@@ -37,3 +37,18 @@ class Neuron:
 
         subtensor.add_args(argument_parser)
         wallet.add_args(argument_parser)
+
+    def sync(self):
+        # --- Check for registration.
+        if not self.subtensor.is_hotkey_registered(
+            netuid=self.config.netuid,
+            hotkey_ss58=self.wallet.hotkey.ss58_address,
+        ):
+            logging.error(
+                f"Wallet: {self.wallet} is not registered on netuid {self.config.netuid}."
+                f" Please register the hotkey using `btcli subnets register` before trying again"
+            )
+
+            exit()
+
+        self.metagraph.sync(subtensor=self.subtensor)

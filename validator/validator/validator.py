@@ -68,6 +68,6 @@ class Validator(Neuron):
         self.scores[uid] = compare_checkpoints(self.pipeline, checkpoint)
 
         if self.subtensor.get_current_block() - self.metagraph.last_update[self.uid] >= self.config.neuron.epoch_length:
-            self.metagraph.sync(subtensor=self.subtensor)
+            self.sync()
 
             # TODO set weights
