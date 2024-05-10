@@ -98,12 +98,12 @@ class Validator(Neuron):
             )
 
             checkpoint = LatentConsistencyModelPipeline.from_pretrained(checkpoint_info.repository).to(self.device)
+
+            self.scores[uid] = compare_checkpoints(self.pipeline, checkpoint, checkpoint_info.average_time)
         except Exception as e:
             self.scores[uid] = 0.0
             logger.info(f"Failed to query miner {uid}, {str(e)}")
             logger.debug(f"Miner {uid} error", exc_info=e)
-        else:
-            self.scores[uid] = compare_checkpoints(self.pipeline, checkpoint, checkpoint_info.average_time)
 
         block = self.subtensor.get_current_block()
 
