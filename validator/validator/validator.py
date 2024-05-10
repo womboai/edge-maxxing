@@ -97,7 +97,7 @@ class Validator(Neuron):
                 f"with a reported speed of {checkpoint_info.average_time}"
             )
 
-            checkpoint = LatentConsistencyModelPipeline.from_pretrained(checkpoint_info.repository)
+            checkpoint = LatentConsistencyModelPipeline.from_pretrained(checkpoint_info.repository).to(self.device)
         except Exception as e:
             self.scores[uid] = 0.0
             logger.info(f"Failed to query miner {uid}, {str(e)}")
