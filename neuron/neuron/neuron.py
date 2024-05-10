@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 BASELINE_CHECKPOINT = "SimianLuo/LCM_Dreamshaper_v7"
 
-AVERAGE_TIME = 30.0
+AVERAGE_TIME = 3.0
 
 
 class CheckpointInfo(BaseModel):

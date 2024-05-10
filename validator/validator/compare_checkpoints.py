@@ -24,7 +24,7 @@ SAMPLE_COUNT = 10
 
 
 def __generate_random_prompt():
-    words = sample(WORDS, k=min(len(WORDS), min(urandom(1)[0] % 32, 8))) + ["tao"]
+    words = sample(WORDS, k=min(len(WORDS), min(urandom(1)[0] % 32, 8)))
     shuffle(words)
 
     return ", ".join(words)
@@ -46,14 +46,15 @@ def compare_checkpoints(
         seed = int.from_bytes(urandom(4), "little")
 
         prompt = __generate_random_prompt()
-        generator = Generator().manual_seed(seed)
+        base_generator = Generator().manual_seed(seed)
+        checkpoint_generator = Generator().manual_seed(seed)
         output_type = "latent"
 
         logger.info(f"Sample {i}, prompt {prompt} and seed {seed}")
 
         base_output = baseline(
             prompt=prompt,
-            generator=generator,
+            generator=base_generator,
             output_type=output_type,
         ).images
 
@@ -61,7 +62,7 @@ def compare_checkpoints(
 
         output = miner_checkpoint(
             prompt=prompt,
-            generator=generator,
+            generator=checkpoint_generator,
             output_type=output_type,
         ).images
 
