@@ -25,7 +25,7 @@ def startup():
     scheduler.start()
 
 
-@app.get("checkpoint")
+@app.get("/checkpoint")
 def get_checkpoint(request: Request) -> CheckpointInfo:
     return CheckpointInfo(
         repository=request.app.state.miner.checkpoint,
