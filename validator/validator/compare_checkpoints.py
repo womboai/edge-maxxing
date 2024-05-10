@@ -67,7 +67,16 @@ def compare_checkpoints(
         ).images
 
         gen_time = perf_counter() - start
-        similarity = pow(cosine_similarity(base_output.flatten(), output.flatten(), eps=1e-3, dim=0).item(), 4)
+
+        similarity = pow(
+            cosine_similarity(
+                base_output.flatten(),
+                output.flatten(),
+                eps=1e-3,
+                dim=0
+            ).item() * 0.5 + 0.5,
+            4,
+        )
 
         logger.info(f"Sample {i} generated with generation time of {gen_time} and similarity {similarity}")
 
