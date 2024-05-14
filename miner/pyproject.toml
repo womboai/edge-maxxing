@@ -31,8 +31,6 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 apple-silicon-training-subnet-neuron = { path = "../neuron", develop = true }
-requests-toolbelt = "1.0.0"
-APScheduler = "3.10.4"
 
 [build-system]
 requires = ["poetry-core"]

@@ -5,6 +5,7 @@ from random import choices, choice
 
 import bittensor as bt
 from aiohttp import ClientSession
+from python_coreml_stable_diffusion.pipeline import CoreMLStableDiffusionPipeline
 from torch import zeros_like, float32, int64, Tensor
 
 from neuron import (
@@ -14,8 +15,8 @@ from neuron import (
     compare_checkpoints,
     get_checkpoint_info,
     get_config,
-    PipelineType,
     SPEC_VERSION,
+    from_pretrained,
 )
 
 logger = getLogger(__name__)
@@ -33,7 +34,7 @@ class Validator:
     metagraph: bt.metagraph
     wallet: bt.wallet
     device: str
-    pipeline: PipelineType
+    pipeline: CoreMLStableDiffusionPipeline
     session: ClientSession
     scores: Tensor
     miner_last_checked: Tensor
@@ -54,7 +55,7 @@ class Validator:
         self.metagraph = self.subtensor.metagraph(netuid=self.config.netuid)
         self.wallet = bt.wallet(config=self.config)
 
-        self.pipeline = PipelineType.from_pretrained(BASELINE_CHECKPOINT).to(self.config.device)
+        self.pipeline = from_pretrained(BASELINE_CHECKPOINT).to(self.config.device)
 
         self.session = ClientSession()
         self.scores = zeros_like(self.metagraph.S, dtype=float32)
@@ -175,7 +176,7 @@ class Validator:
                 f"with a reported speed of {checkpoint_info.average_time}"
             )
 
-            checkpoint = PipelineType.from_pretrained(checkpoint_info.repository).to(self.config.device)
+            checkpoint = from_pretrained(checkpoint_info.repository).to(self.config.device)
 
             comparison = compare_checkpoints(
                 self.pipeline,

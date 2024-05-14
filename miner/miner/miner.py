@@ -3,6 +3,7 @@ from logging import getLogger
 from os.path import isdir
 
 import bittensor as bt
+from python_coreml_stable_diffusion.pipeline import CoreMLStableDiffusionPipeline
 
 from neuron import (
     AVERAGE_TIME,
@@ -11,7 +12,7 @@ from neuron import (
     get_checkpoint_info,
     get_config,
     compare_checkpoints,
-    PipelineType,
+    from_pretrained,
 )
 
 logger = getLogger(__name__)
@@ -19,7 +20,7 @@ logger = getLogger(__name__)
 MODEL_DIRECTORY = "model"
 
 
-def optimize(pipeline: PipelineType) -> PipelineType:
+def optimize(pipeline: CoreMLStableDiffusionPipeline) -> CoreMLStableDiffusionPipeline:
     # Miners should change this function to optimize the pipeline
     return pipeline
 
@@ -47,10 +48,10 @@ def main():
     metagraph = subtensor.metagraph(netuid=config.netuid)
     wallet = bt.wallet(config=config)
 
-    baseline_pipeline = PipelineType.from_pretrained(BASELINE_CHECKPOINT).to(config.device)
+    baseline_pipeline = from_pretrained(BASELINE_CHECKPOINT).to(config.device)
 
     if isdir(MODEL_DIRECTORY):
-        pipeline = PipelineType.from_pretrained(MODEL_DIRECTORY).to(config.device)
+        pipeline = from_pretrained(MODEL_DIRECTORY).to(config.device)
         expected_average_time = AVERAGE_TIME
     else:
         for uid in sorted(range(metagraph.n.item()), key=lambda i: metagraph.incentive[i].item(), reverse=True):
@@ -64,7 +65,7 @@ def main():
             repository = BASELINE_CHECKPOINT
             expected_average_time = AVERAGE_TIME
 
-        pipeline = PipelineType.from_pretrained(repository).to(config.device)
+        pipeline = from_pretrained(repository).to(config.device)
 
         pipeline.save_pretrained(MODEL_DIRECTORY)
 
@@ -91,7 +92,7 @@ def main():
         average_time=comparison.average_time,
     )
 
-    subtensor.commit(wallet, metagraph.netuid, checkpoint_info.model_dump_json())
+    subtensor.commit(wallet, metagraph.netuid, checkpoint_info.json())
     logger.info(f"Submitted {checkpoint_info} as the info for this miner")
 
 

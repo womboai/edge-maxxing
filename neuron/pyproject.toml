@@ -35,6 +35,12 @@ classifiers = [
 python = ">=3.10,<3.13"
 bittensor = "6.12.0"
 loguru = "0.7.2"
+diffusers = "0.27.2"
+nltk = "3.8.1"
+transformers = "4.37.2"
+accelerate = "0.26.1"
+omegaconf = "2.3.0"
+python_coreml_stable_diffusion = { git = "https://github.com/apple/ml-stable-diffusion", tag = "1.1.1" }
 
 [build-system]
 requires = ["poetry-core"]
