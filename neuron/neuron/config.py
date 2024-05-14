@@ -1,16 +1,25 @@
 from argparse import ArgumentParser
-from typing import TypeVar
+from typing import Callable
 
-from bittensor import config
-
-from .neuron import Neuron
-
-T: TypeVar = TypeVar("T", bound=Neuron)
+import bittensor as bt
 
 
-def get_config(cls: type[T]):
+def get_config(add_args: Callable[[ArgumentParser], None] | None = None):
     argument_parser = ArgumentParser()
 
-    cls.add_args(argument_parser)
+    argument_parser.add_argument("--netuid", dest="netuid", type=int, required=True)
 
-    return config(argument_parser)
+    argument_parser.add_argument(
+        "--device",
+        type=str,
+        help="Device to run on.",
+        default="mps",
+    )
+
+    bt.subtensor.add_args(argument_parser)
+    bt.wallet.add_args(argument_parser)
+
+    if add_args:
+        add_args(argument_parser)
+
+    return bt.config(argument_parser)

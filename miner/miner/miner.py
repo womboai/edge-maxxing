@@ -1,65 +1,99 @@
-import logging
 from argparse import ArgumentParser
+from logging import getLogger
+from os.path import isdir
 
-from bittensor import axon, config
-from bittensor.utils.networking import get_external_ip
+import bittensor as bt
 
-from neuron import Neuron, BASELINE_CHECKPOINT
+from neuron import (
+    AVERAGE_TIME,
+    BASELINE_CHECKPOINT,
+    CheckpointInfo,
+    get_checkpoint_info,
+    get_config,
+    compare_checkpoints,
+    PipelineType,
+)
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
+
+MODEL_DIRECTORY = "model"
 
 
-class Miner(Neuron):
-    def __init__(self, config: config):
-        super().__init__(config)
+def optimize(pipeline: PipelineType) -> PipelineType:
+    # Miners should change this function to optimize the pipeline
+    return pipeline
 
-        self.checkpoint = BASELINE_CHECKPOINT
 
-        # Warn if allowing incoming requests from anyone.
-        if not self.config.blacklist.force_validator_permit:
-            logger.warning(
-                "You are allowing non-validators to send requests to your miner. This is a security risk."
-            )
+def add_extra_args(argument_parser: ArgumentParser):
+    argument_parser.add_argument(
+        "--repository",
+        type=str,
+        help="The repository to push to",
+        required=True,
+    )
 
-        if self.config.blacklist.allow_non_registered:
-            logger.warning(
-                "You are allowing non-registered entities to send requests to your miner. This is a security risk."
-            )
+    argument_parser.add_argument(
+        "--commit_message",
+        type=str,
+        help="The commit message",
+        required=False,
+    )
 
-        external_ip = self.config.axon.external_ip or get_external_ip()
-        external_port = self.config.axon.external_port or self.config.axon.port
 
-        self.subtensor.serve(
-            wallet=self.wallet,
-            ip=external_ip,
-            port=external_port,
-            protocol=4,
-            netuid=config.netuid,
+def main():
+    config = get_config(add_extra_args)
+
+    subtensor = bt.subtensor(config=config)
+    metagraph = subtensor.metagraph(netuid=config.netuid)
+    wallet = bt.wallet(config=config)
+
+    baseline_pipeline = PipelineType.from_pretrained(BASELINE_CHECKPOINT).to(config.device)
+
+    if isdir(MODEL_DIRECTORY):
+        pipeline = PipelineType.from_pretrained(MODEL_DIRECTORY).to(config.device)
+        expected_average_time = AVERAGE_TIME
+    else:
+        for uid in sorted(range(metagraph.n.item()), key=lambda i: metagraph.incentive[i].item(), reverse=True):
+            info = get_checkpoint_info(uid)
+
+            if info:
+                repository = info.repository
+                expected_average_time = info.average_time
+                break
+        else:
+            repository = BASELINE_CHECKPOINT
+            expected_average_time = AVERAGE_TIME
+
+        pipeline = PipelineType.from_pretrained(repository).to(config.device)
+
+        pipeline.save_pretrained(MODEL_DIRECTORY)
+
+    pipeline = optimize(pipeline)
+
+    comparison = compare_checkpoints(baseline_pipeline, pipeline, expected_average_time)
+
+    if comparison.failed:
+        logger.warning("Not pushing to huggingface as the checkpoint failed to beat the baseline.")
+
+        return
+
+    if comparison.average_time > expected_average_time:
+        logger.warning(
+            f"Not pushing to huggingface as the average time {comparison.average_time} "
+            f"is worse than the expected {expected_average_time}"
         )
 
-    @classmethod
-    def add_args(cls, argument_parser: ArgumentParser):
-        super().add_args(argument_parser)
+    pipeline.push_to_hub(config.repository, config.commit_message)
+    logger.info(f"Pushed to huggingface at {config.repository}")
 
-        axon.add_args(argument_parser)
+    checkpoint_info = CheckpointInfo(
+        repository=config.repository,
+        average_time=comparison.average_time,
+    )
 
-        argument_parser.add_argument(
-            "--blacklist.force_validator_permit",
-            action="store_true",
-            help="If set, we will force incoming requests to have a permit.",
-            default=False,
-        )
+    subtensor.commit(wallet, metagraph.netuid, checkpoint_info.model_dump_json())
+    logger.info(f"Submitted {checkpoint_info} as the info for this miner")
 
-        argument_parser.add_argument(
-            "--blacklist.allow_non_registered",
-            action="store_true",
-            help="If set, miners will accept queries from non registered entities. (Dangerous!)",
-            default=False,
-        )
 
-        argument_parser.add_argument(
-            "--blacklist.validator_minimum_tao",
-            type=int,
-            help="The minimum number of TAO needed for a validator's queries to be accepted.",
-            default=4096,
-        )
+if __name__ == '__main__':
+    main()

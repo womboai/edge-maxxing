@@ -1,42 +1,34 @@
-import logging
+from logging import getLogger
 from os import urandom
-from random import sample, shuffle
 from time import perf_counter
 
-from diffusers import LatentConsistencyModelPipeline
 from torch import Generator, cosine_similarity
-from neuron import AVERAGE_TIME
 
-import nltk
+from neuron import AVERAGE_TIME, generate_random_prompt, PipelineType
 
-nltk.download('words')
-nltk.download('universal_tagset')
-nltk.download('averaged_perceptron_tagger')
+logger = getLogger(__name__)
 
-from nltk.corpus import words
-from nltk import pos_tag
-
-
-logger = logging.getLogger(__name__)
-
-WORDS = [word for word, tag in pos_tag(words.words(), tagset='universal') if tag == "ADJ" or tag == "NOUN"]
 SAMPLE_COUNT = 10
 
 
-def __generate_random_prompt():
-    words = sample(WORDS, k=min(len(WORDS), min(urandom(1)[0] % 32, 8)))
-    shuffle(words)
-
-    return ", ".join(words)
+class Comparison:
+    def __init__(self, average_time: float, average_similarity: float, failed: bool):
+        self.average_time = average_time
+        self.average_similarity = average_similarity
+        self.failed = failed
 
 
 def compare_checkpoints(
-    baseline: LatentConsistencyModelPipeline,
-    miner_checkpoint: LatentConsistencyModelPipeline,
+    baseline: PipelineType,
+    miner_checkpoint: PipelineType,
     reported_average_time: float,
-) -> float:
+) -> Comparison:
     if reported_average_time > AVERAGE_TIME:
-        return 0.0
+        logger.info(f"Reported time is {reported_average_time}, which is worse than the baseline of {AVERAGE_TIME}")
+
+        return Comparison(average_time=reported_average_time, average_similarity=1.0, failed=True)
+
+    failed = False
 
     average_time = AVERAGE_TIME
     average_similarity = 1.0
@@ -44,8 +36,8 @@ def compare_checkpoints(
     # Take {SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been
     for i in range(SAMPLE_COUNT):
         seed = int.from_bytes(urandom(4), "little")
+        prompt = generate_random_prompt()
 
-        prompt = __generate_random_prompt()
         base_generator = Generator().manual_seed(seed)
         checkpoint_generator = Generator().manual_seed(seed)
         output_type = "latent"
@@ -86,8 +78,9 @@ def compare_checkpoints(
         average_time = (average_time * generated + gen_time) / (generated + 1)
         average_similarity = (average_similarity * generated + similarity) / (generated + 1)
 
-        if average_time >= reported_average_time * 1.125:
+        if average_time >= reported_average_time * 1.0625:
             # Too slow compared to reported speed, rank immediately based on current time
+            failed = True
             break
 
         if average_time < AVERAGE_TIME:
@@ -99,10 +92,12 @@ def compare_checkpoints(
         if needed_time < average_time / 2:
             # Needs double the current performance to beat the baseline,
             # thus we shouldn't waste compute testing farther
+            failed = True
             break
 
         if average_similarity < 0.85:
             # Deviating too much from original quality
+            failed = True
             break
 
     logger.info(
@@ -111,4 +106,4 @@ def compare_checkpoints(
         f"and speed of {average_time}"
     )
 
-    return min(0, AVERAGE_TIME - average_time) * average_similarity
+    return Comparison(average_time, average_similarity, failed)
