@@ -55,7 +55,7 @@ def main():
         expected_average_time = AVERAGE_TIME
     else:
         for uid in sorted(range(metagraph.n.item()), key=lambda i: metagraph.incentive[i].item(), reverse=True):
-            info = get_checkpoint_info(uid)
+            info = get_checkpoint_info(subtensor, metagraph, uid)
 
             if info:
                 repository = info.repository
