@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from logging import getLogger
+from os import mkdir
 from os.path import isdir, join
 from shutil import copytree, rmtree
 
@@ -93,7 +94,9 @@ def main():
 
     pipeline = pipelines.coreml_sdxl_pipeline
     pipelines.base_minimal_pipeline.save_pretrained(MODEL_DIRECTORY)
+
     rmtree(mlpackages_dir, ignore_errors=True)
+    mkdir(mlpackages_dir)
     copytree(pipelines.coreml_models_path, mlpackages_dir, dirs_exist_ok=True)
 
     comparison = compare_checkpoints(baseline_pipeline, pipeline, expected_average_time)
