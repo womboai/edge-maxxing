@@ -51,7 +51,7 @@ def from_pretrained(name: str, mlpackages: str) -> CoreMLPipelines:
         pytorch_pipe=base_pipeline,
         mlpackages_dir=compiled_dir,
         model_version=name,
-        compute_unit=ComputeUnit.CPU_AND_GPU,
+        compute_unit=ComputeUnit.CPU_AND_GPU.value,
         delete_original_pipe=False,
     )
 
