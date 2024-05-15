@@ -52,7 +52,7 @@ def from_pretrained(name: str, mlpackages: str, device: str) -> CoreMLPipelines:
     pipeline = get_coreml_pipe(
         pytorch_pipe=base_pipeline,
         mlpackages_dir=compiled_dir,
-        model_version=name,
+        model_version="xl",
         compute_unit=ComputeUnit.CPU_AND_GPU.name,
         delete_original_pipe=False,
     )
