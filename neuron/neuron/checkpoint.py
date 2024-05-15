@@ -100,27 +100,31 @@ def compare_checkpoints(
 
         logger.info(f"Sample {i}, prompt {prompt} and seed {seed}")
 
-        def latent_set_callback(name: str):
-            def set_latents(_index: int, _timestep: Tensor, latents: Tensor):
-                locals()[name] = latents
-
-            return set_latents
-
         base_output: Tensor
+
+        def set_base_output(_index: int, _timestep: Tensor, latents: Tensor):
+            nonlocal base_output
+            base_output = latents
+
         baseline(
             prompt=prompt,
             generator=base_generator,
             output_type=output_type,
-            callback=latent_set_callback("base_output")
+            callback=set_base_output
         )
 
         start = perf_counter()
 
         output: Tensor
+
+        def set_output(_index: int, _timestep: Tensor, latents: Tensor):
+            nonlocal output
+            output = latents
+
         miner_checkpoint(
             prompt=prompt,
             generator=checkpoint_generator,
-            output_type=latent_set_callback("output"),
+            output_type=set_output,
         )
 
         gen_time = perf_counter() - start
