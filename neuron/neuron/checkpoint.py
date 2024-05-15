@@ -124,7 +124,8 @@ def compare_checkpoints(
         miner_checkpoint(
             prompt=prompt,
             generator=checkpoint_generator,
-            output_type=set_output,
+            output_type=output_type,
+            callback=set_output,
         )
 
         gen_time = perf_counter() - start
