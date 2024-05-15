@@ -105,7 +105,7 @@ def compare_checkpoints(
             prompt=prompt,
             generator=base_generator,
             output_type=output_type,
-        )
+        ).images
 
         start = perf_counter()
 
@@ -113,7 +113,7 @@ def compare_checkpoints(
             prompt=prompt,
             generator=checkpoint_generator,
             output_type=output_type,
-        )
+        ).images
 
         gen_time = perf_counter() - start
 
