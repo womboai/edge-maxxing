@@ -37,8 +37,8 @@ class CheckpointBenchmark:
         self.failed = failed
 
 
-def from_pretrained(name: str, mlpackages: str) -> CoreMLPipelines:
-    base_pipeline = StableDiffusionXLMinimalPipeline.from_pretrained(name)
+def from_pretrained(name: str, mlpackages: str, device: str) -> CoreMLPipelines:
+    base_pipeline = StableDiffusionXLMinimalPipeline.from_pretrained(name).to(device)
 
     if isdir(mlpackages):
         coreml_dir = mlpackages
