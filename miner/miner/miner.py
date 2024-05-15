@@ -93,7 +93,7 @@ def main():
 
     pipeline = pipelines.coreml_sdxl_pipeline
     pipelines.base_minimal_pipeline.save_pretrained(MODEL_DIRECTORY)
-    copytree(pipelines.coreml_models_path, mlpackages_dir)
+    copytree(pipelines.coreml_models_path, mlpackages_dir, dirs_exist_ok=True)
 
     comparison = compare_checkpoints(baseline_pipeline, pipeline, expected_average_time)
 
