@@ -48,6 +48,15 @@ def add_extra_args(argument_parser: ArgumentParser):
         required=False,
     )
 
+    argument_parser.add_argument(
+        "--no_commit",
+        dest="commit",
+        action="store_false",
+        help="Do not commit to huggingface",
+    )
+
+    argument_parser.set_defaults(commit=True)
+
 
 def main():
     config = get_config(add_extra_args)
@@ -88,22 +97,23 @@ def main():
 
     comparison = compare_checkpoints(baseline_pipeline, pipeline, expected_average_time)
 
-    if comparison.failed:
-        logger.warning("Not pushing to huggingface as the checkpoint failed to beat the baseline.")
+    if config.commit:
+        if comparison.failed:
+            logger.warning("Not pushing to huggingface as the checkpoint failed to beat the baseline.")
 
-        return
+            return
 
-    if comparison.average_time > expected_average_time:
-        logger.warning(
-            f"Not pushing to huggingface as the average time {comparison.average_time} "
-            f"is worse than the expected {expected_average_time}"
-        )
+        if comparison.average_time > expected_average_time:
+            logger.warning(
+                f"Not pushing to huggingface as the average time {comparison.average_time} "
+                f"is worse than the expected {expected_average_time}"
+            )
 
-        return
+            return
 
-    pipeline.push_to_hub(config.diffusion_repository, config.commit_message)
-    upload_folder(config.coreml_repository, mlpackages_dir)
-    logger.info(f"Pushed to huggingface at {config.diffusion_repository} and {config.coreml_repository}")
+        pipeline.push_to_hub(config.diffusion_repository, config.commit_message)
+        upload_folder(config.coreml_repository, mlpackages_dir, commit_message=config.commit_message)
+        logger.info(f"Pushed to huggingface at {config.diffusion_repository} and {config.coreml_repository}")
 
     checkpoint_info = CheckpointInfo(
         repository=config.diffusion_repository,
