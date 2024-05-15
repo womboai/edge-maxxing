@@ -5,6 +5,7 @@ from time import perf_counter
 
 import bittensor as bt
 from coremltools import ComputeUnit
+from huggingface_hub import snapshot_download
 from pydantic import BaseModel
 from python_coreml_stable_diffusion.pipeline import get_coreml_pipe, CoreMLStableDiffusionPipeline
 from torch import Generator, cosine_similarity
@@ -42,7 +43,7 @@ def from_pretrained(name: str, mlpackages: str) -> CoreMLPipelines:
     if isdir(mlpackages):
         coreml_dir = mlpackages
     else:
-        coreml_dir = CoreMLStableDiffusionPipeline.download(mlpackages)
+        coreml_dir = snapshot_download(mlpackages)
 
     compiled_dir = f"{coreml_dir}/compiled"
 
