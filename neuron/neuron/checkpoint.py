@@ -11,15 +11,16 @@ from coremltools import ComputeUnit
 from huggingface_hub import snapshot_download
 from pydantic import BaseModel
 from python_coreml_stable_diffusion.pipeline import get_coreml_pipe, CoreMLStableDiffusionPipeline
-from torch import Generator, cosine_similarity, Tensor
+from torch import Generator, cosine_similarity
 
-from .random_inputs import generate_random_prompt
 from .pipeline import StableDiffusionXLMinimalPipeline, CoreMLPipelines
+from .random_inputs import generate_random_prompt
 
 logger = getLogger(__name__)
 
 BASELINE_CHECKPOINT = "stabilityai/stable-diffusion-xl-base-1.0"
 MLPACKAGES = "apple/coreml-stable-diffusion-xl-base"
+CURRENT_CONTEST = "apple-silicon-stable-diffusion-xl-base-optimization"
 AVERAGE_TIME = 10.0
 SPEC_VERSION = 20
 
@@ -31,6 +32,7 @@ class CheckpointInfo(BaseModel):
     mlpackages: str = MLPACKAGES
     average_time: float = AVERAGE_TIME
     spec_version: int = SPEC_VERSION
+    contest: str = CURRENT_CONTEST
 
 
 class CheckpointBenchmark:
@@ -70,7 +72,12 @@ def get_checkpoint_info(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey
     commitment = metadata["info"]["fields"][0]
     hex_data = commitment[list(commitment.keys())[0]][2:]
 
-    return CheckpointInfo.parse_raw(bytes.fromhex(hex_data))
+    info = CheckpointInfo.parse_raw(bytes.fromhex(hex_data).decode())
+
+    if info.spec_version != SPEC_VERSION or info.contest != CURRENT_CONTEST:
+        return None
+
+    return info
 
 
 def compare_checkpoints(

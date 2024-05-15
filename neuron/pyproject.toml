@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "apple-silicon-training-subnet-neuron"
+name = "model-optimization-subnet-neuron"
 
 version = "1.0.0"
 

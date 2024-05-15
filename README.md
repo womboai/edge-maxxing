@@ -1,1 +1,1 @@
-# apple-silicon-training-subnet
+# model-optimization-subnet

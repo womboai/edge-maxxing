@@ -153,16 +153,6 @@ class Validator:
 
         logger.log(level, f"set_weights {state}, {message}")
 
-    async def get_checkpoint(self, uid: int) -> CheckpointInfo:
-        axon = self.metagraph.axons[uid]
-
-        url = f"http://{axon.ip}:{axon.port}/checkpoint"
-
-        async with self.session.get(url) as response:
-            response.raise_for_status()
-
-            return CheckpointInfo.parse_obj(await response.json())
-
     async def do_step(self):
         uid = self.get_next_uid()
         axon = self.metagraph.axons[uid]

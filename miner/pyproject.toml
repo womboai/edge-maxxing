@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "apple-silicon-training-subnet-miner"
+name = "model-optimization-subnet-miner"
 
 version = "1.0.0"
 
@@ -30,7 +30,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.11"
-apple-silicon-training-subnet-neuron = { path = "../neuron", develop = true }
+model-optimization-subnet-neuron = { path = "../neuron", develop = true }
 
 [build-system]
 requires = ["poetry-core"]
