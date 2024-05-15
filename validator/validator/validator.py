@@ -17,6 +17,7 @@ from neuron import (
     get_config,
     SPEC_VERSION,
     from_pretrained,
+    MLPACKAGES,
 )
 
 logger = getLogger(__name__)
@@ -55,7 +56,7 @@ class Validator:
         self.metagraph = self.subtensor.metagraph(netuid=self.config.netuid)
         self.wallet = bt.wallet(config=self.config)
 
-        self.pipeline = from_pretrained(BASELINE_CHECKPOINT).to(self.config.device)
+        self.pipeline = from_pretrained(BASELINE_CHECKPOINT, MLPACKAGES).coreml_sdxl_pipeline.to(self.config.device)
 
         self.session = ClientSession()
         self.scores = zeros_like(self.metagraph.S, dtype=float32)
@@ -176,7 +177,7 @@ class Validator:
                 f"with a reported speed of {checkpoint_info.average_time}"
             )
 
-            checkpoint = from_pretrained(checkpoint_info.repository).to(self.config.device)
+            checkpoint = from_pretrained(checkpoint_info.repository, checkpoint_info.mlpackages).coreml_sdxl_pipeline.to(self.config.device)
 
             comparison = compare_checkpoints(
                 self.pipeline,

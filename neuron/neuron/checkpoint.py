@@ -1,19 +1,28 @@
+import os
 from logging import getLogger
 from os import urandom
+from os.path import basename, isdir
+from pathlib import Path
 from time import perf_counter
+from urllib.parse import urlparse
+from urllib.request import urlretrieve
+from zipfile import ZipFile
 
 import bittensor as bt
 from coremltools import ComputeUnit
 from diffusers import StableDiffusionXLPipeline
+from huggingface_hub import hf_hub_download
 from pydantic import BaseModel
 from python_coreml_stable_diffusion.pipeline import get_coreml_pipe, CoreMLStableDiffusionPipeline
 from torch import Generator, cosine_similarity
 
 from neuron import generate_random_prompt
+from neuron.pipeline import StableDiffusionXLMinimalPipeline, CoreMLPipelines
 
 logger = getLogger(__name__)
 
 BASELINE_CHECKPOINT = "stabilityai/stable-diffusion-xl-base-1.0"
+MLPACKAGES = "apple/coreml-stable-diffusion-xl-base"
 AVERAGE_TIME = 10.0
 SPEC_VERSION = 20
 
@@ -22,6 +31,7 @@ SAMPLE_COUNT = 10
 
 class CheckpointInfo(BaseModel):
     repository: str = BASELINE_CHECKPOINT
+    mlpackages: str = MLPACKAGES
     average_time: float = AVERAGE_TIME
     spec_version: int = SPEC_VERSION
 
@@ -33,17 +43,25 @@ class CheckpointBenchmark:
         self.failed = failed
 
 
-def from_pretrained(name: str):
-    base_pipeline = StableDiffusionXLPipeline.from_pretrained(name)
+def from_pretrained(name: str, mlpackages: str) -> CoreMLPipelines:
+    base_pipeline = StableDiffusionXLMinimalPipeline.from_pretrained(name)
+
+    if isdir(mlpackages):
+        coreml_dir = mlpackages
+    else:
+        coreml_dir = CoreMLStableDiffusionPipeline.download(mlpackages)
+
+    compiled_dir = f"{coreml_dir}/compiled"
 
     pipeline = get_coreml_pipe(
         pytorch_pipe=base_pipeline,
-        mlpackages_dir=mlpackages_dir,
+        mlpackages_dir=compiled_dir,
         model_version=name,
         compute_unit=ComputeUnit.CPU_AND_GPU,
+        delete_original_pipe=False,
     )
 
-    return pipeline
+    return CoreMLPipelines(base_pipeline, pipeline, coreml_dir)
 
 
 def get_checkpoint_info(subtensor: bt.subtensor, metagraph: bt.metagraph, uid: int) -> CheckpointInfo | None:

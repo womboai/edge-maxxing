@@ -14,7 +14,7 @@ authors = ["WOMBO <hello@w.ai>"]
 package-mode = false
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.13"
+python = ">=3.10,<3.11"
 
 [build-system]
 requires = ["poetry-core"]

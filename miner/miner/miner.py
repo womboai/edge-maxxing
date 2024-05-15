@@ -1,9 +1,10 @@
 from argparse import ArgumentParser
 from logging import getLogger
-from os.path import isdir
+from os.path import isdir, join
+from shutil import copytree
 
 import bittensor as bt
-from python_coreml_stable_diffusion.pipeline import CoreMLStableDiffusionPipeline
+from huggingface_hub import upload_folder
 
 from neuron import (
     AVERAGE_TIME,
@@ -12,7 +13,7 @@ from neuron import (
     get_checkpoint_info,
     get_config,
     compare_checkpoints,
-    from_pretrained,
+    from_pretrained, MLPACKAGES, CoreMLPipelines,
 )
 
 logger = getLogger(__name__)
@@ -20,16 +21,23 @@ logger = getLogger(__name__)
 MODEL_DIRECTORY = "model"
 
 
-def optimize(pipeline: CoreMLStableDiffusionPipeline) -> CoreMLStableDiffusionPipeline:
+def optimize(pipeline: CoreMLPipelines) -> CoreMLPipelines:
     # Miners should change this function to optimize the pipeline
     return pipeline
 
 
 def add_extra_args(argument_parser: ArgumentParser):
     argument_parser.add_argument(
-        "--repository",
+        "--diffusion_repository",
         type=str,
-        help="The repository to push to",
+        help="The repository to push the diffusion components(scheduler, tokenizers, etc) to",
+        required=True,
+    )
+
+    argument_parser.add_argument(
+        "--coreml_repository",
+        type=str,
+        help="The repository to push CoreML models(unet, vae, etc) to",
         required=True,
     )
 
@@ -48,10 +56,13 @@ def main():
     metagraph = subtensor.metagraph(netuid=config.netuid)
     wallet = bt.wallet(config=config)
 
-    baseline_pipeline = from_pretrained(BASELINE_CHECKPOINT).to(config.device)
+    baseline_packages = from_pretrained(BASELINE_CHECKPOINT, MLPACKAGES)
+    baseline_pipeline = baseline_packages.coreml_sdxl_pipeline.to(config.device)
+
+    mlpackages_dir = join(MODEL_DIRECTORY, "mlpackages")
 
     if isdir(MODEL_DIRECTORY):
-        pipeline = from_pretrained(MODEL_DIRECTORY).to(config.device)
+        pipelines = from_pretrained(MODEL_DIRECTORY, mlpackages_dir)
         expected_average_time = AVERAGE_TIME
     else:
         for uid in sorted(range(metagraph.n.item()), key=lambda i: metagraph.incentive[i].item(), reverse=True):
@@ -59,17 +70,21 @@ def main():
 
             if info:
                 repository = info.repository
+                mlpackages = info.mlpackages
                 expected_average_time = info.average_time
                 break
         else:
             repository = BASELINE_CHECKPOINT
+            mlpackages = MLPACKAGES
             expected_average_time = AVERAGE_TIME
 
-        pipeline = from_pretrained(repository).to(config.device)
+        pipelines = from_pretrained(repository, mlpackages)
 
-        pipeline.save_pretrained(MODEL_DIRECTORY)
+    pipelines = optimize(pipelines)
 
-    pipeline = optimize(pipeline)
+    pipeline = pipelines.coreml_sdxl_pipeline.to(config.device)
+    pipelines.base_minimal_pipeline.save_pretrained(MODEL_DIRECTORY)
+    copytree(pipelines.coreml_models_path, mlpackages_dir)
 
     comparison = compare_checkpoints(baseline_pipeline, pipeline, expected_average_time)
 
@@ -84,11 +99,15 @@ def main():
             f"is worse than the expected {expected_average_time}"
         )
 
-    pipeline.push_to_hub(config.repository, config.commit_message)
-    logger.info(f"Pushed to huggingface at {config.repository}")
+        return
+
+    pipeline.push_to_hub(config.diffusion_repository, config.commit_message)
+    upload_folder(config.coreml_repository, mlpackages_dir)
+    logger.info(f"Pushed to huggingface at {config.diffusion_repository} and {config.coreml_repository}")
 
     checkpoint_info = CheckpointInfo(
-        repository=config.repository,
+        repository=config.diffusion_repository,
+        mlpackages=config.coreml_repository,
         average_time=comparison.average_time,
     )
 

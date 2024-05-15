@@ -227,7 +227,7 @@ name = "apple-silicon-training-subnet-neuron"
 version = "1.0.0"
 description = "The base neuron which validators & miners inherent from"
 optional = false
-python-versions = ">=3.10,<3.13"
+python-versions = ">=3.10,<3.11"
 files = []
 develop = true
 
@@ -3120,7 +3120,7 @@ name = "python-statemachine"
 version = "2.1.2"
 description = "Python Finite State Machines made easy."
 optional = false
-python-versions = ">=3.7,<3.13"
+python-versions = ">=3.7,<3.11"
 files = [
     {file = "python_statemachine-2.1.2-py3-none-any.whl", hash = "sha256:d7e369d5da5b9007cc7cf5eb7a1b169081e2f4b7d30b6415fc122858fb7696ec"},
     {file = "python_statemachine-2.1.2.tar.gz", hash = "sha256:0b0dd8b28738b53f14391b06d5072cd5e72259da5ae23574d3d4f5e6dd366663"},
@@ -4510,5 +4510,5 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 
 [metadata]
 lock-version = "2.0"
-python-versions = ">=3.10,<3.13"
+python-versions = ">=3.10,<3.11"
 content-hash = "610fef001d14aff7a6a209f75423b0fd1d363a2ac7633aa6beae8d0252a31596"
