@@ -2,8 +2,10 @@ from logging import getLogger
 from os import urandom
 from os.path import isdir
 from time import perf_counter
+from typing import cast
 
 import bittensor as bt
+from bittensor.extrinsics.serving import get_metadata
 from coremltools import ComputeUnit
 from huggingface_hub import snapshot_download
 from pydantic import BaseModel
@@ -58,8 +60,16 @@ def from_pretrained(name: str, mlpackages: str, device: str) -> CoreMLPipelines:
     return CoreMLPipelines(base_pipeline, pipeline, coreml_dir)
 
 
-def get_checkpoint_info(subtensor: bt.subtensor, metagraph: bt.metagraph, uid: int) -> CheckpointInfo | None:
-    return CheckpointInfo.parse_raw(subtensor.get_commitment(metagraph.netuid, uid))
+def get_checkpoint_info(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey: str) -> CheckpointInfo | None:
+    metadata = cast(dict[str, dict[str, list[dict[str, str]]]], get_metadata(subtensor, metagraph.netuid, hotkey))
+
+    if not metadata:
+        return None
+
+    commitment = metadata["info"]["fields"][0]
+    hex_data = commitment[list(commitment.keys())[0]][2:]
+
+    return CheckpointInfo.parse_raw(bytes.fromhex(hex_data))
 
 
 def compare_checkpoints(
