@@ -71,7 +71,7 @@ def main():
 
     mlpackages_dir = join(MODEL_DIRECTORY, "mlpackages")
 
-    if isdir(MODEL_DIRECTORY):
+    if isdir(MODEL_DIRECTORY) and isdir(mlpackages_dir):
         pipelines = from_pretrained(MODEL_DIRECTORY, mlpackages_dir, config.device)
         expected_average_time = AVERAGE_TIME
     else:
