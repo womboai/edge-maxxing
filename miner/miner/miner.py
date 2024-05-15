@@ -1,8 +1,7 @@
 from argparse import ArgumentParser
 from logging import getLogger
-from os import rmdir
 from os.path import isdir, join
-from shutil import copytree
+from shutil import copytree, rmtree
 
 import bittensor as bt
 from huggingface_hub import upload_folder
@@ -94,7 +93,7 @@ def main():
 
     pipeline = pipelines.coreml_sdxl_pipeline
     pipelines.base_minimal_pipeline.save_pretrained(MODEL_DIRECTORY)
-    rmdir(mlpackages_dir)
+    rmtree(mlpackages_dir, ignore_errors=True)
     copytree(pipelines.coreml_models_path, mlpackages_dir, dirs_exist_ok=True)
 
     comparison = compare_checkpoints(baseline_pipeline, pipeline, expected_average_time)
