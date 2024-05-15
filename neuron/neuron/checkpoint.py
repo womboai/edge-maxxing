@@ -1,23 +1,16 @@
-import os
 from logging import getLogger
 from os import urandom
-from os.path import basename, isdir
-from pathlib import Path
+from os.path import isdir
 from time import perf_counter
-from urllib.parse import urlparse
-from urllib.request import urlretrieve
-from zipfile import ZipFile
 
 import bittensor as bt
 from coremltools import ComputeUnit
-from diffusers import StableDiffusionXLPipeline
-from huggingface_hub import hf_hub_download
 from pydantic import BaseModel
 from python_coreml_stable_diffusion.pipeline import get_coreml_pipe, CoreMLStableDiffusionPipeline
 from torch import Generator, cosine_similarity
 
-from neuron import generate_random_prompt
-from neuron.pipeline import StableDiffusionXLMinimalPipeline, CoreMLPipelines
+from .random_inputs import generate_random_prompt
+from .pipeline import StableDiffusionXLMinimalPipeline, CoreMLPipelines
 
 logger = getLogger(__name__)
 
