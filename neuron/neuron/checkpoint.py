@@ -112,6 +112,7 @@ def compare_checkpoints(
             prompt=prompt,
             generator=base_generator,
             output_type=output_type,
+            num_inference_steps=20,
         ).images
 
         start = perf_counter()
@@ -120,6 +121,7 @@ def compare_checkpoints(
             prompt=prompt,
             generator=checkpoint_generator,
             output_type=output_type,
+            num_inference_steps=20,
         ).images
 
         gen_time = perf_counter() - start
