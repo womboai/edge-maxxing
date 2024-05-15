@@ -10,7 +10,7 @@ from coremltools import ComputeUnit
 from huggingface_hub import snapshot_download
 from pydantic import BaseModel
 from python_coreml_stable_diffusion.pipeline import get_coreml_pipe, CoreMLStableDiffusionPipeline
-from torch import Generator, cosine_similarity
+from torch import Generator, cosine_similarity, Tensor
 
 from .random_inputs import generate_random_prompt
 from .pipeline import StableDiffusionXLMinimalPipeline, CoreMLPipelines
@@ -100,22 +100,32 @@ def compare_checkpoints(
 
         logger.info(f"Sample {i}, prompt {prompt} and seed {seed}")
 
-        base_output = baseline(
+        def latent_set_callback(name: str):
+            def set_latents(_index: int, _timestep: Tensor, latents: Tensor):
+                locals()[name] = latents
+
+            return set_latents
+
+        base_output: Tensor
+        baseline(
             prompt=prompt,
             generator=base_generator,
             output_type=output_type,
-        ).images
+            callback=latent_set_callback("base_output")
+        )
 
         start = perf_counter()
 
-        output = miner_checkpoint(
+        output: Tensor
+        miner_checkpoint(
             prompt=prompt,
             generator=checkpoint_generator,
-            output_type=output_type,
-        ).images
+            output_type=latent_set_callback("output"),
+        )
 
         gen_time = perf_counter() - start
 
+        # noinspection PyUnboundLocalVariable
         similarity = pow(
             cosine_similarity(
                 base_output.flatten(),

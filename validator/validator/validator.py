@@ -170,7 +170,7 @@ class Validator:
         try:
             logger.info(f"Checking miner {uid}, hotkey: {axon.hotkey}")
 
-            checkpoint_info = get_checkpoint_info(self.subtensor, self.metagraph, uid)
+            checkpoint_info = get_checkpoint_info(self.subtensor, self.metagraph, axon.hotkey)
 
             logger.info(
                 f"Miner {uid} returned {checkpoint_info.repository} as the model, "
