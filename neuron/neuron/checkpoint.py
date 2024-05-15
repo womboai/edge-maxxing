@@ -5,6 +5,7 @@ from time import perf_counter
 from typing import cast
 
 import bittensor as bt
+import torch
 from bittensor.extrinsics.serving import get_metadata
 from coremltools import ComputeUnit
 from huggingface_hub import snapshot_download
@@ -100,32 +101,18 @@ def compare_checkpoints(
 
         logger.info(f"Sample {i}, prompt {prompt} and seed {seed}")
 
-        base_output: Tensor
-
-        def set_base_output(_index: int, _timestep: Tensor, latents: Tensor):
-            nonlocal base_output
-            base_output = latents
-
-        baseline(
+        base_output = baseline(
             prompt=prompt,
             generator=base_generator,
             output_type=output_type,
-            callback=set_base_output
         )
 
         start = perf_counter()
 
-        output: Tensor
-
-        def set_output(_index: int, _timestep: Tensor, latents: Tensor):
-            nonlocal output
-            output = latents
-
-        miner_checkpoint(
+        output = miner_checkpoint(
             prompt=prompt,
             generator=checkpoint_generator,
             output_type=output_type,
-            callback=set_output,
         )
 
         gen_time = perf_counter() - start
@@ -133,8 +120,8 @@ def compare_checkpoints(
         # noinspection PyUnboundLocalVariable
         similarity = pow(
             cosine_similarity(
-                base_output.flatten(),
-                output.flatten(),
+                torch.from_numpy(base_output).flatten(),
+                torch.from_numpy(output).flatten(),
                 eps=1e-3,
                 dim=0
             ).item() * 0.5 + 0.5,
