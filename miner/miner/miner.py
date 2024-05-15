@@ -31,14 +31,12 @@ def add_extra_args(argument_parser: ArgumentParser):
         "--diffusion_repository",
         type=str,
         help="The repository to push the diffusion components(scheduler, tokenizers, etc) to",
-        required=True,
     )
 
     argument_parser.add_argument(
         "--coreml_repository",
         type=str,
         help="The repository to push CoreML models(unet, vae, etc) to",
-        required=True,
     )
 
     argument_parser.add_argument(

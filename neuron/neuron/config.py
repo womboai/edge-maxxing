@@ -7,7 +7,11 @@ import bittensor as bt
 def get_config(add_args: Callable[[ArgumentParser], None] | None = None):
     argument_parser = ArgumentParser()
 
-    argument_parser.add_argument("--netuid", dest="netuid", type=int, required=True)
+    argument_parser.add_argument(
+        "--netuid",
+        dest="netuid",
+        type=int,
+    )
 
     argument_parser.add_argument(
         "--device",
