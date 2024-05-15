@@ -59,7 +59,7 @@ def from_pretrained(name: str, mlpackages: str, device: str) -> CoreMLPipelines:
 
 
 def get_checkpoint_info(subtensor: bt.subtensor, metagraph: bt.metagraph, uid: int) -> CheckpointInfo | None:
-    return CheckpointInfo.parse_json(subtensor.get_commitment(metagraph.netuid, uid))
+    return CheckpointInfo.parse_raw(subtensor.get_commitment(metagraph.netuid, uid))
 
 
 def compare_checkpoints(
