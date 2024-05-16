@@ -1,23 +1,24 @@
 from argparse import ArgumentParser
-from asyncio import run
+from datetime import date, datetime
 from logging import getLogger, INFO, WARNING, basicConfig, DEBUG
+from os.path import isfile
 from random import choices, choice
+from zoneinfo import ZoneInfo
 
 import bittensor as bt
 from aiohttp import ClientSession
 from python_coreml_stable_diffusion.pipeline import CoreMLStableDiffusionPipeline
-from torch import zeros_like, float32, int64, Tensor
+from torch import zeros_like, float32, int64, Tensor, save, load
 
 from neuron import (
     AVERAGE_TIME,
     BASELINE_CHECKPOINT,
     CheckpointInfo,
     compare_checkpoints,
-    get_checkpoint_info,
     get_config,
     SPEC_VERSION,
     from_pretrained,
-    MLPACKAGES,
+    MLPACKAGES, ContestId, CURRENT_CONTEST, get_checkpoint_info,
 )
 
 logger = getLogger(__name__)
@@ -37,12 +38,16 @@ class Validator:
     device: str
     pipeline: CoreMLStableDiffusionPipeline
     session: ClientSession
-    scores: Tensor
-    miner_last_checked: Tensor
-    miner_info: dict[int, CheckpointInfo]
-    hotkeys: list[str]
     uid: int
+
+    scores: Tensor
+    miner_info: list[CheckpointInfo | None]
+    hotkeys: list[str]
     step: int
+
+    last_day: date
+    working_on: ContestId | None
+    miners_checked: set[int]
 
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
@@ -60,13 +65,16 @@ class Validator:
 
         self.session = ClientSession()
         self.scores = zeros_like(self.metagraph.S, dtype=float32)
-        self.miner_last_checked = zeros_like(self.metagraph.S, dtype=int64)
+        self.miners_checked = set()
+        self.miner_info = [None] * self.metagraph.n.item()
 
         self.hotkeys = self.metagraph.hotkeys
 
         self.uid = self.hotkeys.index(self.wallet.hotkey.ss58_address)
 
         self.step = 0
+
+        self.load_state()
 
     @classmethod
     def add_extra_args(cls, argument_parser: ArgumentParser):
@@ -77,25 +85,51 @@ class Validator:
             default=100,
         )
 
-    def get_next_uid(self) -> int | None:
-        miner_uids = [
-            uid
-            for uid in range(self.metagraph.n.item())
-            if self.metagraph.axons[uid].is_serving
-        ]
+    def save_state(self):
+        """Saves the state of the validator to a file."""
+        bt.logging.info("Saving validator state.")
 
-        if not len(miner_uids):
+        # Save the state of the validator to file.
+        save(
+            {
+                "step": self.step,
+                "hotkeys": self.hotkeys,
+                "scores": self.scores,
+                "last_day": self.last_day,
+                "working_on": self.working_on,
+                "miners_checked": self.miners_checked,
+                "miner_info": self.miner_info,
+            },
+            self.config.neuron.full_path + "/state.pt",
+        )
+
+    def load_state(self):
+        """Loads the state of the validator from a file."""
+        bt.logging.info("Loading validator state.")
+
+        path = self.config.neuron.full_path + "/state.pt"
+
+        if not isfile(path):
+            return
+
+        # Load the state of the validator from file.
+        state = load(path)
+        self.step = state["step"]
+        self.hotkeys = state["hotkeys"]
+        self.scores = state["scores"]
+        self.last_day = state["last_day"]
+        self.working_on = state["working_on"]
+        self.miners_checked = state["miners_checked"]
+        self.miner_info = state["miner_info"]
+
+    def get_next_uid(self) -> int | None:
+        uids = set([uid for uid, info in enumerate(self.miner_info) if info])
+        remaining_uids = uids - self.miners_checked
+
+        if not len(remaining_uids):
             return None
 
-        blocks = [self.miner_last_checked[uid].item() for uid in miner_uids]
-
-        if sum(blocks) == 0:
-            return choice(miner_uids)
-
-        last_block = max(blocks)
-        weights = [last_block - block for block in blocks]
-
-        return choices(miner_uids, weights=weights)[0]
+        return choice(list(remaining_uids))
 
     def sync(self):
         # --- Check for registration.
@@ -118,20 +152,21 @@ class Validator:
         if len(self.hotkeys) != len(self.metagraph.hotkeys):
             # resize
             new_scores = zeros_like(self.metagraph.S, dtype=float32)
-            new_miner_last_checked = zeros_like(self.metagraph.S, dtype=int64)
+            new_miner_info = [None] * self.metagraph.n.item()
 
             length = len(self.hotkeys)
             new_scores[:length] = self.scores[:length]
-            new_miner_last_checked[:length] = self.miner_last_checked[:length]
+            new_miner_info[:length] = self.miner_info[:length]
 
             self.scores = new_scores
-            self.miner_last_checked = new_miner_last_checked
+            self.miner_info = new_miner_info
 
         for uid, hotkey in enumerate(self.hotkeys):
             if hotkey != self.metagraph.hotkeys[uid]:
                 # hotkey has been replaced
                 self.scores[uid] = 0.0
-                self.miner_last_checked[uid] = 0
+                self.miners_checked[uid] = 0
+                self.miner_info[uid] = None
 
         sorted_scores = sorted(enumerate(self.scores.tolist()), key=lambda score: score[1], reverse=True)
         ranked_scores = [(index, _get_cut(index)) for index, score in sorted_scores if score > 0.0]
@@ -153,21 +188,31 @@ class Validator:
 
         logger.log(level, f"set_weights {state}, {message}")
 
-    async def do_step(self):
+    def test_next_miner(self):
         uid = self.get_next_uid()
+
+        if uid is None:
+            # Finished all submissions
+            self.working_on = None
+            return
+
         axon = self.metagraph.axons[uid]
 
         try:
             logger.info(f"Checking miner {uid}, hotkey: {axon.hotkey}")
 
-            checkpoint_info = get_checkpoint_info(self.subtensor, self.metagraph, axon.hotkey)
+            checkpoint_info = self.miner_info[uid]
 
             logger.info(
                 f"Miner {uid} returned {checkpoint_info.repository} as the model, "
                 f"with a reported speed of {checkpoint_info.average_time}"
             )
 
-            checkpoint = from_pretrained(checkpoint_info.repository, checkpoint_info.mlpackages, self.config.device).coreml_sdxl_pipeline
+            checkpoint = from_pretrained(
+                checkpoint_info.repository,
+                checkpoint_info.mlpackages,
+                self.config.device,
+            ).coreml_sdxl_pipeline
 
             comparison = compare_checkpoints(
                 self.pipeline,
@@ -184,22 +229,47 @@ class Validator:
             logger.info(f"Failed to query miner {uid}, {str(e)}")
             logger.debug(f"Miner {uid} error", exc_info=e)
 
-        block = self.subtensor.get_current_block()
+        self.miners_checked.add(uid)
 
-        self.miner_last_checked[uid] = block
+    def do_step(self):
+        now = datetime.now(tz=ZoneInfo("America/New_York"))
 
-        if block - self.metagraph.last_update[self.uid] >= self.config.epoch_length:
+        if not self.working_on and self.last_day < now.date() and now.hour >= 11:
+            # Past noon, should start collecting submissions
+            logger.info(f"Working on contest {CURRENT_CONTEST} today's submission")
+
+            self.last_day = now.date()
+            self.working_on = CURRENT_CONTEST
+            self.miners_checked = set()
+
+            logger.info("Collecting all submissions")
+            self.miner_info = [
+                get_checkpoint_info(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid])
+                for uid in range(self.metagraph.n.item())
+            ]
+
+            logger.info(f"Got the following valid submissions: {list(enumerate(self.miner_info))}")
+
+            self.step += 1
+            return
+
+        if self.working_on:
+            self.test_next_miner()
+
+        if self.subtensor.get_current_block() - self.metagraph.last_update[self.uid] >= self.config.epoch_length:
             self.sync()
 
         self.step += 1
 
-    async def run(self):
+        self.save_state()
+
+    def run(self):
         while True:
             try:
-                await self.do_step()
+                self.do_step()
             except Exception as e:
                 logger.error(f"Error during validation step {self.step}", exc_info=e)
 
 
 if __name__ == '__main__':
-    run(Validator().run())
+    Validator().run()

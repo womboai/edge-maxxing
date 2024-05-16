@@ -2,7 +2,7 @@ from logging import getLogger
 from os import urandom
 from os.path import isdir
 from time import perf_counter
-from typing import cast
+from typing import cast, TypeAlias
 
 import bittensor as bt
 import torch
@@ -18,9 +18,11 @@ from .random_inputs import generate_random_prompt
 
 logger = getLogger(__name__)
 
+ContestId: TypeAlias = str
+
 BASELINE_CHECKPOINT = "stabilityai/stable-diffusion-xl-base-1.0"
 MLPACKAGES = "apple/coreml-stable-diffusion-xl-base"
-CURRENT_CONTEST = "apple-silicon-stable-diffusion-xl-base-optimization"
+CURRENT_CONTEST: ContestId = "apple-silicon-stable-diffusion-xl-base-optimization"
 AVERAGE_TIME = 10.0
 SPEC_VERSION = 20
 
@@ -32,7 +34,7 @@ class CheckpointInfo(BaseModel):
     mlpackages: str = MLPACKAGES
     average_time: float = AVERAGE_TIME
     spec_version: int = SPEC_VERSION
-    contest: str = CURRENT_CONTEST
+    contest: ContestId = CURRENT_CONTEST
 
 
 class CheckpointBenchmark:
@@ -74,7 +76,13 @@ def get_checkpoint_info(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey
 
     info = CheckpointInfo.parse_raw(bytes.fromhex(hex_data).decode())
 
-    if info.spec_version != SPEC_VERSION or info.contest != CURRENT_CONTEST:
+    if (
+        info.spec_version != SPEC_VERSION or
+        info.contest != CURRENT_CONTEST or
+        info.average_time >= AVERAGE_TIME or
+        info.repository == BASELINE_CHECKPOINT or
+        info.mlpackages == MLPACKAGES
+    ):
         return None
 
     return info
