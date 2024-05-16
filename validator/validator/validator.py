@@ -13,12 +13,15 @@ from torch import zeros_like, float32, int64, Tensor, save, load
 from neuron import (
     AVERAGE_TIME,
     BASELINE_CHECKPOINT,
-    CheckpointInfo,
+    CheckpointSubmission,
     compare_checkpoints,
     get_config,
     SPEC_VERSION,
     from_pretrained,
-    MLPACKAGES, ContestId, CURRENT_CONTEST, get_checkpoint_info,
+    MLPACKAGES,
+    ContestId,
+    CURRENT_CONTEST,
+    get_submission,
 )
 
 logger = getLogger(__name__)
@@ -41,7 +44,7 @@ class Validator:
     uid: int
 
     scores: Tensor
-    miner_info: list[CheckpointInfo | None]
+    miner_info: list[CheckpointSubmission | None]
     hotkeys: list[str]
     step: int
 
@@ -251,7 +254,7 @@ class Validator:
 
             logger.info("Collecting all submissions")
             self.miner_info = [
-                get_checkpoint_info(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid])
+                get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid])
                 for uid in range(self.metagraph.n.item())
             ]
 

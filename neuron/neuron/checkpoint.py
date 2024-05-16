@@ -29,7 +29,7 @@ SPEC_VERSION = 20
 SAMPLE_COUNT = 10
 
 
-class CheckpointInfo(BaseModel):
+class CheckpointSubmission(BaseModel):
     repository: str = BASELINE_CHECKPOINT
     mlpackages: str = MLPACKAGES
     average_time: float = AVERAGE_TIME
@@ -65,7 +65,7 @@ def from_pretrained(name: str, mlpackages: str, device: str) -> CoreMLPipelines:
     return CoreMLPipelines(base_pipeline, pipeline, coreml_dir)
 
 
-def get_checkpoint_info(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey: str) -> CheckpointInfo | None:
+def get_submission(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey: str) -> CheckpointSubmission | None:
     metadata = cast(dict[str, dict[str, list[dict[str, str]]]], get_metadata(subtensor, metagraph.netuid, hotkey))
 
     if not metadata:
@@ -74,14 +74,13 @@ def get_checkpoint_info(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey
     commitment = metadata["info"]["fields"][0]
     hex_data = commitment[list(commitment.keys())[0]][2:]
 
-    info = CheckpointInfo.parse_raw(bytes.fromhex(hex_data).decode())
+    info = CheckpointSubmission.parse_raw(bytes.fromhex(hex_data).decode())
 
     if (
         info.spec_version != SPEC_VERSION or
         info.contest != CURRENT_CONTEST or
         info.average_time >= AVERAGE_TIME or
-        info.repository == BASELINE_CHECKPOINT or
-        info.mlpackages == MLPACKAGES
+        (info.repository == BASELINE_CHECKPOINT and info.mlpackages == MLPACKAGES)
     ):
         return None
 

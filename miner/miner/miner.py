@@ -10,8 +10,8 @@ from huggingface_hub import upload_folder
 from neuron import (
     AVERAGE_TIME,
     BASELINE_CHECKPOINT,
-    CheckpointInfo,
-    get_checkpoint_info,
+    CheckpointSubmission,
+    get_submission,
     get_config,
     compare_checkpoints,
     from_pretrained,
@@ -76,7 +76,7 @@ def main():
         expected_average_time = AVERAGE_TIME
     else:
         for uid in sorted(range(metagraph.n.item()), key=lambda i: metagraph.incentive[i].item(), reverse=True):
-            info = get_checkpoint_info(subtensor, metagraph, metagraph.hotkeys[uid])
+            info = get_submission(subtensor, metagraph, metagraph.hotkeys[uid])
 
             if info:
                 repository = info.repository
@@ -119,7 +119,7 @@ def main():
         upload_folder(config.coreml_repository, mlpackages_dir, commit_message=config.commit_message)
         logger.info(f"Pushed to huggingface at {config.diffusion_repository} and {config.coreml_repository}")
 
-    checkpoint_info = CheckpointInfo(
+    checkpoint_info = CheckpointSubmission(
         repository=config.diffusion_repository,
         mlpackages=config.coreml_repository,
         average_time=comparison.average_time,
