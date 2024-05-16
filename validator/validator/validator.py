@@ -48,6 +48,7 @@ class Validator:
     last_day: date
     working_on: ContestId | None
     miners_checked: set[int]
+    should_set_weights: bool
 
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
@@ -73,6 +74,7 @@ class Validator:
         self.uid = self.hotkeys.index(self.wallet.hotkey.ss58_address)
 
         self.step = 0
+        self.should_set_weights = True
 
         self.load_state()
 
@@ -122,15 +124,6 @@ class Validator:
         self.miners_checked = state["miners_checked"]
         self.miner_info = state["miner_info"]
 
-    def get_next_uid(self) -> int | None:
-        uids = set([uid for uid, info in enumerate(self.miner_info) if info])
-        remaining_uids = uids - self.miners_checked
-
-        if not len(remaining_uids):
-            return None
-
-        return choice(list(remaining_uids))
-
     def sync(self):
         # --- Check for registration.
         if not self.subtensor.is_hotkey_registered(
@@ -165,11 +158,14 @@ class Validator:
             if hotkey != self.metagraph.hotkeys[uid]:
                 # hotkey has been replaced
                 self.scores[uid] = 0.0
-                self.miners_checked[uid] = 0
+                self.miners_checked.remove(uid)
                 self.miner_info[uid] = None
 
+        if not self.should_set_weights:
+            return
+
         sorted_scores = sorted(enumerate(self.scores.tolist()), key=lambda score: score[1], reverse=True)
-        ranked_scores = [(index, _get_cut(index)) for index, score in sorted_scores if score > 0.0]
+        ranked_scores = [(index, _get_cut(index) if score > 0.0 else 0.0) for index, score in sorted_scores]
 
         weights = sorted(ranked_scores, key=lambda score: score[0])
 
@@ -187,6 +183,16 @@ class Validator:
         state, level = ("successful", INFO) if result else ("failed", WARNING)
 
         logger.log(level, f"set_weights {state}, {message}")
+        self.should_set_weights = False
+
+    def get_next_uid(self) -> int | None:
+        uids = set([uid for uid, info in enumerate(self.miner_info) if info])
+        remaining_uids = uids - self.miners_checked
+
+        if not len(remaining_uids):
+            return None
+
+        return choice(list(remaining_uids))
 
     def test_next_miner(self):
         uid = self.get_next_uid()
@@ -230,6 +236,7 @@ class Validator:
             logger.debug(f"Miner {uid} error", exc_info=e)
 
         self.miners_checked.add(uid)
+        self.should_set_weights = True
 
     def do_step(self):
         now = datetime.now(tz=ZoneInfo("America/New_York"))
