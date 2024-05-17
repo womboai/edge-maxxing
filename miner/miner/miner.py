@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from os import mkdir
+from os import mkdir, rmdir
 from os.path import isdir, join
 from shutil import copytree, rmtree
 
@@ -27,9 +27,9 @@ def optimize(pipeline: CoreMLPipelines) -> CoreMLPipelines:
 
 def add_extra_args(argument_parser: ArgumentParser):
     argument_parser.add_argument(
-        "--diffusion_repository",
+        "--repository",
         type=str,
-        help="The repository to push the diffusion components(scheduler, tokenizers, etc) to",
+        help="The repository to push  to",
     )
 
     argument_parser.add_argument(
@@ -87,9 +87,9 @@ def main():
     pipelines = optimize(pipelines)
 
     pipeline = pipelines.coreml_sdxl_pipeline
+    rmtree(MODEL_DIRECTORY, ignore_errors=True)
     pipelines.base_minimal_pipeline.save_pretrained(MODEL_DIRECTORY)
 
-    rmtree(mlpackages_dir, ignore_errors=True)
     mkdir(mlpackages_dir)
     copytree(pipelines.coreml_models_path, mlpackages_dir, dirs_exist_ok=True)
 
@@ -109,15 +109,10 @@ def main():
 
             return
 
-        pipeline.push_to_hub(config.diffusion_repository, config.commit_message)
-        upload_folder(config.coreml_repository, mlpackages_dir, commit_message=config.commit_message)
-        bt.logging.info(f"Pushed to huggingface at {config.diffusion_repository} and {config.coreml_repository}")
+        upload_folder(config.repository, MODEL_DIRECTORY, commit_message=config.commit_message)
+        bt.logging.info(f"Pushed to huggingface at {config.repository}")
 
-    checkpoint_info = CheckpointSubmission(
-        repository=config.diffusion_repository,
-        mlpackages=config.coreml_repository,
-        average_time=comparison.average_time,
-    )
+    checkpoint_info = CheckpointSubmission(repository=config.repository, average_time=comparison.average_time)
 
     encoded = checkpoint_info.to_bytes()
     publish_metadata(subtensor, wallet, metagraph.netuid, f"Raw{len(encoded)}", encoded)
