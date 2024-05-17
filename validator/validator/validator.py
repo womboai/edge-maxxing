@@ -69,14 +69,15 @@ class Validator:
 
         self.session = ClientSession()
         self.scores = zeros_like(self.metagraph.S, dtype=float32)
-        self.miners_checked = set()
-        self.miner_info = [None] * self.metagraph.n.item()
 
         self.hotkeys = self.metagraph.hotkeys
 
         self.uid = self.hotkeys.index(self.wallet.hotkey.ss58_address)
-
         self.step = 0
+
+        self.miner_info = [None] * self.metagraph.n.item()
+        self.working_on = None
+        self.miners_checked = set()
         self.should_set_weights = True
 
         self.load_state()
