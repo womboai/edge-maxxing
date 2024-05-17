@@ -48,7 +48,7 @@ class Validator:
     hotkeys: list[str]
     step: int
 
-    last_day: date
+    last_day: date | None
     working_on: ContestId | None
     miners_checked: set[int]
     should_set_weights: bool
@@ -76,6 +76,7 @@ class Validator:
         self.step = 0
 
         self.miner_info = [None] * self.metagraph.n.item()
+        self.last_day = None
         self.working_on = None
         self.miners_checked = set()
         self.should_set_weights = True
@@ -258,7 +259,7 @@ class Validator:
     def do_step(self):
         now = datetime.now(tz=ZoneInfo("America/New_York"))
 
-        if not self.working_on and self.last_day < now.date() and now.hour >= 11:
+        if not self.working_on and (not self.last_day or self.last_day < now.date()) and now.hour >= 11:
             # Past noon, should start collecting submissions
             logger.info(f"Working on contest {CURRENT_CONTEST} today's submission")
 
