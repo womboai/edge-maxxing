@@ -9,7 +9,6 @@ from bittensor.extrinsics.serving import publish_metadata
 from huggingface_hub import upload_folder
 
 from neuron import (
-    AVERAGE_TIME,
     BASELINE_CHECKPOINT,
     CheckpointSubmission,
     get_submission,
@@ -74,7 +73,7 @@ def main():
 
     if isdir(MODEL_DIRECTORY) and isdir(mlpackages_dir):
         pipelines = from_pretrained(MODEL_DIRECTORY, mlpackages_dir, config.device)
-        expected_average_time = AVERAGE_TIME
+        expected_average_time = None
     else:
         for uid in sorted(range(metagraph.n.item()), key=lambda i: metagraph.incentive[i].item(), reverse=True):
             info = get_submission(subtensor, metagraph, metagraph.hotkeys[uid])
@@ -87,7 +86,7 @@ def main():
         else:
             repository = BASELINE_CHECKPOINT
             mlpackages = MLPACKAGES
-            expected_average_time = AVERAGE_TIME
+            expected_average_time = None
 
         pipelines = from_pretrained(repository, mlpackages, config.device)
 
@@ -108,7 +107,7 @@ def main():
 
             return
 
-        if comparison.average_time > expected_average_time:
+        if expected_average_time and comparison.average_time > expected_average_time:
             logger.warning(
                 f"Not pushing to huggingface as the average time {comparison.average_time} "
                 f"is worse than the expected {expected_average_time}"

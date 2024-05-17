@@ -25,7 +25,6 @@ ContestId: TypeAlias = int
 BASELINE_CHECKPOINT = "stabilityai/stable-diffusion-xl-base-1.0"
 MLPACKAGES = "apple/coreml-stable-diffusion-xl-base"
 CURRENT_CONTEST: ContestId = 0
-AVERAGE_TIME = 10.0
 SPEC_VERSION = 20
 
 SAMPLE_COUNT = 10
@@ -42,7 +41,7 @@ def float_from_bits(bits: int):
 class CheckpointSubmission(BaseModel):
     repository: str = BASELINE_CHECKPOINT
     mlpackages: str = MLPACKAGES
-    average_time: float = AVERAGE_TIME
+    average_time: float
     spec_version: int = SPEC_VERSION
     contest: ContestId = CURRENT_CONTEST
 
@@ -105,7 +104,8 @@ class CheckpointSubmission(BaseModel):
 
 
 class CheckpointBenchmark:
-    def __init__(self, average_time: float, average_similarity: float, failed: bool):
+    def __init__(self, baseline_average: float, average_time: float, average_similarity: float, failed: bool):
+        self.baseline_average = baseline_average
         self.average_time = average_time
         self.average_similarity = average_similarity
         self.failed = failed
@@ -147,7 +147,6 @@ def get_submission(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey: str
         if (
             info.spec_version != SPEC_VERSION or
             info.contest != CURRENT_CONTEST or
-            info.average_time >= AVERAGE_TIME or
             (info.repository == BASELINE_CHECKPOINT and info.mlpackages == MLPACKAGES)
         ):
             return None
@@ -162,16 +161,12 @@ def get_submission(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey: str
 def compare_checkpoints(
     baseline: CoreMLStableDiffusionPipeline,
     miner_checkpoint: CoreMLStableDiffusionPipeline,
-    reported_average_time: float,
+    reported_average_time: float | None = None,
 ) -> CheckpointBenchmark:
-    if reported_average_time > AVERAGE_TIME:
-        logger.info(f"Reported time is {reported_average_time}, which is worse than the baseline of {AVERAGE_TIME}")
-
-        return CheckpointBenchmark(average_time=reported_average_time, average_similarity=1.0, failed=True)
-
     failed = False
 
-    average_time = AVERAGE_TIME
+    baseline_average = float("inf")
+    average_time = float("inf")
     average_similarity = 1.0
 
     i = 0
@@ -187,12 +182,19 @@ def compare_checkpoints(
 
         logger.info(f"Sample {i}, prompt {prompt} and seed {seed}")
 
+        generated = i
+        remaining = SAMPLE_COUNT - generated
+
+        start = perf_counter()
+
         base_output = baseline(
             prompt=prompt,
             generator=base_generator,
             output_type=output_type,
             num_inference_steps=20,
         ).images
+
+        baseline_average = (baseline_average * generated + perf_counter() - start) / (generated + 1)
 
         start = perf_counter()
 
@@ -218,22 +220,19 @@ def compare_checkpoints(
 
         logger.info(f"Sample {i} generated with generation time of {gen_time} and similarity {similarity}")
 
-        generated = i
-        remaining = SAMPLE_COUNT - generated
-
         average_time = (average_time * generated + gen_time) / (generated + 1)
         average_similarity = (average_similarity * generated + similarity) / (generated + 1)
 
-        if average_time >= reported_average_time * 1.0625:
+        if reported_average_time and average_time >= reported_average_time * 1.0625:
             # Too slow compared to reported speed, rank immediately based on current time
             failed = True
             break
 
-        if average_time < AVERAGE_TIME:
+        if average_time < baseline_average:
             # So far, the average time is better than the baseline, so we can continue
             continue
 
-        needed_time = (AVERAGE_TIME * SAMPLE_COUNT - generated * average_time) / remaining
+        needed_time = (baseline_average * SAMPLE_COUNT - generated * average_time) / remaining
 
         if needed_time < average_time / 2:
             # Needs double the current performance to beat the baseline,
@@ -252,4 +251,9 @@ def compare_checkpoints(
         f"and speed of {average_time}"
     )
 
-    return CheckpointBenchmark(average_time, average_similarity, failed)
+    return CheckpointBenchmark(
+        baseline_average,
+        average_time,
+        average_similarity,
+        failed,
+    )

@@ -12,7 +12,6 @@ from python_coreml_stable_diffusion.pipeline import CoreMLStableDiffusionPipelin
 from torch import zeros_like, float32, Tensor, save, load
 
 from neuron import (
-    AVERAGE_TIME,
     BASELINE_CHECKPOINT,
     CheckpointSubmission,
     compare_checkpoints,
@@ -250,7 +249,10 @@ class Validator:
             if comparison.failed:
                 self.scores[uid] = 0.0
             else:
-                self.scores[uid] = min(0, AVERAGE_TIME - comparison.average_time) * comparison.average_similarity
+                self.scores[uid] = min(
+                    0.0,
+                    comparison.baseline_average - comparison.average_time,
+                ) * comparison.average_similarity
         except Exception as e:
             self.scores[uid] = 0.0
             logger.info(f"Failed to query miner {uid}, {str(e)}")
