@@ -22,8 +22,12 @@ def get_config(add_args: Callable[[ArgumentParser], None] | None = None):
 
     bt.subtensor.add_args(argument_parser)
     bt.wallet.add_args(argument_parser)
+    bt.logging.add_args(argument_parser)
 
     if add_args:
         add_args(argument_parser)
 
-    return bt.config(argument_parser)
+    config = bt.config(argument_parser)
+    bt.logging(config=config)
+
+    return config
