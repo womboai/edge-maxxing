@@ -1,3 +1,4 @@
+import time
 from argparse import ArgumentParser
 from datetime import date, datetime
 from logging import getLogger, INFO, WARNING, basicConfig, DEBUG
@@ -258,7 +259,7 @@ class Validator:
         self.miners_checked.add(uid)
         self.should_set_weights = True
 
-    def do_step(self):
+    def do_step(self, block: int):
         now = datetime.now(tz=ZoneInfo("America/New_York"))
 
         if not self.working_on and (not self.last_day or self.last_day < now.date()) and now.hour >= 11:
@@ -280,20 +281,31 @@ class Validator:
             self.step += 1
             return
 
+        sleep = True
+
         if self.working_on:
             self.test_next_miner()
+            sleep = False
 
-        if self.subtensor.get_current_block() - self.metagraph.last_update[self.uid] >= self.config.epoch_length:
+        if block - self.metagraph.last_update[self.uid] >= self.config.epoch_length:
             self.sync()
+            sleep = False
 
         self.step += 1
 
         self.save_state()
 
+        if sleep:
+            logger.info(f"Nothing to do in this step, sleeping for {self.config.epoch_length} blocks")
+            time.sleep(self.config.epoch_length * 12)
+
     def run(self):
         while True:
             try:
-                self.do_step()
+                block = self.subtensor.get_current_block()
+                logger.info(f"Step {self.step}, block {block}")
+
+                self.do_step(block)
             except Exception as e:
                 logger.error(f"Error during validation step {self.step}", exc_info=e)
 
