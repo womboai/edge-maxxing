@@ -5,6 +5,7 @@ from os.path import isdir, join
 from shutil import copytree, rmtree
 
 import bittensor as bt
+from bittensor.extrinsics.serving import publish_metadata
 from huggingface_hub import upload_folder
 
 from neuron import (
@@ -125,7 +126,9 @@ def main():
         average_time=comparison.average_time,
     )
 
-    subtensor.commit(wallet, metagraph.netuid, checkpoint_info.json())
+    encoded = checkpoint_info.to_bytes()
+    publish_metadata(subtensor, wallet, metagraph.netuid, f"Raw{len(encoded)}", encoded)
+
     logger.info(f"Submitted {checkpoint_info} as the info for this miner")
 
 

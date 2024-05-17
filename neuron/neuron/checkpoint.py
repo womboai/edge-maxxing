@@ -1,6 +1,8 @@
+import traceback
 from logging import getLogger
 from os import urandom
 from os.path import isdir
+from struct import pack, unpack
 from time import perf_counter
 from typing import cast, TypeAlias
 
@@ -18,15 +20,23 @@ from .random_inputs import generate_random_prompt
 
 logger = getLogger(__name__)
 
-ContestId: TypeAlias = str
+ContestId: TypeAlias = int
 
 BASELINE_CHECKPOINT = "stabilityai/stable-diffusion-xl-base-1.0"
 MLPACKAGES = "apple/coreml-stable-diffusion-xl-base"
-CURRENT_CONTEST: ContestId = "apple-silicon-stable-diffusion-xl-base-optimization"
+CURRENT_CONTEST: ContestId = 0
 AVERAGE_TIME = 10.0
 SPEC_VERSION = 20
 
 SAMPLE_COUNT = 10
+
+
+def float_bits(value: float):
+    return unpack(">L", pack(">f", value))[0]
+
+
+def float_from_bits(bits: int):
+    return unpack(">f", pack(">L", bits))[0]
 
 
 class CheckpointSubmission(BaseModel):
@@ -35,6 +45,63 @@ class CheckpointSubmission(BaseModel):
     average_time: float = AVERAGE_TIME
     spec_version: int = SPEC_VERSION
     contest: ContestId = CURRENT_CONTEST
+
+    def to_bytes(self):
+        data = bytearray()
+
+        def write_bytes(byte_data: bytes):
+            data.append(len(byte_data))
+            data.extend(byte_data)
+
+        def write_int(int_value: int):
+            data.extend(int.to_bytes(int_value, 4, "big"))
+
+        write_bytes(self.repository.encode())
+        write_bytes(self.mlpackages.encode())
+        write_int(float_bits(self.average_time))
+        write_int(self.spec_version)
+        write_int(self.contest)
+
+        if len(data) > 128:
+            raise RuntimeError(f"CheckpointSubmission {self} is too large({len(data)}, can not exceed 128 bytes.")
+
+        return bytes(data)
+
+    @classmethod
+    def from_bytes(cls, data: bytes):
+        position = 0
+
+        def read_bytes():
+            nonlocal position
+            length = data[position]
+            position += 1
+
+            value = data[position:position + length]
+            position += length
+
+            return value
+
+        def read_int():
+            nonlocal position
+
+            value = int.from_bytes(data[position:position + 4], "big")
+            position += 4
+
+            return value
+
+        repository = read_bytes().decode()
+        mlpackages = read_bytes().decode()
+        average_time = float_from_bits(read_int())
+        spec_version = read_int()
+        contest = read_int()
+
+        return cls(
+            repository=repository,
+            mlpackages=mlpackages,
+            average_time=average_time,
+            spec_version=spec_version,
+            contest=contest,
+        )
 
 
 class CheckpointBenchmark:
@@ -66,25 +133,30 @@ def from_pretrained(name: str, mlpackages: str, device: str) -> CoreMLPipelines:
 
 
 def get_submission(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey: str) -> CheckpointSubmission | None:
-    metadata = cast(dict[str, dict[str, list[dict[str, str]]]], get_metadata(subtensor, metagraph.netuid, hotkey))
+    try:
+        metadata = cast(dict[str, dict[str, list[dict[str, str]]]], get_metadata(subtensor, metagraph.netuid, hotkey))
 
-    if not metadata:
+        if not metadata:
+            return None
+
+        commitment = metadata["info"]["fields"][0]
+        hex_data = commitment[list(commitment.keys())[0]][2:]
+
+        info = CheckpointSubmission.from_bytes(bytes.fromhex(hex_data))
+
+        if (
+            info.spec_version != SPEC_VERSION or
+            info.contest != CURRENT_CONTEST or
+            info.average_time >= AVERAGE_TIME or
+            (info.repository == BASELINE_CHECKPOINT and info.mlpackages == MLPACKAGES)
+        ):
+            return None
+
+        return info
+    except Exception as e:
+        logger.error(f"Failed to get submission from miner {hotkey}, ", e)
+        logger.debug("Submission parsing error, ", traceback.format_exception(e))
         return None
-
-    commitment = metadata["info"]["fields"][0]
-    hex_data = commitment[list(commitment.keys())[0]][2:]
-
-    info = CheckpointSubmission.parse_raw(bytes.fromhex(hex_data).decode())
-
-    if (
-        info.spec_version != SPEC_VERSION or
-        info.contest != CURRENT_CONTEST or
-        info.average_time >= AVERAGE_TIME or
-        (info.repository == BASELINE_CHECKPOINT and info.mlpackages == MLPACKAGES)
-    ):
-        return None
-
-    return info
 
 
 def compare_checkpoints(
