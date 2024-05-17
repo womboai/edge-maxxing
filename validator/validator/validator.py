@@ -52,9 +52,13 @@ class Validator:
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
 
+        bt.logging.info("Setting up bittensor objects")
+
         self.subtensor = bt.subtensor(config=self.config)
         self.metagraph = self.subtensor.metagraph(netuid=self.config.netuid)
         self.wallet = bt.wallet(config=self.config)
+
+        bt.logging.info("Loading pipeline")
 
         self.pipeline = from_pretrained(BASELINE_CHECKPOINT, self.config.device).coreml_sdxl_pipeline
 

@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 from os import mkdir, rmdir
 from os.path import isdir, join
 from shutil import copytree, rmtree
+from tempfile import TemporaryDirectory
 
 import bittensor as bt
 from bittensor.extrinsics.serving import publish_metadata
@@ -65,8 +66,6 @@ def main():
     baseline_packages = from_pretrained(BASELINE_CHECKPOINT, config.device)
     baseline_pipeline = baseline_packages.coreml_sdxl_pipeline
 
-    mlpackages_dir = join(MODEL_DIRECTORY, "mlpackages")
-
     if isdir(MODEL_DIRECTORY):
         pipelines = from_pretrained(MODEL_DIRECTORY, config.device)
         expected_average_time = None
@@ -87,11 +86,18 @@ def main():
     pipelines = optimize(pipelines)
 
     pipeline = pipelines.coreml_sdxl_pipeline
-    rmtree(MODEL_DIRECTORY, ignore_errors=True)
-    pipelines.base_minimal_pipeline.save_pretrained(MODEL_DIRECTORY)
 
-    mkdir(mlpackages_dir)
-    copytree(pipelines.coreml_models_path, mlpackages_dir, dirs_exist_ok=True)
+    with TemporaryDirectory() as directory:
+        mlpackages_dir = join(directory, "mlpackages")
+
+        bt.logging.info(f"Saving optimization results to {MODEL_DIRECTORY} folder")
+
+        pipelines.base_minimal_pipeline.save_pretrained(directory)
+        mkdir(mlpackages_dir)
+        copytree(pipelines.coreml_models_path, mlpackages_dir, dirs_exist_ok=True)
+
+        rmtree(MODEL_DIRECTORY, ignore_errors=True)
+        copytree(directory, MODEL_DIRECTORY, dirs_exist_ok=True)
 
     comparison = compare_checkpoints(baseline_pipeline, pipeline, expected_average_time)
 
