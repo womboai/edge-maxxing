@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 from datetime import date, datetime
 from logging import getLogger, INFO, WARNING, basicConfig, DEBUG
+from os import makedirs
 from os.path import isfile, expanduser, join
 from random import choice
 from zoneinfo import ZoneInfo
@@ -100,7 +101,9 @@ class Validator:
             )
         )
 
-        return join(expanduser(full_path), "state.pt")
+        makedirs(full_path, exist_ok=True)
+
+        return join(full_path, "state.pt")
 
     def save_state(self):
         """Saves the state of the validator to a file."""
