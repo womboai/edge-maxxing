@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "model-optimization-subnet"
+name = "edge-optimization-subnet"
 
 version = "1.0.0"
 

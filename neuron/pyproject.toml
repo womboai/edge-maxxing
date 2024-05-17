@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "model-optimization-subnet-neuron"
+name = "edge-optimization-subnet-neuron"
 
 version = "1.0.0"
 

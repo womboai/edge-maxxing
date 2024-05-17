@@ -1,1 +1,1 @@
-# model-optimization-subnet
+# edge-optimization-subnet

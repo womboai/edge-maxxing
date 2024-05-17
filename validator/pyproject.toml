@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "model-optimization-subnet-validator"
+name = "edge-optimization-subnet-validator"
 
 version = "1.0.0"
 
@@ -29,7 +29,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.11"
-model-optimization-subnet-neuron = { path = "../neuron", develop = true }
+edge-optimization-subnet-neuron = { path = "../neuron", develop = true }
 
 [build-system]
 requires = ["poetry-core"]
