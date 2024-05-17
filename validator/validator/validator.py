@@ -77,7 +77,7 @@ class Validator:
         self.last_day = None
         self.working_on = None
         self.miners_checked = set()
-        self.should_set_weights = True
+        self.should_set_weights = False
 
         self.load_state()
 
@@ -118,6 +118,7 @@ class Validator:
                 "last_day": self.last_day,
                 "working_on": self.working_on,
                 "miners_checked": self.miners_checked,
+                "should_set_weights": self.should_set_weights,
                 "miner_info": self.miner_info,
             },
             self.state_path(),
@@ -140,6 +141,7 @@ class Validator:
         self.last_day = state["last_day"]
         self.working_on = state["working_on"]
         self.miners_checked = state["miners_checked"]
+        self.should_set_weights = state["should_set_weights"]
         self.miner_info = state["miner_info"]
 
     def sync(self):
