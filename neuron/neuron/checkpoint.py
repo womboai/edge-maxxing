@@ -24,7 +24,7 @@ MLPACKAGES = "apple/coreml-stable-diffusion-xl-base"
 CURRENT_CONTEST: ContestId = 0
 SPEC_VERSION = 20
 
-SAMPLE_COUNT = 10
+SAMPLE_COUNT = 5
 
 
 def float_bits(value: float):
