@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
 from datetime import date, datetime
 from logging import getLogger, INFO, WARNING, basicConfig, DEBUG
-from os.path import isfile
+from os.path import isfile, expanduser, join
 from random import choices, choice
 from zoneinfo import ZoneInfo
 
@@ -90,6 +90,19 @@ class Validator:
             default=100,
         )
 
+    def state_path(self):
+        full_path = expanduser(
+            "{}/{}/{}/netuid{}/{}".format(
+                self.config.logging.logging_dir,
+                self.config.wallet.name,
+                self.config.wallet.hotkey,
+                self.config.netuid,
+                "validator",
+            )
+        )
+
+        return join(expanduser(full_path), "state.pt")
+
     def save_state(self):
         """Saves the state of the validator to a file."""
         bt.logging.info("Saving validator state.")
@@ -105,14 +118,14 @@ class Validator:
                 "miners_checked": self.miners_checked,
                 "miner_info": self.miner_info,
             },
-            self.config.neuron.full_path + "/state.pt",
+            self.state_path(),
         )
 
     def load_state(self):
         """Loads the state of the validator from a file."""
         bt.logging.info("Loading validator state.")
 
-        path = self.config.neuron.full_path + "/state.pt"
+        path = self.state_path()
 
         if not isfile(path):
             return
