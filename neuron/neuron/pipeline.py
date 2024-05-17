@@ -34,6 +34,8 @@ class StableDiffusionXLMinimalPipeline(DiffusionPipeline):
 
         self.register_to_config(force_zeros_for_empty_prompt=force_zeros_for_empty_prompt)
 
+        self.force_zeros_for_empty_prompt = force_zeros_for_empty_prompt
+
 
 class CoreMLPipelines:
     base_minimal_pipeline: StableDiffusionXLMinimalPipeline

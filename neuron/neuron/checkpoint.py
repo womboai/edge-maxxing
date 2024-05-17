@@ -116,9 +116,10 @@ def from_pretrained(name: str, device: str) -> CoreMLPipelines:
     pipeline = get_coreml_pipe(
         pytorch_pipe=base_pipeline,
         mlpackages_dir=coreml_dir,
-        model_version=name,
+        model_version="xl",
         compute_unit=ComputeUnit.CPU_AND_GPU.name,
         delete_original_pipe=False,
+        force_zeros_for_empty_prompt=base_pipeline.force_zeros_for_empty_prompt,
     )
 
     return CoreMLPipelines(base_pipeline, pipeline, coreml_dir)
@@ -139,7 +140,7 @@ def get_submission(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey: str
         if (
             info.spec_version != SPEC_VERSION or
             info.contest != CURRENT_CONTEST or
-            (info.repository == BASELINE_CHECKPOINT and info.mlpackages == MLPACKAGES)
+            info.repository == BASELINE_CHECKPOINT
         ):
             return None
 
