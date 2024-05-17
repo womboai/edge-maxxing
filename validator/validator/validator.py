@@ -19,7 +19,6 @@ from neuron import (
     get_config,
     SPEC_VERSION,
     from_pretrained,
-    MLPACKAGES,
     ContestId,
     CURRENT_CONTEST,
     get_submission,
@@ -57,7 +56,7 @@ class Validator:
         self.metagraph = self.subtensor.metagraph(netuid=self.config.netuid)
         self.wallet = bt.wallet(config=self.config)
 
-        self.pipeline = from_pretrained(BASELINE_CHECKPOINT, MLPACKAGES, self.config.device).coreml_sdxl_pipeline
+        self.pipeline = from_pretrained(BASELINE_CHECKPOINT, self.config.device).coreml_sdxl_pipeline
 
         self.scores = [0.0] * self.metagraph.n.item()
 
@@ -227,11 +226,7 @@ class Validator:
                 f"with a reported speed of {checkpoint_info.average_time}"
             )
 
-            checkpoint = from_pretrained(
-                checkpoint_info.repository,
-                checkpoint_info.mlpackages,
-                self.config.device,
-            ).coreml_sdxl_pipeline
+            checkpoint = from_pretrained(checkpoint_info.repository, self.config.device).coreml_sdxl_pipeline
 
             comparison = compare_checkpoints(
                 self.pipeline,

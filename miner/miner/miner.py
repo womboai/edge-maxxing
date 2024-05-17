@@ -14,7 +14,6 @@ from neuron import (
     get_config,
     compare_checkpoints,
     from_pretrained,
-    MLPACKAGES,
     CoreMLPipelines,
 )
 
@@ -63,13 +62,13 @@ def main():
     metagraph = subtensor.metagraph(netuid=config.netuid)
     wallet = bt.wallet(config=config)
 
-    baseline_packages = from_pretrained(BASELINE_CHECKPOINT, MLPACKAGES, config.device)
+    baseline_packages = from_pretrained(BASELINE_CHECKPOINT, config.device)
     baseline_pipeline = baseline_packages.coreml_sdxl_pipeline
 
     mlpackages_dir = join(MODEL_DIRECTORY, "mlpackages")
 
-    if isdir(MODEL_DIRECTORY) and isdir(mlpackages_dir):
-        pipelines = from_pretrained(MODEL_DIRECTORY, mlpackages_dir, config.device)
+    if isdir(MODEL_DIRECTORY):
+        pipelines = from_pretrained(MODEL_DIRECTORY, config.device)
         expected_average_time = None
     else:
         for uid in sorted(range(metagraph.n.item()), key=lambda i: metagraph.incentive[i].item(), reverse=True):
@@ -77,15 +76,13 @@ def main():
 
             if info:
                 repository = info.repository
-                mlpackages = info.mlpackages
                 expected_average_time = info.average_time
                 break
         else:
             repository = BASELINE_CHECKPOINT
-            mlpackages = MLPACKAGES
             expected_average_time = None
 
-        pipelines = from_pretrained(repository, mlpackages, config.device)
+        pipelines = from_pretrained(repository, config.device)
 
     pipelines = optimize(pipelines)
 

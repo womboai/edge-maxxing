@@ -1,6 +1,6 @@
 import traceback
 from os import urandom
-from os.path import isdir
+from os.path import isdir, join
 from struct import pack, unpack
 from time import perf_counter
 from typing import cast, TypeAlias
@@ -19,8 +19,7 @@ from .random_inputs import generate_random_prompt
 
 ContestId: TypeAlias = int
 
-BASELINE_CHECKPOINT = "stabilityai/stable-diffusion-xl-base-1.0"
-MLPACKAGES = "apple/coreml-stable-diffusion-xl-base"
+BASELINE_CHECKPOINT = "womboai/coreml-stable-diffusion-xl-base-1.0"
 CURRENT_CONTEST: ContestId = 0
 SPEC_VERSION = 20
 
@@ -37,7 +36,6 @@ def float_from_bits(bits: int):
 
 class CheckpointSubmission(BaseModel):
     repository: str = BASELINE_CHECKPOINT
-    mlpackages: str = MLPACKAGES
     average_time: float
     spec_version: int = SPEC_VERSION
     contest: ContestId = CURRENT_CONTEST
@@ -53,7 +51,6 @@ class CheckpointSubmission(BaseModel):
             data.extend(int.to_bytes(int_value, 4, "big"))
 
         write_bytes(self.repository.encode())
-        write_bytes(self.mlpackages.encode())
         write_int(float_bits(self.average_time))
         write_int(self.spec_version)
         write_int(self.contest)
@@ -86,14 +83,12 @@ class CheckpointSubmission(BaseModel):
             return value
 
         repository = read_bytes().decode()
-        mlpackages = read_bytes().decode()
         average_time = float_from_bits(read_int())
         spec_version = read_int()
         contest = read_int()
 
         return cls(
             repository=repository,
-            mlpackages=mlpackages,
             average_time=average_time,
             spec_version=spec_version,
             contest=contest,
@@ -108,20 +103,20 @@ class CheckpointBenchmark:
         self.failed = failed
 
 
-def from_pretrained(name: str, mlpackages: str, device: str) -> CoreMLPipelines:
+def from_pretrained(name: str, device: str) -> CoreMLPipelines:
     base_pipeline = StableDiffusionXLMinimalPipeline.from_pretrained(name).to(device)
 
-    if isdir(mlpackages):
-        coreml_dir = mlpackages
+    if isdir(name):
+        directory = name
     else:
-        coreml_dir = snapshot_download(mlpackages)
+        directory = snapshot_download(name)
 
-    compiled_dir = f"{coreml_dir}/compiled"
+    coreml_dir = join(directory, "mlpackages")
 
     pipeline = get_coreml_pipe(
         pytorch_pipe=base_pipeline,
-        mlpackages_dir=compiled_dir,
-        model_version="xl",
+        mlpackages_dir=coreml_dir,
+        model_version=name,
         compute_unit=ComputeUnit.CPU_AND_GPU.name,
         delete_original_pipe=False,
     )
