@@ -2,13 +2,12 @@ from argparse import ArgumentParser
 from datetime import date, datetime
 from logging import getLogger, INFO, WARNING, basicConfig, DEBUG
 from os.path import isfile, expanduser, join
-from random import choices, choice
+from random import choice
 from zoneinfo import ZoneInfo
 
 import bittensor as bt
-from aiohttp import ClientSession
 from python_coreml_stable_diffusion.pipeline import CoreMLStableDiffusionPipeline
-from torch import zeros_like, float32, int64, Tensor, save, load
+from torch import zeros_like, float32, Tensor, save, load
 
 from neuron import (
     AVERAGE_TIME,
@@ -40,7 +39,6 @@ class Validator:
     wallet: bt.wallet
     device: str
     pipeline: CoreMLStableDiffusionPipeline
-    session: ClientSession
     uid: int
 
     scores: Tensor
@@ -67,7 +65,6 @@ class Validator:
 
         self.pipeline = from_pretrained(BASELINE_CHECKPOINT, MLPACKAGES, self.config.device).coreml_sdxl_pipeline
 
-        self.session = ClientSession()
         self.scores = zeros_like(self.metagraph.S, dtype=float32)
 
         self.hotkeys = self.metagraph.hotkeys
