@@ -53,7 +53,14 @@ def add_extra_args(argument_parser: ArgumentParser):
         help="Do not commit to huggingface",
     )
 
-    argument_parser.set_defaults(commit=True)
+    argument_parser.add_argument(
+        "--no_optimizations",
+        dest="optimize",
+        action="store_false",
+        help="Submit/push without running the optimization step, if optimized outside the program",
+    )
+
+    argument_parser.set_defaults(commit=True, optimize=True)
 
 
 def main():
@@ -83,21 +90,24 @@ def main():
 
         pipelines = from_pretrained(repository, config.device)
 
-    pipelines = optimize(pipelines)
+    if optimize:
+        pipelines = optimize(pipelines)
 
-    pipeline = pipelines.coreml_sdxl_pipeline
+        pipeline = pipelines.coreml_sdxl_pipeline
 
-    with TemporaryDirectory() as directory:
-        mlpackages_dir = join(directory, "mlpackages")
+        with TemporaryDirectory() as directory:
+            mlpackages_dir = join(directory, "mlpackages")
 
-        bt.logging.info(f"Saving optimization results to {MODEL_DIRECTORY} folder")
+            bt.logging.info(f"Saving optimization results to {MODEL_DIRECTORY} folder")
 
-        pipelines.base_minimal_pipeline.save_pretrained(directory)
-        mkdir(mlpackages_dir)
-        copytree(pipelines.coreml_models_path, mlpackages_dir, dirs_exist_ok=True)
+            pipelines.base_minimal_pipeline.save_pretrained(directory)
+            mkdir(mlpackages_dir)
+            copytree(pipelines.coreml_models_path, mlpackages_dir, dirs_exist_ok=True)
 
-        rmtree(MODEL_DIRECTORY, ignore_errors=True)
-        copytree(directory, MODEL_DIRECTORY, dirs_exist_ok=True)
+            rmtree(MODEL_DIRECTORY, ignore_errors=True)
+            copytree(directory, MODEL_DIRECTORY, dirs_exist_ok=True)
+    else:
+        pipeline = pipelines.coreml_sdxl_pipeline
 
     comparison = compare_checkpoints(baseline_pipeline, pipeline, expected_average_time)
 
