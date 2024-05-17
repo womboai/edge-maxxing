@@ -1,5 +1,4 @@
 import traceback
-from logging import getLogger
 from os import urandom
 from os.path import isdir
 from struct import pack, unpack
@@ -17,8 +16,6 @@ from torch import Generator, cosine_similarity
 
 from .pipeline import StableDiffusionXLMinimalPipeline, CoreMLPipelines
 from .random_inputs import generate_random_prompt
-
-logger = getLogger(__name__)
 
 ContestId: TypeAlias = int
 
@@ -153,8 +150,8 @@ def get_submission(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey: str
 
         return info
     except Exception as e:
-        logger.error(f"Failed to get submission from miner {hotkey}, ", e)
-        logger.debug("Submission parsing error, ", traceback.format_exception(e))
+        bt.logging.error(f"Failed to get submission from miner {hotkey}", sufix=e)
+        bt.logging.debug("Submission parsing error", sufix=traceback.format_exception(e))
         return None
 
 
@@ -180,7 +177,7 @@ def compare_checkpoints(
         checkpoint_generator = Generator().manual_seed(seed)
         output_type = "latent"
 
-        logger.info(f"Sample {i}, prompt {prompt} and seed {seed}")
+        bt.logging.info(f"Sample {i}, prompt {prompt} and seed {seed}")
 
         generated = i
         remaining = SAMPLE_COUNT - generated
@@ -218,7 +215,7 @@ def compare_checkpoints(
             4,
         )
 
-        logger.info(f"Sample {i} generated with generation time of {gen_time} and similarity {similarity}")
+        bt.logging.info(f"Sample {i} generated with generation time of {gen_time} and similarity {similarity}")
 
         average_time = (average_time * generated + gen_time) / (generated + 1)
         average_similarity = (average_similarity * generated + similarity) / (generated + 1)
@@ -245,7 +242,7 @@ def compare_checkpoints(
             failed = True
             break
 
-    logger.info(
+    bt.logging.info(
         f"Tested {i + 1} samples, "
         f"average similarity of {average_similarity}, "
         f"and speed of {average_time}"

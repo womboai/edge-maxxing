@@ -1,7 +1,8 @@
 import time
+import traceback
 from argparse import ArgumentParser
 from datetime import date, datetime
-from logging import getLogger, INFO, WARNING, basicConfig, DEBUG
+from logging import INFO, WARNING, basicConfig, DEBUG
 from os import makedirs
 from os.path import isfile, expanduser, join
 from random import choice
@@ -9,7 +10,7 @@ from zoneinfo import ZoneInfo
 
 import bittensor as bt
 from python_coreml_stable_diffusion.pipeline import CoreMLStableDiffusionPipeline
-from torch import zeros_like, float32, Tensor, save, load
+from torch import save, load
 
 from neuron import (
     BASELINE_CHECKPOINT,
@@ -23,8 +24,6 @@ from neuron import (
     CURRENT_CONTEST,
     get_submission,
 )
-
-logger = getLogger(__name__)
 
 WINNER_PERCENTAGE = 0.8
 
@@ -53,11 +52,6 @@ class Validator:
 
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
-
-        if self.config.logging and self.config.logging.debug:
-            basicConfig(level=DEBUG)
-        else:
-            basicConfig(level=INFO)
 
         self.subtensor = bt.subtensor(config=self.config)
         self.metagraph = self.subtensor.metagraph(netuid=self.config.netuid)
@@ -149,7 +143,7 @@ class Validator:
             netuid=self.config.netuid,
             hotkey_ss58=self.wallet.hotkey.ss58_address,
         ):
-            logger.error(
+            bt.logging.error(
                 f"Wallet: {self.wallet} is not registered on netuid {self.config.netuid}."
                 f" Please register the hotkey using `btcli subnets register` before trying again"
             )
@@ -201,7 +195,7 @@ class Validator:
 
         state, level = ("successful", INFO) if result else ("failed", WARNING)
 
-        logger.log(level, f"set_weights {state}, {message}")
+        bt.logging.log(level, f"set_weights {state}, {message}")
         self.should_set_weights = False
 
     def get_next_uid(self) -> int | None:
@@ -224,11 +218,11 @@ class Validator:
         axon = self.metagraph.axons[uid]
 
         try:
-            logger.info(f"Checking miner {uid}, hotkey: {axon.hotkey}")
+            bt.logging.info(f"Checking miner {uid}, hotkey: {axon.hotkey}")
 
             checkpoint_info = self.miner_info[uid]
 
-            logger.info(
+            bt.logging.info(
                 f"Miner {uid} returned {checkpoint_info.repository} as the model, "
                 f"with a reported speed of {checkpoint_info.average_time}"
             )
@@ -254,8 +248,8 @@ class Validator:
                 ) * comparison.average_similarity
         except Exception as e:
             self.scores[uid] = 0.0
-            logger.info(f"Failed to query miner {uid}, {str(e)}")
-            logger.debug(f"Miner {uid} error", exc_info=e)
+            bt.logging.info(f"Failed to query miner {uid}", suffix=e)
+            bt.logging.debug(f"Miner {uid} error", suffix=traceback.format_exception(e))
 
         self.miners_checked.add(uid)
         self.should_set_weights = True
@@ -265,19 +259,19 @@ class Validator:
 
         if not self.working_on and (not self.last_day or self.last_day < now.date()) and now.hour >= 11:
             # Past noon, should start collecting submissions
-            logger.info(f"Working on contest {CURRENT_CONTEST} today's submission")
+            bt.logging.info(f"Working on contest {CURRENT_CONTEST} today's submission")
 
             self.last_day = now.date()
             self.working_on = CURRENT_CONTEST
             self.miners_checked = set()
 
-            logger.info("Collecting all submissions")
+            bt.logging.info("Collecting all submissions")
             self.miner_info = [
                 get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid])
                 for uid in range(self.metagraph.n.item())
             ]
 
-            logger.info(f"Got the following valid submissions: {list(enumerate(self.miner_info))}")
+            bt.logging.info(f"Got the following valid submissions: {list(enumerate(self.miner_info))}")
 
             self.step += 1
             return
@@ -297,18 +291,18 @@ class Validator:
         self.save_state()
 
         if sleep:
-            logger.info(f"Nothing to do in this step, sleeping for {self.config.epoch_length} blocks")
+            bt.logging.info(f"Nothing to do in this step, sleeping for {self.config.epoch_length} blocks")
             time.sleep(self.config.epoch_length * 12)
 
     def run(self):
         while True:
             try:
                 block = self.subtensor.get_current_block()
-                logger.info(f"Step {self.step}, block {block}")
+                bt.logging.info(f"Step {self.step}, block {block}")
 
                 self.do_step(block)
             except Exception as e:
-                logger.error(f"Error during validation step {self.step}", exc_info=e)
+                bt.logging.error(f"Error during validation step {self.step}", suffix=traceback.format_exception(e))
 
 
 if __name__ == '__main__':

@@ -1,5 +1,4 @@
 from argparse import ArgumentParser
-from logging import getLogger
 from os import mkdir
 from os.path import isdir, join
 from shutil import copytree, rmtree
@@ -18,8 +17,6 @@ from neuron import (
     MLPACKAGES,
     CoreMLPipelines,
 )
-
-logger = getLogger(__name__)
 
 MODEL_DIRECTORY = "model"
 
@@ -103,12 +100,12 @@ def main():
 
     if config.commit:
         if comparison.failed:
-            logger.warning("Not pushing to huggingface as the checkpoint failed to beat the baseline.")
+            bt.logging.warning("Not pushing to huggingface as the checkpoint failed to beat the baseline.")
 
             return
 
         if expected_average_time and comparison.average_time > expected_average_time:
-            logger.warning(
+            bt.logging.warning(
                 f"Not pushing to huggingface as the average time {comparison.average_time} "
                 f"is worse than the expected {expected_average_time}"
             )
@@ -117,7 +114,7 @@ def main():
 
         pipeline.push_to_hub(config.diffusion_repository, config.commit_message)
         upload_folder(config.coreml_repository, mlpackages_dir, commit_message=config.commit_message)
-        logger.info(f"Pushed to huggingface at {config.diffusion_repository} and {config.coreml_repository}")
+        bt.logging.info(f"Pushed to huggingface at {config.diffusion_repository} and {config.coreml_repository}")
 
     checkpoint_info = CheckpointSubmission(
         repository=config.diffusion_repository,
@@ -128,7 +125,7 @@ def main():
     encoded = checkpoint_info.to_bytes()
     publish_metadata(subtensor, wallet, metagraph.netuid, f"Raw{len(encoded)}", encoded)
 
-    logger.info(f"Submitted {checkpoint_info} as the info for this miner")
+    bt.logging.info(f"Submitted {checkpoint_info} as the info for this miner")
 
 
 if __name__ == '__main__':
