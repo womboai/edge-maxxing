@@ -38,11 +38,10 @@ class Validator:
     subtensor: bt.subtensor
     metagraph: bt.metagraph
     wallet: bt.wallet
-    device: str
     pipeline: CoreMLStableDiffusionPipeline
     uid: int
 
-    scores: Tensor
+    scores: list[float]
     miner_info: list[CheckpointSubmission | None]
     hotkeys: list[str]
     step: int
@@ -66,7 +65,7 @@ class Validator:
 
         self.pipeline = from_pretrained(BASELINE_CHECKPOINT, MLPACKAGES, self.config.device).coreml_sdxl_pipeline
 
-        self.scores = zeros_like(self.metagraph.S, dtype=float32)
+        self.scores = [0.0] * self.metagraph.n.item()
 
         self.hotkeys = self.metagraph.hotkeys
 
@@ -164,7 +163,7 @@ class Validator:
     def set_weights(self):
         if len(self.hotkeys) != len(self.metagraph.hotkeys):
             # resize
-            new_scores = zeros_like(self.metagraph.S, dtype=float32)
+            new_scores = [0.0] * self.metagraph.n.item()
             new_miner_info = [None] * self.metagraph.n.item()
 
             length = len(self.hotkeys)
@@ -184,7 +183,7 @@ class Validator:
         if not self.should_set_weights:
             return
 
-        sorted_scores = sorted(enumerate(self.scores.tolist()), key=lambda score: score[1], reverse=True)
+        sorted_scores = sorted(enumerate(self.scores), key=lambda score: score[1], reverse=True)
         ranked_scores = [(index, _get_cut(index) if score > 0.0 else 0.0) for index, score in sorted_scores]
 
         weights = sorted(ranked_scores, key=lambda score: score[0])
