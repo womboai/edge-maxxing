@@ -253,12 +253,6 @@ class Validator:
         self.miners_checked.add(uid)
         self.should_set_weights = True
 
-    def timeout(self):
-        self.step += 1
-
-        bt.logging.info(f"Nothing to do in this step, sleeping for {self.config.epoch_length} blocks")
-        time.sleep(self.config.epoch_length * 12)
-
     def do_step(self, block: int):
         now = datetime.now(tz=ZoneInfo("America/New_York"))
 
@@ -285,11 +279,13 @@ class Validator:
         if block - self.metagraph.last_update[self.uid] >= self.config.epoch_length:
             self.sync()
 
-            if not self.working_on:
-                return self.timeout()
-
         if not self.working_on:
-            return self.timeout()
+            self.step += 1
+
+            bt.logging.info(f"Nothing to do in this step, sleeping for {self.config.epoch_length} blocks")
+            time.sleep(self.config.epoch_length * 12)
+
+            return
 
         self.test_next_miner()
 
