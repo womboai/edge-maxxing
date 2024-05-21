@@ -131,7 +131,15 @@ def main():
     checkpoint_info = CheckpointSubmission(repository=config.repository, average_time=comparison.average_time)
 
     encoded = checkpoint_info.to_bytes()
-    publish_metadata(subtensor, wallet, metagraph.netuid, f"Raw{len(encoded)}", encoded)
+
+    publish_metadata(
+        subtensor,
+        wallet,
+        metagraph.netuid,
+        f"Raw{len(encoded)}",
+        encoded,
+        wait_for_finalization=True,
+    )
 
     bt.logging.info(f"Submitted {checkpoint_info} as the info for this miner")
 
