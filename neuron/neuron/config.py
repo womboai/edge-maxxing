@@ -28,6 +28,6 @@ def get_config(add_args: Callable[[ArgumentParser], None] | None = None):
         add_args(argument_parser)
 
     config = bt.config(argument_parser)
-    bt.logging(config=config)
+    bt.logging(config=config.logging)
 
     return config

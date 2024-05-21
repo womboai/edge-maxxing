@@ -28,7 +28,7 @@ WINNER_PERCENTAGE = 0.8
 
 
 def _get_cut(rank: int):
-    return WINNER_PERCENTAGE * pow(1 / (1 - WINNER_PERCENTAGE), -rank)
+    return WINNER_PERCENTAGE * pow(1 - WINNER_PERCENTAGE, rank)
 
 
 class Validator:
