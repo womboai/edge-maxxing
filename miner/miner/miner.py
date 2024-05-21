@@ -138,7 +138,7 @@ def main():
         metagraph.netuid,
         f"Raw{len(encoded)}",
         encoded,
-        wait_for_finalization=True,
+        wait_for_finalization=False,
     )
 
     bt.logging.info(f"Submitted {checkpoint_info} as the info for this miner")
