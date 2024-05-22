@@ -8,6 +8,7 @@ import bittensor as bt
 import torch
 from bittensor.extrinsics.serving import get_metadata
 from diffusers import DiffusionPipeline
+from numpy import ndarray
 from pydantic import BaseModel
 from python_coreml_stable_diffusion.pipeline import CoreMLStableDiffusionPipeline
 from torch import Generator, cosine_similarity
@@ -172,11 +173,17 @@ def compare_checkpoints(
 
         gen_time = perf_counter() - start
 
+        if isinstance(base_output, ndarray):
+            base_output = torch.from_numpy(base_output)
+
+        if isinstance(output, ndarray):
+            output = torch.from_numpy(output)
+
         # noinspection PyUnboundLocalVariable
         similarity = pow(
             cosine_similarity(
-                torch.from_numpy(base_output).flatten(),
-                torch.from_numpy(output).flatten(),
+                base_output.flatten(),
+                output.flatten(),
                 eps=1e-3,
                 dim=0
             ).item() * 0.5 + 0.5,
