@@ -2,26 +2,23 @@ import time
 import traceback
 from argparse import ArgumentParser
 from datetime import date, datetime
-from logging import INFO, WARNING, basicConfig, DEBUG
+from logging import INFO, WARNING
 from os import makedirs
 from os.path import isfile, expanduser, join
 from random import choice
 from zoneinfo import ZoneInfo
 
 import bittensor as bt
-from python_coreml_stable_diffusion.pipeline import CoreMLStableDiffusionPipeline
+from diffusers import DiffusionPipeline
 from torch import save, load
 
 from neuron import (
-    BASELINE_CHECKPOINT,
     CheckpointSubmission,
     compare_checkpoints,
     get_config,
     SPEC_VERSION,
-    from_pretrained,
     ContestId,
-    CURRENT_CONTEST,
-    get_submission,
+    get_submission, CURRENT_CONTEST,
 )
 
 WINNER_PERCENTAGE = 0.8
@@ -31,22 +28,37 @@ def _get_cut(rank: int):
     return WINNER_PERCENTAGE * pow(1 - WINNER_PERCENTAGE, rank)
 
 
+class ContestState:
+    id: ContestId
+    pipeline: DiffusionPipeline
+    miners_checked: set[int]
+    miner_info: list[CheckpointSubmission | None]
+
+    def __init__(
+        self,
+        contest_id: ContestId,
+        pipeline: DiffusionPipeline,
+        miner_info: list[CheckpointSubmission | None],
+    ):
+        self.id = contest_id
+        self.pipeline = pipeline
+        self.miners_checked = set()
+        self.miner_info = miner_info
+
+
 class Validator:
     config: bt.config
     subtensor: bt.subtensor
     metagraph: bt.metagraph
     wallet: bt.wallet
-    pipeline: CoreMLStableDiffusionPipeline
     uid: int
 
     scores: list[float]
-    miner_info: list[CheckpointSubmission | None]
     hotkeys: list[str]
     step: int
 
     last_day: date | None
-    working_on: ContestId | None
-    miners_checked: set[int]
+    contest_state: ContestState | None
     should_set_weights: bool
 
     def __init__(self):
@@ -58,10 +70,6 @@ class Validator:
         self.metagraph = self.subtensor.metagraph(netuid=self.config.netuid)
         self.wallet = bt.wallet(config=self.config)
 
-        bt.logging.info("Loading pipeline")
-
-        self.pipeline = from_pretrained(BASELINE_CHECKPOINT, self.config.device).coreml_sdxl_pipeline
-
         self.scores = [0.0] * self.metagraph.n.item()
 
         self.hotkeys = self.metagraph.hotkeys
@@ -69,10 +77,8 @@ class Validator:
         self.uid = self.hotkeys.index(self.wallet.hotkey.ss58_address)
         self.step = 0
 
-        self.miner_info = [None] * self.metagraph.n.item()
         self.last_day = None
-        self.working_on = None
-        self.miners_checked = set()
+        self.contest_state = None
         self.should_set_weights = False
 
         self.load_state()
@@ -112,10 +118,8 @@ class Validator:
                 "hotkeys": self.hotkeys,
                 "scores": self.scores,
                 "last_day": self.last_day,
-                "working_on": self.working_on,
-                "miners_checked": self.miners_checked,
+                "contest_state": self.contest_state,
                 "should_set_weights": self.should_set_weights,
-                "miner_info": self.miner_info,
             },
             self.state_path(),
         )
@@ -135,10 +139,8 @@ class Validator:
         self.hotkeys = state["hotkeys"]
         self.scores = state["scores"]
         self.last_day = state["last_day"]
-        self.working_on = state["working_on"]
-        self.miners_checked = state["miners_checked"]
+        self.contest_state = state["contest_state"]
         self.should_set_weights = state["should_set_weights"]
-        self.miner_info = state["miner_info"]
 
     def sync(self):
         # --- Check for registration.
@@ -161,21 +163,26 @@ class Validator:
         if len(self.hotkeys) != len(self.metagraph.hotkeys):
             # resize
             new_scores = [0.0] * self.metagraph.n.item()
-            new_miner_info = [None] * self.metagraph.n.item()
 
             length = len(self.hotkeys)
             new_scores[:length] = self.scores[:length]
-            new_miner_info[:length] = self.miner_info[:length]
 
             self.scores = new_scores
-            self.miner_info = new_miner_info
+
+            if self.contest_state:
+                new_miner_info = [None] * self.metagraph.n.item()
+                new_miner_info[:length] = self.contest_state.miner_info[:length]
+
+                self.contest_state.miner_info = new_miner_info
 
         for uid, hotkey in enumerate(self.hotkeys):
             if hotkey != self.metagraph.hotkeys[uid]:
                 # hotkey has been replaced
                 self.scores[uid] = 0.0
-                self.miners_checked.remove(uid)
-                self.miner_info[uid] = None
+
+                if self.contest_state:
+                    self.contest_state.miners_checked.remove(uid)
+                    self.contest_state.miner_info[uid] = None
 
         if not self.should_set_weights:
             return
@@ -202,8 +209,8 @@ class Validator:
         self.should_set_weights = False
 
     def get_next_uid(self) -> int | None:
-        uids = set([uid for uid, info in enumerate(self.miner_info) if info])
-        remaining_uids = uids - self.miners_checked
+        uids = set([uid for uid, info in enumerate(self.contest_state.miner_info) if info])
+        remaining_uids = uids - self.contest_state.miners_checked
 
         if not len(remaining_uids):
             return None
@@ -215,7 +222,7 @@ class Validator:
 
         if uid is None:
             # Finished all submissions
-            self.working_on = None
+            self.contest_state = None
             return
 
         axon = self.metagraph.axons[uid]
@@ -223,17 +230,17 @@ class Validator:
         try:
             bt.logging.info(f"Checking miner {uid}, hotkey: {axon.hotkey}")
 
-            checkpoint_info = self.miner_info[uid]
+            checkpoint_info = self.contest_state.miner_info[uid]
 
             bt.logging.info(
                 f"Miner {uid} returned {checkpoint_info.repository} as the model, "
                 f"with a reported speed of {checkpoint_info.average_time}"
             )
 
-            checkpoint = from_pretrained(checkpoint_info.repository, self.config.device).coreml_sdxl_pipeline
+            checkpoint = CURRENT_CONTEST.loader(checkpoint_info.repository, self.config.device)
 
             comparison = compare_checkpoints(
-                self.pipeline,
+                self.contest_state.pipeline,
                 checkpoint,
                 checkpoint_info.average_time,
             )
@@ -250,27 +257,36 @@ class Validator:
             bt.logging.info(f"Failed to query miner {uid}", suffix=e)
             bt.logging.debug(f"Miner {uid} error", suffix=traceback.format_exception(e))
 
-        self.miners_checked.add(uid)
+        self.contest_state.miners_checked.add(uid)
         self.should_set_weights = True
 
     def do_step(self, block: int):
         now = datetime.now(tz=ZoneInfo("America/New_York"))
 
-        if not self.working_on and (not self.last_day or self.last_day < now.date()) and now.hour >= 11:
+        if not self.contest_state and (not self.last_day or self.last_day < now.date()) and now.hour >= 11:
             # Past noon, should start collecting submissions
-            bt.logging.info(f"Working on contest {CURRENT_CONTEST} today's submission")
+            bt.logging.info("Loading pipeline")
+
+            pipeline = CURRENT_CONTEST.loader(CURRENT_CONTEST.baseline_repository, self.config.device)
+
+            bt.logging.info(f"Working on contest {CURRENT_CONTEST.id.name} today's submission")
 
             self.last_day = now.date()
-            self.working_on = CURRENT_CONTEST
-            self.miners_checked = set()
+            contest_id = CURRENT_CONTEST.id
 
             bt.logging.info("Collecting all submissions")
-            self.miner_info = [
+            miner_info = [
                 get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid])
                 for uid in range(self.metagraph.n.item())
             ]
 
-            bt.logging.info(f"Got the following valid submissions: {list(enumerate(self.miner_info))}")
+            self.contest_state = ContestState(
+                contest_id,
+                pipeline,
+                miner_info,
+            )
+
+            bt.logging.info(f"Got the following valid submissions: {list(enumerate(miner_info))}")
 
             self.step += 1
 
@@ -279,7 +295,7 @@ class Validator:
         if block - self.metagraph.last_update[self.uid] >= self.config.epoch_length:
             self.sync()
 
-        if not self.working_on:
+        if not self.contest_state:
             self.step += 1
 
             bt.logging.info(f"Nothing to do in this step, sleeping for {self.config.epoch_length} blocks")

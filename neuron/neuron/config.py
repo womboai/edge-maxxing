@@ -3,6 +3,8 @@ from typing import Callable
 
 import bittensor as bt
 
+from neuron import CURRENT_CONTEST
+
 
 def get_config(add_args: Callable[[ArgumentParser], None] | None = None):
     argument_parser = ArgumentParser()
@@ -17,7 +19,7 @@ def get_config(add_args: Callable[[ArgumentParser], None] | None = None):
         "--device",
         type=str,
         help="Device to run on.",
-        default="mps",
+        default=CURRENT_CONTEST.device,
     )
 
     bt.subtensor.add_args(argument_parser)

@@ -1,27 +1,26 @@
 from argparse import ArgumentParser
-from os import mkdir, rmdir
+from os import mkdir
 from os.path import isdir, join
 from shutil import copytree, rmtree
 from tempfile import TemporaryDirectory
 
 import bittensor as bt
 from bittensor.extrinsics.serving import publish_metadata
+from diffusers import DiffusionPipeline
 from huggingface_hub import upload_folder
 
 from neuron import (
-    BASELINE_CHECKPOINT,
     CheckpointSubmission,
     get_submission,
     get_config,
     compare_checkpoints,
-    from_pretrained,
-    CoreMLPipelines,
+    CURRENT_CONTEST,
 )
 
 MODEL_DIRECTORY = "model"
 
 
-def optimize(pipeline: CoreMLPipelines) -> CoreMLPipelines:
+def optimize(pipeline: DiffusionPipeline) -> DiffusionPipeline:
     # Miners should change this function to optimize the pipeline
     return pipeline
 
@@ -70,11 +69,10 @@ def main():
     metagraph = subtensor.metagraph(netuid=config.netuid)
     wallet = bt.wallet(config=config)
 
-    baseline_packages = from_pretrained(BASELINE_CHECKPOINT, config.device)
-    baseline_pipeline = baseline_packages.coreml_sdxl_pipeline
+    baseline_pipeline = CURRENT_CONTEST.loader(CURRENT_CONTEST.baseline_repository, config.device)
 
     if isdir(MODEL_DIRECTORY):
-        pipelines = from_pretrained(MODEL_DIRECTORY, config.device)
+        pipeline = CURRENT_CONTEST.loader(MODEL_DIRECTORY, config.device)
         expected_average_time = None
     else:
         for uid in sorted(range(metagraph.n.item()), key=lambda i: metagraph.incentive[i].item(), reverse=True):
@@ -85,29 +83,14 @@ def main():
                 expected_average_time = info.average_time
                 break
         else:
-            repository = BASELINE_CHECKPOINT
+            repository = CURRENT_CONTEST.baseline_repository
             expected_average_time = None
 
-        pipelines = from_pretrained(repository, config.device)
+        pipeline = CURRENT_CONTEST.loader(repository, config.device)
 
-    if optimize:
-        pipelines = optimize(pipelines)
-
-        pipeline = pipelines.coreml_sdxl_pipeline
-
-        with TemporaryDirectory() as directory:
-            mlpackages_dir = join(directory, "mlpackages")
-
-            bt.logging.info(f"Saving optimization results to {MODEL_DIRECTORY} folder")
-
-            pipelines.base_minimal_pipeline.save_pretrained(directory)
-            mkdir(mlpackages_dir)
-            copytree(pipelines.coreml_models_path, mlpackages_dir, dirs_exist_ok=True)
-
-            rmtree(MODEL_DIRECTORY, ignore_errors=True)
-            copytree(directory, MODEL_DIRECTORY, dirs_exist_ok=True)
-    else:
-        pipeline = pipelines.coreml_sdxl_pipeline
+    if config.optimize:
+        pipeline = optimize(pipeline)
+        pipeline.save_pretrained(MODEL_DIRECTORY)
 
     comparison = compare_checkpoints(baseline_pipeline, pipeline, expected_average_time)
 

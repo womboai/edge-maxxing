@@ -1,26 +1,20 @@
 import traceback
 from os import urandom
-from os.path import isdir, join
 from struct import pack, unpack
 from time import perf_counter
-from typing import cast, TypeAlias
+from typing import cast
 
 import bittensor as bt
 import torch
 from bittensor.extrinsics.serving import get_metadata
-from coremltools import ComputeUnit
-from huggingface_hub import snapshot_download
+from diffusers import DiffusionPipeline
 from pydantic import BaseModel
-from python_coreml_stable_diffusion.pipeline import get_coreml_pipe, CoreMLStableDiffusionPipeline
+from python_coreml_stable_diffusion.pipeline import CoreMLStableDiffusionPipeline
 from torch import Generator, cosine_similarity
 
-from .pipeline import StableDiffusionXLMinimalPipeline, CoreMLPipelines
+from .contest import ContestId, CURRENT_CONTEST
 from .random_inputs import generate_random_prompt
 
-ContestId: TypeAlias = int
-
-BASELINE_CHECKPOINT = "wombo/coreml-stable-diffusion-xl-base-1.0"
-CURRENT_CONTEST: ContestId = 0
 SPEC_VERSION = 20
 
 SAMPLE_COUNT = 5
@@ -35,10 +29,10 @@ def float_from_bits(bits: int):
 
 
 class CheckpointSubmission(BaseModel):
-    repository: str = BASELINE_CHECKPOINT
+    repository: str = CURRENT_CONTEST.baseline_repository
     average_time: float
     spec_version: int = SPEC_VERSION
-    contest: ContestId = CURRENT_CONTEST
+    contest: ContestId = CURRENT_CONTEST.id
 
     def to_bytes(self):
         data = bytearray()
@@ -53,7 +47,7 @@ class CheckpointSubmission(BaseModel):
         write_bytes(self.repository.encode())
         write_int(float_bits(self.average_time))
         write_int(self.spec_version)
-        write_int(self.contest)
+        write_int(self.contest.value)
 
         if len(data) > 128:
             raise RuntimeError(f"CheckpointSubmission {self} is too large({len(data)}, can not exceed 128 bytes.")
@@ -85,13 +79,13 @@ class CheckpointSubmission(BaseModel):
         repository = read_bytes().decode()
         average_time = float_from_bits(read_int())
         spec_version = read_int()
-        contest = read_int()
+        contest_id = ContestId(read_int())
 
         return cls(
             repository=repository,
             average_time=average_time,
             spec_version=spec_version,
-            contest=contest,
+            contest=contest_id,
         )
 
 
@@ -101,28 +95,6 @@ class CheckpointBenchmark:
         self.average_time = average_time
         self.average_similarity = average_similarity
         self.failed = failed
-
-
-def from_pretrained(name: str, device: str) -> CoreMLPipelines:
-    base_pipeline = StableDiffusionXLMinimalPipeline.from_pretrained(name).to(device)
-
-    if isdir(name):
-        directory = name
-    else:
-        directory = snapshot_download(name)
-
-    coreml_dir = join(directory, "mlpackages")
-
-    pipeline = get_coreml_pipe(
-        pytorch_pipe=base_pipeline,
-        mlpackages_dir=coreml_dir,
-        model_version="xl",
-        compute_unit=ComputeUnit.CPU_AND_GPU.name,
-        delete_original_pipe=False,
-        force_zeros_for_empty_prompt=base_pipeline.force_zeros_for_empty_prompt,
-    )
-
-    return CoreMLPipelines(base_pipeline, pipeline, coreml_dir)
 
 
 def get_submission(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey: str) -> CheckpointSubmission | None:
@@ -139,8 +111,8 @@ def get_submission(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey: str
 
         if (
             info.spec_version != SPEC_VERSION or
-            info.contest != CURRENT_CONTEST or
-            info.repository == BASELINE_CHECKPOINT
+            info.contest != CURRENT_CONTEST.id or
+            info.repository == CURRENT_CONTEST.baseline_repository
         ):
             return None
 
@@ -152,8 +124,8 @@ def get_submission(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey: str
 
 
 def compare_checkpoints(
-    baseline: CoreMLStableDiffusionPipeline,
-    miner_checkpoint: CoreMLStableDiffusionPipeline,
+    baseline: DiffusionPipeline,
+    miner_checkpoint: DiffusionPipeline,
     reported_average_time: float | None = None,
 ) -> CheckpointBenchmark:
     failed = False
