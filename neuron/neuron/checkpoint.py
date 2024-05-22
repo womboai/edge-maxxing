@@ -19,7 +19,7 @@ from .random_inputs import generate_random_prompt
 
 ContestId: TypeAlias = int
 
-BASELINE_CHECKPOINT = "womboai/coreml-stable-diffusion-xl-base-1.0"
+BASELINE_CHECKPOINT = "wombo/coreml-stable-diffusion-xl-base-1.0"
 CURRENT_CONTEST: ContestId = 0
 SPEC_VERSION = 20
 
