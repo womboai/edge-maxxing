@@ -106,8 +106,5 @@ class CoreMLStableDiffusionXLPipeline(CoreMLStableDiffusionPipeline):
         )
 
     def to(self, *args, **kwargs):
-        self.tokenizer.to(*args, **kwargs)
-        self.tokenizer_2.to(*args, **kwargs)
-
         if self.feature_extractor:
             self.feature_extractor.to(*args, **kwargs)
