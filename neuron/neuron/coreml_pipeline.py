@@ -104,3 +104,11 @@ class CoreMLStableDiffusionXLPipeline(CoreMLStableDiffusionPipeline):
             force_zeros_for_empty_prompt=pipeline.force_zeros_for_empty_prompt,
             feature_extractor=pipeline.feature_extractor,
         )
+
+    def to(self, *args, **kwargs):
+        self.scheduler.to(*args, **kwargs)
+        self.tokenizer.to(*args, **kwargs)
+        self.tokenizer_2.to(*args, **kwargs)
+
+        if self.feature_extractor:
+            self.feature_extractor.to(*args, **kwargs)
