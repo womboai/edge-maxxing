@@ -56,7 +56,7 @@ def find_contest(contest_id: ContestId):
     raise RuntimeError(f"Unknown contest ID requested {contest_id}")
 
 
-CURRENT_CONTEST = find_contest(ContestId.NVIDIA_4090)
+CURRENT_CONTEST = find_contest(ContestId.APPLE_SILICON)
 
 
 def apple_silicon_from_pretrained(name: str, device: str):
