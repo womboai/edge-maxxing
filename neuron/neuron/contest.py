@@ -7,7 +7,7 @@ from diffusers import DiffusionPipeline, StableDiffusionXLPipeline
 from huggingface_hub import snapshot_download
 from python_coreml_stable_diffusion.pipeline import get_coreml_pipe
 
-from neuron import StableDiffusionXLMinimalPipeline
+from .pipeline import StableDiffusionXLMinimalPipeline
 
 CheckpointLoader = Callable[[str, str], DiffusionPipeline]
 

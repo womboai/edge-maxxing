@@ -10,7 +10,6 @@ from bittensor.extrinsics.serving import get_metadata
 from diffusers import DiffusionPipeline
 from numpy import ndarray
 from pydantic import BaseModel
-from python_coreml_stable_diffusion.pipeline import CoreMLStableDiffusionPipeline
 from torch import Generator, cosine_similarity
 
 from .contest import ContestId, CURRENT_CONTEST
