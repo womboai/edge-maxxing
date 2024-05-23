@@ -269,8 +269,8 @@ class Validator:
                 ) * comparison.average_similarity
         except Exception as e:
             self.scores[uid] = 0.0
-            bt.logging.info(f"Failed to query miner {uid}", suffix=e)
-            bt.logging.debug(f"Miner {uid} error", suffix=traceback.format_exception(e))
+            bt.logging.info(f"Failed to query miner {uid}, {e}")
+            bt.logging.debug(f"Miner {uid} error, {traceback.format_exception(e)}")
 
         self.contest_state.miners_checked.add(uid)
 
@@ -336,7 +336,7 @@ class Validator:
 
                 self.do_step(block)
             except Exception as e:
-                bt.logging.error(f"Error during validation step {self.step}", suffix=traceback.format_exception(e))
+                bt.logging.error(f"Error during validation step {self.step}, {traceback.format_exception(e)}")
 
 
 if __name__ == '__main__':
