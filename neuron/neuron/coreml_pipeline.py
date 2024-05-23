@@ -11,7 +11,7 @@ from python_coreml_stable_diffusion.coreml_model import CoreMLModel
 from python_coreml_stable_diffusion.pipeline import CoreMLStableDiffusionPipeline, get_coreml_pipe
 from transformers import CLIPTokenizer, CLIPFeatureExtractor
 
-from neuron import StableDiffusionXLMinimalPipeline
+from .pipeline import StableDiffusionXLMinimalPipeline
 
 
 class CoreMLStableDiffusionXLPipeline(CoreMLStableDiffusionPipeline):
@@ -104,6 +104,3 @@ class CoreMLStableDiffusionXLPipeline(CoreMLStableDiffusionPipeline):
             force_zeros_for_empty_prompt=pipeline.force_zeros_for_empty_prompt,
             feature_extractor=pipeline.feature_extractor,
         )
-
-    def to(self, *args, **kwargs):
-        return super().to(*args, **kwargs)
