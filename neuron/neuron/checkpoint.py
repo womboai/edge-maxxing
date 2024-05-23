@@ -180,15 +180,12 @@ def compare_checkpoints(
             output = torch.from_numpy(output)
 
         # noinspection PyUnboundLocalVariable
-        similarity = pow(
-            cosine_similarity(
-                base_output.flatten(),
-                output.flatten(),
-                eps=1e-3,
-                dim=0
-            ).item() * 0.5 + 0.5,
-            4,
-        )
+        similarity = (cosine_similarity(
+            base_output.flatten(),
+            output.flatten(),
+            eps=1e-3,
+            dim=0
+        ).item() * 0.5 + 0.5) ** 4,
 
         bt.logging.info(f"Sample {i} generated with generation time of {gen_time} and similarity {similarity}")
 

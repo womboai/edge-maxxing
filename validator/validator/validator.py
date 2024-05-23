@@ -10,6 +10,8 @@ from zoneinfo import ZoneInfo
 
 import bittensor as bt
 from diffusers import DiffusionPipeline
+from numpy import real, isreal
+from numpy.polynomial import Polynomial
 from torch import save, load
 
 from neuron import (
@@ -24,8 +26,18 @@ from neuron import (
 WINNER_PERCENTAGE = 0.8
 
 
-def _get_cut(rank: int):
-    return WINNER_PERCENTAGE * pow(1 - WINNER_PERCENTAGE, rank)
+def _get_incentive(rank: int, sequence_ratio: float):
+    return WINNER_PERCENTAGE * (sequence_ratio ** rank)
+
+
+def _winner_percentage_sequence_ratio(sample_count: int):
+    if sample_count == 1:
+        return 1 / WINNER_PERCENTAGE
+
+    polynomial = Polynomial([1 - WINNER_PERCENTAGE, -1] + ([0.0] * (sample_count - 2)) + [WINNER_PERCENTAGE])
+    real_roots = [float(real(root)) for root in polynomial.roots() if isreal(root) and root >= 0.0]
+
+    return real_roots[0]
 
 
 class ContestState:
@@ -54,6 +66,7 @@ class Validator:
     uid: int
 
     scores: list[float]
+    sequence_ratio: float = 1.0 - WINNER_PERCENTAGE
     hotkeys: list[str]
     step: int
 
@@ -188,12 +201,14 @@ class Validator:
             return
 
         sorted_scores = sorted(enumerate(self.scores), key=lambda score: score[1], reverse=True)
-        ranked_scores = [(index, _get_cut(index) if score > 0.0 else 0.0) for index, score in sorted_scores]
 
-        weights = sorted(ranked_scores, key=lambda score: score[0])
+        ranked_scores = [
+            (index, (_get_incentive(index, self.sequence_ratio) if score > 0.0 else 0.0))
+            for index, score in sorted_scores
+        ]
 
-        uids = [uid for uid, _ in weights]
-        weights = [weights for _, weights in weights]
+        uids = [uid for uid, _ in ranked_scores]
+        weights = [weight for _, weight in ranked_scores]
 
         result, message = self.subtensor.set_weights(
             self.wallet,
@@ -206,7 +221,6 @@ class Validator:
         state, level = ("successful", INFO) if result else ("failed", WARNING)
 
         bt.logging.log(level, f"set_weights {state}, {message}")
-        self.should_set_weights = False
 
     def get_next_uid(self) -> int | None:
         uids = set([uid for uid, info in enumerate(self.contest_state.miner_info) if info])
@@ -223,6 +237,7 @@ class Validator:
         if uid is None:
             # Finished all submissions
             self.contest_state = None
+            self.should_set_weights = True
             return
 
         axon = self.metagraph.axons[uid]
@@ -258,7 +273,6 @@ class Validator:
             bt.logging.debug(f"Miner {uid} error", suffix=traceback.format_exception(e))
 
         self.contest_state.miners_checked.add(uid)
-        self.should_set_weights = True
 
     def do_step(self, block: int):
         now = datetime.now(tz=ZoneInfo("America/New_York"))
@@ -279,6 +293,11 @@ class Validator:
                 get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid])
                 for uid in range(self.metagraph.n.item())
             ]
+
+            self.sequence_ratio = _winner_percentage_sequence_ratio(len(miner_info) - miner_info.count(None))
+
+            self.scores = [0.0] * self.metagraph.n.item()
+            self.should_set_weights = False
 
             self.contest_state = ContestState(
                 contest_id,
