@@ -178,7 +178,6 @@ def compare_checkpoints(
         if isinstance(output, ndarray):
             output = torch.from_numpy(output)
 
-        # noinspection PyUnboundLocalVariable
         similarity = (cosine_similarity(
             base_output.flatten(),
             output.flatten(),

@@ -1,8 +1,5 @@
 from argparse import ArgumentParser
-from os import mkdir
-from os.path import isdir, join
-from shutil import copytree, rmtree
-from tempfile import TemporaryDirectory
+from os.path import isdir
 
 import bittensor as bt
 from bittensor.extrinsics.serving import publish_metadata

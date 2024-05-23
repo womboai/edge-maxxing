@@ -7,6 +7,7 @@ from diffusers import DiffusionPipeline, StableDiffusionXLPipeline
 from huggingface_hub import snapshot_download
 from python_coreml_stable_diffusion.pipeline import get_coreml_pipe
 
+from .coreml_pipeline import CoreMLStableDiffusionXLPipeline
 from .pipeline import StableDiffusionXLMinimalPipeline
 
 CheckpointLoader = Callable[[str, str], DiffusionPipeline]
@@ -35,7 +36,7 @@ CONTESTS = [
         ContestId.APPLE_SILICON,
         "wombo/coreml-stable-diffusion-xl-base-1.0",
         "mps",
-        lambda repository, device: apple_silicon_from_pretrained(repository, device),
+        lambda repository, device: CoreMLStableDiffusionXLPipeline.from_pretrained(repository).to(device),
     ),
     Contest(
         ContestId.NVIDIA_4090,
