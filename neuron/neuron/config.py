@@ -3,7 +3,7 @@ from typing import Callable
 
 import bittensor as bt
 
-from neuron import CURRENT_CONTEST
+from .contest import CURRENT_CONTEST
 
 
 def get_config(add_args: Callable[[ArgumentParser], None] | None = None):
