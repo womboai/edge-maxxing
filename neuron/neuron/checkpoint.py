@@ -183,8 +183,8 @@ def compare_checkpoints(
             base_output.flatten(),
             output.flatten(),
             eps=1e-3,
-            dim=0
-        ).item() * 0.5 + 0.5) ** 4,
+            dim=0,
+        ).item() * 0.5 + 0.5) ** 4
 
         bt.logging.info(f"Sample {i} generated with generation time of {gen_time} and similarity {similarity}")
 
