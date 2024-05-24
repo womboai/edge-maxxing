@@ -15,7 +15,7 @@ from torch import Generator, cosine_similarity
 from .contest import ContestId, CURRENT_CONTEST
 from .random_inputs import generate_random_prompt
 
-SPEC_VERSION = 20
+SPEC_VERSION = 0
 
 SAMPLE_COUNT = 5
 
@@ -118,8 +118,8 @@ def get_submission(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey: str
 
         return info
     except Exception as e:
-        bt.logging.error(f"Failed to get submission from miner {hotkey}", sufix=e)
-        bt.logging.debug("Submission parsing error", sufix=traceback.format_exception(e))
+        bt.logging.error(f"Failed to get submission from miner {hotkey}, {e}")
+        bt.logging.debug(f"Submission parsing error, {traceback.format_exception(e)}")
         return None
 
 
@@ -159,7 +159,10 @@ def compare_checkpoints(
             num_inference_steps=20,
         ).images
 
-        baseline_average = (baseline_average * generated + perf_counter() - start) / (generated + 1)
+        if generated:
+            baseline_average = (baseline_average * generated + perf_counter() - start) / (generated + 1)
+        else:
+            baseline_average = perf_counter() - start
 
         start = perf_counter()
 
@@ -187,7 +190,11 @@ def compare_checkpoints(
 
         bt.logging.info(f"Sample {i} generated with generation time of {gen_time} and similarity {similarity}")
 
-        average_time = (average_time * generated + gen_time) / (generated + 1)
+        if generated:
+            average_time = (average_time * generated + gen_time) / (generated + 1)
+        else:
+            average_time = gen_time
+
         average_similarity = (average_similarity * generated + similarity) / (generated + 1)
 
         if reported_average_time and average_time >= reported_average_time * 1.0625:
