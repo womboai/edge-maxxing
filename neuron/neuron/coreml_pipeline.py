@@ -108,3 +108,5 @@ class CoreMLStableDiffusionXLPipeline(CoreMLStableDiffusionPipeline):
     def to(self, *args, **kwargs):
         if self.feature_extractor:
             self.feature_extractor.to(*args, **kwargs)
+
+        return self
