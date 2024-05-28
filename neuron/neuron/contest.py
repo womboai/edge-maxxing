@@ -6,6 +6,7 @@ from coremltools import ComputeUnit
 from diffusers import DiffusionPipeline, StableDiffusionXLPipeline
 from huggingface_hub import snapshot_download
 from python_coreml_stable_diffusion.pipeline import get_coreml_pipe
+from torch.cuda import get_device_properties
 
 from .coreml_pipeline import CoreMLStableDiffusionXLPipeline
 from .pipeline import StableDiffusionXLMinimalPipeline
@@ -22,12 +23,21 @@ class Contest:
     id: ContestId
     baseline_repository: str
     device: str
+    device_name: str | None
     loader: CheckpointLoader
 
-    def __init__(self, contest_id: ContestId, baseline_repository: str, device: str, loader: CheckpointLoader):
+    def __init__(
+        self,
+        contest_id: ContestId,
+        baseline_repository: str,
+        device: str,
+        device_name: str | None,
+        loader: CheckpointLoader,
+    ):
         self.id = contest_id
         self.baseline_repository = baseline_repository
         self.device = device
+        self.device_name = device_name
         self.loader = loader
 
 
@@ -36,12 +46,14 @@ CONTESTS = [
         ContestId.APPLE_SILICON,
         "wombo/coreml-stable-diffusion-xl-base-1.0",
         "mps",
+        None,
         lambda repository, device: CoreMLStableDiffusionXLPipeline.from_pretrained(repository).to(device),
     ),
     Contest(
         ContestId.NVIDIA_4090,
         "stabilityai/stable-diffusion-xl-base-1.0",
         "cuda",
+        "NVIDIA GeForce RTX 4090",
         lambda repository, device: StableDiffusionXLPipeline.from_pretrained(repository).to(device),
     ),
 ]
