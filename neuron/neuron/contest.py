@@ -51,7 +51,7 @@ CONTESTS = [
     ),
     Contest(
         ContestId.NVIDIA_4090,
-        "stabilityai/stable-diffusion-xl-base-1.0",
+        "stablediffusionapi/newdream-sdxl-20",
         "cuda",
         "NVIDIA GeForce RTX 4090",
         lambda repository, device: StableDiffusionXLPipeline.from_pretrained(repository).to(device),
