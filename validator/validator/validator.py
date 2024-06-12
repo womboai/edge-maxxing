@@ -205,11 +205,12 @@ class Validator:
         sorted_scores = sorted(enumerate(self.scores), key=lambda score: score[1], reverse=True)
 
         ranked_scores = [
-            (index, (_get_incentive(index, self.sequence_ratio) if score > 0.0 else 0.0))
-            for index, score in sorted_scores
+            (uid, (_get_incentive(index, self.sequence_ratio) if score > 0.0 else 0.0))
+            for index, (uid, score) in enumerate(sorted_scores)
         ]
 
-        uids = [uid for uid, _ in ranked_scores]
+        ranked_scores = sorted(ranked_scores, key=lambda score: score[0])
+
         weights = numpy.array([weight for _, weight in ranked_scores])
 
         if numpy.isnan(weights).any():
@@ -222,14 +223,14 @@ class Validator:
         raw_weights = weights / numpy.linalg.norm(weights, ord=1, axis=0, keepdims=True)
 
         bt.logging.debug("raw_weights", raw_weights)
-        bt.logging.debug("raw_weight_uids", uids)
+        bt.logging.debug("raw_weight_uids", self.metagraph.uids)
         # Process the raw weights to final_weights via subtensor limitations.
 
         (
             processed_weight_uids,
             processed_weights,
         ) = process_weights_for_netuid(
-            uids=uids,
+            uids=self.metagraph.uids,
             weights=raw_weights,
             netuid=self.config.netuid,
             subtensor=self.subtensor,
