@@ -222,7 +222,7 @@ class Validator:
         raw_weights = weights / numpy.linalg.norm(weights, ord=1, axis=0, keepdims=True)
 
         bt.logging.debug("raw_weights", raw_weights)
-        bt.logging.debug("raw_weight_uids", self.metagraph.uids)
+        bt.logging.debug("raw_weight_uids", uids)
         # Process the raw weights to final_weights via subtensor limitations.
 
         (
