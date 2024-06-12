@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 
 import bittensor as bt
 import numpy
-from bittensor.utils.weight_utils import process_weights_for_netuid
+from bittensor.utils.weight_utils import process_weights_for_netuid, convert_weights_and_uids_for_emit
 from diffusers import DiffusionPipeline
 from numpy import real, isreal
 from numpy.polynomial import Polynomial
@@ -237,11 +237,25 @@ class Validator:
             metagraph=self.metagraph,
         )
 
+        bt.logging.debug("processed_weights", processed_weights)
+        bt.logging.debug("processed_weight_uids", processed_weight_uids)
+
+        # Convert to uint16 weights and uids.
+        (
+            uint_uids,
+            uint_weights,
+        ) = convert_weights_and_uids_for_emit(
+            uids=processed_weight_uids, weights=processed_weights
+        )
+
+        bt.logging.debug("uint_weights", uint_weights)
+        bt.logging.debug("uint_uids", uint_uids)
+
         result, message = self.subtensor.set_weights(
             self.wallet,
             self.metagraph.netuid,
-            processed_weight_uids,
-            processed_weights,
+            uint_uids,
+            uint_weights,
             SPEC_VERSION,
         )
 
