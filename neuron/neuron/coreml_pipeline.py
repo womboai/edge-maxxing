@@ -4,14 +4,46 @@ from os.path import isdir, join
 from coremltools import ComputeUnit
 from diffusers import (
     DDIMScheduler, DPMSolverMultistepScheduler, EulerAncestralDiscreteScheduler,
-    EulerDiscreteScheduler, LMSDiscreteScheduler, PNDMScheduler,
+    EulerDiscreteScheduler, LMSDiscreteScheduler, PNDMScheduler, DiffusionPipeline,
 )
+from diffusers.schedulers import KarrasDiffusionSchedulers
 from huggingface_hub import snapshot_download
 from python_coreml_stable_diffusion.coreml_model import CoreMLModel
 from python_coreml_stable_diffusion.pipeline import CoreMLStableDiffusionPipeline, get_coreml_pipe
-from transformers import CLIPTokenizer, CLIPFeatureExtractor
+from transformers import CLIPTokenizer, CLIPFeatureExtractor, CLIPImageProcessor
 
-from .pipeline import StableDiffusionXLMinimalPipeline
+
+class StableDiffusionXLMinimalPipeline(DiffusionPipeline):
+    f"""
+    A minimal SDXL pipeline that includes only what's needed for {CoreMLStableDiffusionPipeline}
+    """
+
+    _optional_components = [
+        "tokenizer",
+        "tokenizer_2",
+        "feature_extractor",
+    ]
+
+    def __init__(
+        self,
+        tokenizer: CLIPTokenizer,
+        tokenizer_2: CLIPTokenizer,
+        scheduler: KarrasDiffusionSchedulers,
+        feature_extractor: CLIPImageProcessor = None,
+        force_zeros_for_empty_prompt: bool = True,
+    ):
+        super().__init__()
+
+        self.register_modules(
+            tokenizer=tokenizer,
+            tokenizer_2=tokenizer_2,
+            scheduler=scheduler,
+            feature_extractor=feature_extractor,
+        )
+
+        self.register_to_config(force_zeros_for_empty_prompt=force_zeros_for_empty_prompt)
+
+        self.force_zeros_for_empty_prompt = force_zeros_for_empty_prompt
 
 
 class CoreMLStableDiffusionXLPipeline(CoreMLStableDiffusionPipeline):

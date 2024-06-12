@@ -9,6 +9,8 @@ from random import choice
 from zoneinfo import ZoneInfo
 
 import bittensor as bt
+import numpy
+from bittensor.utils.weight_utils import process_weights_for_netuid
 from diffusers import DiffusionPipeline
 from numpy import real, isreal
 from numpy.polynomial import Polynomial
@@ -208,13 +210,37 @@ class Validator:
         ]
 
         uids = [uid for uid, _ in ranked_scores]
-        weights = [weight for _, weight in ranked_scores]
+        weights = numpy.array([weight for _, weight in ranked_scores])
+
+        if numpy.isnan(weights).any():
+            bt.logging.warning(
+                f"Scores contain NaN values. This may be due to a lack of responses from miners, or a bug in your reward functions."
+            )
+
+        # Calculate the average reward for each uid across non-zero values.
+        # Replace any NaN values with 0
+        raw_weights = weights / numpy.linalg.norm(weights, ord=1, axis=0, keepdims=True)
+
+        bt.logging.debug("raw_weights", raw_weights)
+        bt.logging.debug("raw_weight_uids", self.metagraph.uids)
+        # Process the raw weights to final_weights via subtensor limitations.
+
+        (
+            processed_weight_uids,
+            processed_weights,
+        ) = process_weights_for_netuid(
+            uids=uids,
+            weights=raw_weights,
+            netuid=self.config.netuid,
+            subtensor=self.subtensor,
+            metagraph=self.metagraph,
+        )
 
         result, message = self.subtensor.set_weights(
             self.wallet,
             self.metagraph.netuid,
-            uids,
-            weights,
+            processed_weight_uids,
+            processed_weights,
             SPEC_VERSION,
         )
 
