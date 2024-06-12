@@ -1,15 +1,9 @@
 from enum import Enum
-from os.path import isdir, join
 from typing import Callable
 
-from coremltools import ComputeUnit
 from diffusers import DiffusionPipeline, StableDiffusionXLPipeline
-from huggingface_hub import snapshot_download
-from python_coreml_stable_diffusion.pipeline import get_coreml_pipe
-from torch.cuda import get_device_properties
 
 from .coreml_pipeline import CoreMLStableDiffusionXLPipeline
-from .pipeline import StableDiffusionXLMinimalPipeline
 
 CheckpointLoader = Callable[[str, str], DiffusionPipeline]
 
@@ -70,25 +64,3 @@ def find_contest(contest_id: ContestId):
 
 
 CURRENT_CONTEST = find_contest(ContestId.NVIDIA_4090)
-
-
-def apple_silicon_from_pretrained(name: str, device: str):
-    base_pipeline = StableDiffusionXLMinimalPipeline.from_pretrained(name).to(device)
-
-    if isdir(name):
-        directory = name
-    else:
-        directory = snapshot_download(name)
-
-    coreml_dir = join(directory, "mlpackages")
-
-    pipeline = get_coreml_pipe(
-        pytorch_pipe=base_pipeline,
-        mlpackages_dir=coreml_dir,
-        model_version="xl",
-        compute_unit=ComputeUnit.CPU_AND_GPU.name,
-        delete_original_pipe=False,
-        force_zeros_for_empty_prompt=base_pipeline.force_zeros_for_empty_prompt,
-    )
-
-    return pipeline
