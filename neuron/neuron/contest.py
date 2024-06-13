@@ -52,7 +52,6 @@ CONTESTS = [
         lambda repository, device: StableDiffusionXLPipeline.from_pretrained(
             repository,
             torch_dtype=torch.float16,
-            variant="fp16",
         ).to(device),
     ),
 ]
