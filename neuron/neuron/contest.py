@@ -60,7 +60,6 @@ class CudaContest(Contest):
 
 
 class AppleSiliconContest(Contest):
-
     def load(self, repository: str | None = None):
         return CoreMLStableDiffusionXLPipeline.from_pretrained(repository or self.baseline_repository).to("mps")
 
