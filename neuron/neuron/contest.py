@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Callable, NoReturn
 
@@ -12,27 +13,63 @@ class ContestId(Enum):
     NVIDIA_4090 = 1
 
 
-class Contest:
+class Contest(ABC):
     id: ContestId
     baseline_repository: str
     device_name: str | None
-    load: Callable[[str], DiffusionPipeline]
-    validate: Callable[[], None]
-    empty_cache: Callable[[], None]
 
-    def __init__(
-        self,
-        contest_id: ContestId,
-        baseline_repository: str,
-        loader: Callable[[str], DiffusionPipeline],
-        validate: Callable[[], None],
-        empty_cache: Callable[[], None],
-    ):
+    def __init__(self, contest_id: ContestId, baseline_repository: str):
         self.id = contest_id
         self.baseline_repository = baseline_repository
-        self.load = loader
-        self.validate = validate
-        self.empty_cache = empty_cache
+
+    @abstractmethod
+    def load(self, repository: str | None = None):
+        ...
+
+    @abstractmethod
+    def validate(self):
+        ...
+
+    @abstractmethod
+    def empty_cache(self):
+        ...
+
+
+class CudaContest(Contest):
+    def __init__(self, contest_id: ContestId, baseline_repository: str, expected_device_name: str):
+        super().__init__(contest_id, baseline_repository)
+
+        self.expected_device_name = expected_device_name
+
+    def load(self, repository: str | None = None):
+        return StableDiffusionXLPipeline.from_pretrained(
+            repository or self.baseline_repository,
+            torch_dtype=torch.float16,
+        ).to("cuda")
+
+    def validate(self):
+        device_name = torch.cuda.get_device_name("cuda")
+
+        if device_name != self.expected_device_name:
+            raise ContestDeviceValidationError(
+                f"Incompatible device {device_name} when {self.expected_device_name} is required.",
+            )
+
+    def empty_cache(self):
+        torch.cuda.empty_cache()
+
+
+class AppleSiliconContest(Contest):
+
+    def load(self, repository: str | None = None):
+        return CoreMLStableDiffusionXLPipeline.from_pretrained(repository or self.baseline_repository).to("mps")
+
+    def validate(self):
+        if not torch.mps.is_available():
+            raise ContestDeviceValidationError("mps is not available but is required.")
+
+    def empty_cache(self):
+        torch.mps.empty_cache()
 
 
 class ContestDeviceValidationError(Exception):
@@ -42,33 +79,9 @@ class ContestDeviceValidationError(Exception):
         self.message = message
 
 
-def check_mps_availability():
-    if not torch.mps.is_available():
-        raise ContestDeviceValidationError("mps is not available but is required.")
-
-
-def check_cuda_device_name(expected_name: str) -> None | NoReturn:
-    device_name = torch.cuda.get_device_name("cuda")
-
-    if device_name != expected_name:
-        raise ContestDeviceValidationError(f"Incompatible device {device_name} when {expected_name} is required.")
-
-
 CONTESTS = [
-    Contest(
-        ContestId.APPLE_SILICON,
-        "wombo/coreml-stable-diffusion-xl-base-1.0",
-        lambda repository: CoreMLStableDiffusionXLPipeline.from_pretrained(repository).to("mps"),
-        lambda: check_mps_availability(),
-        lambda: torch.mps.empty_cache(),
-    ),
-    Contest(
-        ContestId.NVIDIA_4090,
-        "stablediffusionapi/newdream-sdxl-20",
-        lambda repository: StableDiffusionXLPipeline.from_pretrained(repository, torch_dtype=torch.float16).to("cuda"),
-        lambda: check_cuda_device_name("NVIDIA GeForce RTX 4090"),
-        lambda: torch.cuda.empty_cache(),
-    ),
+    AppleSiliconContest(ContestId.APPLE_SILICON, "wombo/coreml-stable-diffusion-xl-base-1.0"),
+    CudaContest(ContestId.NVIDIA_4090, "stablediffusionapi/newdream-sdxl-20", "NVIDIA GeForce RTX 4090"),
 ]
 
 
