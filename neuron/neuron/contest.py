@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Callable, NoReturn
 
 import torch
-from diffusers import DiffusionPipeline, StableDiffusionXLPipeline
+from diffusers import StableDiffusionXLPipeline
 
 from .coreml_pipeline import CoreMLStableDiffusionXLPipeline
 

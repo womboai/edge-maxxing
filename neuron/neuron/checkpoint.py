@@ -138,7 +138,7 @@ def generate(pipeline: DiffusionPipeline, prompt: str, seed: int) -> GenerationO
 
     output = pipeline(
         prompt=prompt,
-        generator=Generator().manual_seed(seed),
+        generator=Generator(pipeline.device).manual_seed(seed),
         output_type="latent",
         num_inference_steps=20,
     ).images

@@ -26,13 +26,7 @@ def add_extra_args(argument_parser: ArgumentParser):
     argument_parser.add_argument(
         "--repository",
         type=str,
-        help="The repository to push  to",
-    )
-
-    argument_parser.add_argument(
-        "--coreml_repository",
-        type=str,
-        help="The repository to push CoreML models(unet, vae, etc) to",
+        help="The repository to push to",
     )
 
     argument_parser.add_argument(
@@ -65,6 +59,8 @@ def main():
     subtensor = bt.subtensor(config=config)
     metagraph = subtensor.metagraph(netuid=config.netuid)
     wallet = bt.wallet(config=config)
+
+    CURRENT_CONTEST.validate()
 
     if isdir(MODEL_DIRECTORY):
         repository = MODEL_DIRECTORY
