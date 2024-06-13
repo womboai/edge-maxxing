@@ -1,4 +1,6 @@
 import traceback
+from collections import namedtuple
+from dataclasses import dataclass
 from os import urandom
 from struct import pack, unpack
 from time import perf_counter
@@ -7,9 +9,10 @@ from typing import cast
 import bittensor as bt
 import torch
 from bittensor.extrinsics.serving import get_metadata
+from diffusers import DiffusionPipeline
 from numpy import ndarray
 from pydantic import BaseModel
-from torch import Generator, cosine_similarity
+from torch import Generator, cosine_similarity, Tensor
 
 from .contest import ContestId, CURRENT_CONTEST, Contest
 from .random_inputs import generate_random_prompt
@@ -17,6 +20,14 @@ from .random_inputs import generate_random_prompt
 SPEC_VERSION = 0
 
 SAMPLE_COUNT = 5
+
+
+@dataclass
+class GenerationOutput:
+    prompt: str
+    seed: int
+    output: Tensor
+    generation_time: float
 
 
 def float_bits(value: float):
@@ -122,6 +133,29 @@ def get_submission(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey: str
         return None
 
 
+def generate(pipeline: DiffusionPipeline, prompt: str, seed: int) -> GenerationOutput:
+    start = perf_counter()
+
+    output = pipeline(
+        prompt=prompt,
+        generator=Generator().manual_seed(seed),
+        output_type="latent",
+        num_inference_steps=20,
+    ).images
+
+    generation_time = perf_counter() - start
+
+    if isinstance(output, ndarray):
+        output = torch.from_numpy(output)
+
+    return GenerationOutput(
+        prompt=prompt,
+        seed=seed,
+        output=output,
+        generation_time=generation_time,
+    )
+
+
 def compare_checkpoints(
     contest: Contest,
     repository: str,
@@ -129,73 +163,62 @@ def compare_checkpoints(
 ) -> CheckpointBenchmark:
     failed = False
 
-    baseline = contest.load(contest.baseline_repository)
-    miner_checkpoint = contest.load(repository)
+    baseline_pipeline = contest.load(contest.baseline_repository)
 
-    baseline_average = float("inf")
+    bt.logging.info("Generating baseline samples to compare")
+
+    baseline_outputs: list[GenerationOutput] = [
+        generate(
+            baseline_pipeline,
+            generate_random_prompt(),
+            int.from_bytes(urandom(4), "little"),
+        )
+        for i in range(SAMPLE_COUNT)
+    ]
+
+    del baseline_pipeline
+
+    contest.empty_cache()
+
+    baseline_average = sum([output.generation_time for output in baseline_outputs]) / len(baseline_outputs)
+
     average_time = float("inf")
     average_similarity = 1.0
+
+    pipeline = contest.load(repository)
 
     i = 0
 
     # Take {SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been
-    for i in range(SAMPLE_COUNT):
-        seed = int.from_bytes(urandom(4), "little")
-        prompt = generate_random_prompt()
-
-        base_generator = Generator().manual_seed(seed)
-        checkpoint_generator = Generator().manual_seed(seed)
-        output_type = "latent"
-
-        bt.logging.info(f"Sample {i}, prompt {prompt} and seed {seed}")
+    for i, baseline in enumerate(baseline_outputs):
+        bt.logging.info(f"Sample {i}, prompt {baseline.prompt} and seed {baseline.seed}")
 
         generated = i
         remaining = SAMPLE_COUNT - generated
 
-        start = perf_counter()
-
-        base_output = baseline(
-            prompt=prompt,
-            generator=base_generator,
-            output_type=output_type,
-            num_inference_steps=20,
-        ).images
-
-        if generated:
-            baseline_average = (baseline_average * generated + perf_counter() - start) / (generated + 1)
-        else:
-            baseline_average = perf_counter() - start
-
-        start = perf_counter()
-
-        output = miner_checkpoint(
-            prompt=prompt,
-            generator=checkpoint_generator,
-            output_type=output_type,
-            num_inference_steps=20,
-        ).images
-
-        gen_time = perf_counter() - start
-
-        if isinstance(base_output, ndarray):
-            base_output = torch.from_numpy(base_output)
-
-        if isinstance(output, ndarray):
-            output = torch.from_numpy(output)
+        generation = generate(
+            pipeline,
+            baseline.prompt,
+            baseline.seed,
+        )
 
         similarity = (cosine_similarity(
-            base_output.flatten(),
-            output.flatten(),
+            baseline.output.flatten(),
+            generation.output.flatten(),
             eps=1e-3,
             dim=0,
         ).item() * 0.5 + 0.5) ** 4
 
-        bt.logging.info(f"Sample {i} generated with generation time of {gen_time} and similarity {similarity}")
+        bt.logging.info(
+            f"Sample {i} generated "
+            f"with generation time of {generation.generation_time} "
+            f"and similarity {similarity}"
+        )
 
         if generated:
-            average_time = (average_time * generated + gen_time) / (generated + 1)
+            average_time = (average_time * generated + generation.generation_time) / (generated + 1)
         else:
-            average_time = gen_time
+            average_time = generation.generation_time
 
         average_similarity = (average_similarity * generated + similarity) / (generated + 1)
 

@@ -17,6 +17,8 @@ class Contest:
     baseline_repository: str
     device_name: str | None
     load: Callable[[str], DiffusionPipeline]
+    validate: Callable[[], None]
+    empty_cache: Callable[[], None]
 
     def __init__(
         self,
@@ -24,11 +26,13 @@ class Contest:
         baseline_repository: str,
         loader: Callable[[str], DiffusionPipeline],
         validate: Callable[[], None],
+        empty_cache: Callable[[], None],
     ):
         self.id = contest_id
         self.baseline_repository = baseline_repository
         self.load = loader
         self.validate = validate
+        self.empty_cache = empty_cache
 
 
 class ContestDeviceValidationError(Exception):
@@ -55,13 +59,15 @@ CONTESTS = [
         ContestId.APPLE_SILICON,
         "wombo/coreml-stable-diffusion-xl-base-1.0",
         lambda repository: CoreMLStableDiffusionXLPipeline.from_pretrained(repository).to("mps"),
-        lambda: check_mps_availability()
+        lambda: check_mps_availability(),
+        lambda: torch.mps.empty_cache(),
     ),
     Contest(
         ContestId.NVIDIA_4090,
         "stablediffusionapi/newdream-sdxl-20",
         lambda repository: StableDiffusionXLPipeline.from_pretrained(repository, torch_dtype=torch.float16).to("cuda"),
-        lambda: check_cuda_device_name("NVIDIA GeForce RTX 4090")
+        lambda: check_cuda_device_name("NVIDIA GeForce RTX 4090"),
+        lambda: torch.cuda.empty_cache(),
     ),
 ]
 
