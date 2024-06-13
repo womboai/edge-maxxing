@@ -22,7 +22,8 @@ from neuron import (
     get_config,
     SPEC_VERSION,
     ContestId,
-    get_submission, CURRENT_CONTEST,
+    get_submission,
+    CURRENT_CONTEST,
 )
 
 WINNER_PERCENTAGE = 0.8
@@ -318,13 +319,13 @@ class Validator:
     def do_step(self, block: int):
         now = datetime.now(tz=ZoneInfo("America/New_York"))
 
-        if not self.contest_state and (not self.last_day or self.last_day < now.date()) and now.hour >= 11:
+        if not self.contest_state and (not self.last_day or self.last_day < now.date()) and now.hour >= 12:
             # Past noon, should start collecting submissions
+            bt.logging.info(f"Working on contest {CURRENT_CONTEST.id.name} today's submission")
+
             bt.logging.info("Loading pipeline")
 
             pipeline = CURRENT_CONTEST.loader(CURRENT_CONTEST.baseline_repository, self.config.device)
-
-            bt.logging.info(f"Working on contest {CURRENT_CONTEST.id.name} today's submission")
 
             self.last_day = now.date()
             contest_id = CURRENT_CONTEST.id

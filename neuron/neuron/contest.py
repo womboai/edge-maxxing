@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import Callable
 
+import torch
 from diffusers import DiffusionPipeline, StableDiffusionXLPipeline
 
 from .coreml_pipeline import CoreMLStableDiffusionXLPipeline
@@ -48,7 +49,11 @@ CONTESTS = [
         "stablediffusionapi/newdream-sdxl-20",
         "cuda",
         "NVIDIA GeForce RTX 4090",
-        lambda repository, device: StableDiffusionXLPipeline.from_pretrained(repository).to(device),
+        lambda repository, device: StableDiffusionXLPipeline.from_pretrained(
+            repository,
+            torch_dtype=torch.float16,
+            variant="fp16",
+        ).to(device),
     ),
 ]
 
