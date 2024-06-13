@@ -260,9 +260,10 @@ class Validator:
             SPEC_VERSION,
         )
 
-        state, level = ("successful", INFO) if result else ("failed", WARNING)
-
-        bt.logging.log(level, f"set_weights {state}, {message}")
+        if result:
+            bt.logging.info(f"set_weights successful, {message}")
+        else:
+            bt.logging.warning(f"set_weights failed, {message}")
 
     def get_next_uid(self) -> int | None:
         uids = set([uid for uid, info in enumerate(self.contest_state.miner_info) if info])
