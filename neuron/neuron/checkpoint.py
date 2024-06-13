@@ -234,7 +234,7 @@ def compare_checkpoints(
         needed_time = (baseline_average * SAMPLE_COUNT - generated * average_time) / remaining
 
         if needed_time < average_time * 0.75:
-            # Needs %30 faster than current performance to beat the baseline,
+            # Needs %33 faster than current performance to beat the baseline,
             # thus we shouldn't waste compute testing farther
             failed = True
             break
