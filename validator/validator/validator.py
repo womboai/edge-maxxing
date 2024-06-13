@@ -279,8 +279,11 @@ class Validator:
 
         if uid is None:
             # Finished all submissions
+            bt.logging.info(f"Contest {self.contest_state.id} done for {self.last_day}")
+
             self.contest_state = None
             self.should_set_weights = True
+
             return
 
         axon = self.metagraph.axons[uid]
