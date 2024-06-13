@@ -65,7 +65,7 @@ class AppleSiliconContest(Contest):
         return CoreMLStableDiffusionXLPipeline.from_pretrained(repository or self.baseline_repository).to("mps")
 
     def validate(self):
-        if not torch.mps.is_available():
+        if not torch.backends.mps.is_available():
             raise ContestDeviceValidationError("mps is not available but is required.")
 
     def empty_cache(self):
