@@ -66,10 +66,8 @@ def main():
     metagraph = subtensor.metagraph(netuid=config.netuid)
     wallet = bt.wallet(config=config)
 
-    baseline_pipeline = CURRENT_CONTEST.loader(CURRENT_CONTEST.baseline_repository, config.device)
-
     if isdir(MODEL_DIRECTORY):
-        pipeline = CURRENT_CONTEST.loader(MODEL_DIRECTORY, config.device)
+        repository = MODEL_DIRECTORY
         expected_average_time = None
     else:
         for uid in sorted(range(metagraph.n.item()), key=lambda i: metagraph.incentive[i].item(), reverse=True):
@@ -83,13 +81,14 @@ def main():
             repository = CURRENT_CONTEST.baseline_repository
             expected_average_time = None
 
-        pipeline = CURRENT_CONTEST.loader(repository, config.device)
-
     if config.optimize:
-        pipeline = optimize(pipeline)
+        pipeline = optimize(CURRENT_CONTEST.load(repository))
+
         pipeline.save_pretrained(MODEL_DIRECTORY)
 
-    comparison = compare_checkpoints(baseline_pipeline, pipeline, expected_average_time)
+        repository = MODEL_DIRECTORY
+
+    comparison = compare_checkpoints(CURRENT_CONTEST, repository, expected_average_time)
 
     if config.commit:
         if comparison.failed:

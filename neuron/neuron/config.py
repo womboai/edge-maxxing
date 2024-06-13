@@ -2,9 +2,6 @@ from argparse import ArgumentParser
 from typing import Callable
 
 import bittensor as bt
-from torch.cuda import get_device_properties, get_device_name
-
-from .contest import CURRENT_CONTEST
 
 
 def get_config(add_args: Callable[[ArgumentParser], None] | None = None):
@@ -16,13 +13,6 @@ def get_config(add_args: Callable[[ArgumentParser], None] | None = None):
         type=int,
     )
 
-    argument_parser.add_argument(
-        "--device",
-        type=str,
-        help="Device to run on.",
-        default=CURRENT_CONTEST.device,
-    )
-
     bt.subtensor.add_args(argument_parser)
     bt.wallet.add_args(argument_parser)
     bt.logging.add_args(argument_parser)
@@ -31,11 +21,6 @@ def get_config(add_args: Callable[[ArgumentParser], None] | None = None):
         add_args(argument_parser)
 
     config = bt.config(argument_parser)
-
-    if CURRENT_CONTEST.device_name:
-        device_name = get_device_name(config.device)
-        if device_name != CURRENT_CONTEST.device_name:
-            raise RuntimeError(f"Incompatible device {device_name} when {CURRENT_CONTEST.device_name} is required.")
 
     bt.logging(config=config.logging)
 

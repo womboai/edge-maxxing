@@ -1,12 +1,10 @@
 from enum import Enum
-from typing import Callable
+from typing import Callable, NoReturn
 
 import torch
 from diffusers import DiffusionPipeline, StableDiffusionXLPipeline
 
 from .coreml_pipeline import CoreMLStableDiffusionXLPipeline
-
-CheckpointLoader = Callable[[str, str], DiffusionPipeline]
 
 
 class ContestId(Enum):
@@ -17,42 +15,53 @@ class ContestId(Enum):
 class Contest:
     id: ContestId
     baseline_repository: str
-    device: str
     device_name: str | None
-    loader: CheckpointLoader
+    load: Callable[[str], DiffusionPipeline]
 
     def __init__(
         self,
         contest_id: ContestId,
         baseline_repository: str,
-        device: str,
-        device_name: str | None,
-        loader: CheckpointLoader,
+        loader: Callable[[str], DiffusionPipeline],
+        validate: Callable[[], None],
     ):
         self.id = contest_id
         self.baseline_repository = baseline_repository
-        self.device = device
-        self.device_name = device_name
-        self.loader = loader
+        self.load = loader
+        self.validate = validate
+
+
+class ContestDeviceValidationError(Exception):
+    def __init__(self, message: str):
+        super().__init__(message)
+
+        self.message = message
+
+
+def check_mps_availability():
+    if not torch.mps.is_available():
+        raise ContestDeviceValidationError("mps is not available but is required.")
+
+
+def check_cuda_device_name(expected_name: str) -> None | NoReturn:
+    device_name = torch.cuda.get_device_name("cuda")
+
+    if device_name != expected_name:
+        raise ContestDeviceValidationError(f"Incompatible device {device_name} when {expected_name} is required.")
 
 
 CONTESTS = [
     Contest(
         ContestId.APPLE_SILICON,
         "wombo/coreml-stable-diffusion-xl-base-1.0",
-        "mps",
-        None,
-        lambda repository, device: CoreMLStableDiffusionXLPipeline.from_pretrained(repository).to(device),
+        lambda repository: CoreMLStableDiffusionXLPipeline.from_pretrained(repository).to("mps"),
+        lambda: check_mps_availability()
     ),
     Contest(
         ContestId.NVIDIA_4090,
         "stablediffusionapi/newdream-sdxl-20",
-        "cuda",
-        "NVIDIA GeForce RTX 4090",
-        lambda repository, device: StableDiffusionXLPipeline.from_pretrained(
-            repository,
-            torch_dtype=torch.float16,
-        ).to(device),
+        lambda repository: StableDiffusionXLPipeline.from_pretrained(repository, torch_dtype=torch.float16).to("cuda"),
+        lambda: check_cuda_device_name("NVIDIA GeForce RTX 4090")
     ),
 ]
 

@@ -7,12 +7,11 @@ from typing import cast
 import bittensor as bt
 import torch
 from bittensor.extrinsics.serving import get_metadata
-from diffusers import DiffusionPipeline
 from numpy import ndarray
 from pydantic import BaseModel
 from torch import Generator, cosine_similarity
 
-from .contest import ContestId, CURRENT_CONTEST
+from .contest import ContestId, CURRENT_CONTEST, Contest
 from .random_inputs import generate_random_prompt
 
 SPEC_VERSION = 0
@@ -124,11 +123,14 @@ def get_submission(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey: str
 
 
 def compare_checkpoints(
-    baseline: DiffusionPipeline,
-    miner_checkpoint: DiffusionPipeline,
+    contest: Contest,
+    repository: str,
     reported_average_time: float | None = None,
 ) -> CheckpointBenchmark:
     failed = False
+
+    baseline = contest.load(contest.baseline_repository)
+    miner_checkpoint = contest.load(repository)
 
     baseline_average = float("inf")
     average_time = float("inf")

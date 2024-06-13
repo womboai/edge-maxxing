@@ -2,7 +2,6 @@ import time
 import traceback
 from argparse import ArgumentParser
 from datetime import date, datetime
-from logging import INFO, WARNING
 from os import makedirs
 from os.path import isfile, expanduser, join
 from random import choice
@@ -11,7 +10,6 @@ from zoneinfo import ZoneInfo
 import bittensor as bt
 import numpy
 from bittensor.utils.weight_utils import process_weights_for_netuid, convert_weights_and_uids_for_emit
-from diffusers import DiffusionPipeline
 from numpy import real, isreal
 from numpy.polynomial import Polynomial
 from torch import save, load
@@ -24,6 +22,7 @@ from neuron import (
     ContestId,
     get_submission,
     CURRENT_CONTEST,
+    find_contest, ContestDeviceValidationError,
 )
 
 WINNER_PERCENTAGE = 0.8
@@ -45,18 +44,15 @@ def _winner_percentage_sequence_ratio(sample_count: int):
 
 class ContestState:
     id: ContestId
-    pipeline: DiffusionPipeline
     miners_checked: set[int]
     miner_info: list[CheckpointSubmission | None]
 
     def __init__(
         self,
         contest_id: ContestId,
-        pipeline: DiffusionPipeline,
         miner_info: list[CheckpointSubmission | None],
     ):
         self.id = contest_id
-        self.pipeline = pipeline
         self.miners_checked = set()
         self.miner_info = miner_info
 
@@ -98,6 +94,10 @@ class Validator:
         self.should_set_weights = False
 
         self.load_state()
+
+        self.contest = find_contest(self.contest_state.id) if self.contest_state else CURRENT_CONTEST
+
+        self.contest.validate()
 
     @classmethod
     def add_extra_args(cls, argument_parser: ArgumentParser):
@@ -298,11 +298,9 @@ class Validator:
                 f"with a reported speed of {checkpoint_info.average_time}"
             )
 
-            checkpoint = CURRENT_CONTEST.loader(checkpoint_info.repository, self.config.device)
-
             comparison = compare_checkpoints(
-                self.contest_state.pipeline,
-                checkpoint,
+                self.contest,
+                checkpoint_info.repository,
                 checkpoint_info.average_time,
             )
 
@@ -325,14 +323,12 @@ class Validator:
 
         if not self.contest_state and (not self.last_day or self.last_day < now.date()) and now.hour >= 12:
             # Past noon, should start collecting submissions
-            bt.logging.info(f"Working on contest {CURRENT_CONTEST.id.name} today's submission")
-
-            bt.logging.info("Loading pipeline")
-
-            pipeline = CURRENT_CONTEST.loader(CURRENT_CONTEST.baseline_repository, self.config.device)
-
+            self.contest = CURRENT_CONTEST
             self.last_day = now.date()
-            contest_id = CURRENT_CONTEST.id
+
+            bt.logging.info(f"Working on contest {self.contest.id.name} today's submission")
+
+            self.contest.validate()
 
             bt.logging.info("Collecting all submissions")
             miner_info = [
@@ -345,11 +341,7 @@ class Validator:
             self.scores = [0.0] * self.metagraph.n.item()
             self.should_set_weights = False
 
-            self.contest_state = ContestState(
-                contest_id,
-                pipeline,
-                miner_info,
-            )
+            self.contest_state = ContestState(self.contest.id, miner_info)
 
             bt.logging.info(f"Got the following valid submissions: {list(enumerate(miner_info))}")
 
@@ -382,7 +374,11 @@ class Validator:
 
                 self.do_step(block)
             except Exception as e:
-                bt.logging.error(f"Error during validation step {self.step}, {traceback.format_exception(e)}")
+                if not isinstance(e, ContestDeviceValidationError):
+                    bt.logging.error(f"Error during validation step {self.step}, {traceback.format_exception(e)}")
+                    continue
+
+                raise
 
 
 if __name__ == '__main__':
