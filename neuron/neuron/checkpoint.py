@@ -1,5 +1,4 @@
 import traceback
-from collections import namedtuple
 from dataclasses import dataclass
 from os import urandom
 from struct import pack, unpack

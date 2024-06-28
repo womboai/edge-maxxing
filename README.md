@@ -2,6 +2,7 @@
 
 ### Current GPU: NVIDIA GeForce RTX 4090
 ### Current Model: `stablediffusionapi/newdream-sdxl-20`
+### Netuid: 39
 
 ## Miners and Validators
 
