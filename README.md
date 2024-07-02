@@ -157,21 +157,33 @@ pm2 start poetry --name edge-validator --interpreter none -- \
 ```
 
 ## Roadmap
+Our mission is to create the world's most optimized AI models for edge devices, democratizing access to powerful AI capabilities. Here's our path forward:
 
-### Phase 1: Initial Optimization 
-- [ ] Implement and optimize initial AI models on the NVIDIA GeForce RTX 4090
-- [ ] Establish a robust telemetry and model benchmarking system
-- [ ] Develop incentive mechanism for miners optimizing and distributing high-performance models
+**Phase 1: Foundation (Current)**
+- [ ] Perfect contest and benchmarking mechanisms
+- [ ] Establish a robust framework for measuring model performance across hardware
+- [ ] Cultivate a community of world-class miners skilled in optimizing models for edge devices
 
-### Phase 2: Expansion to Multiple Modalities
-- [ ] Expand optimization capabilities to support various models, end consumer devices, and modalities
-- [ ] Integrate with WOMBO’s flagship products (Dream and WOMBO Me) to leverage optimized models
+**Phase 2: Expansion**
+- [ ] Support a diverse range of AI models, pipelines, and consumer-grade hardware
+- [ ] Develop tools to lower entry barriers for new participants
+Integrate initial set of optimized models into the w.ai platform
 
-### Phase 3: Open Source Contributions
-- [ ] Release open-source AI pipelines and APIs for optimized model usage
-- [ ] Encourage third-party developers to build applications and services on top of the EdgeMaxxing subnet
+**Phase 3: Mass Adoption and Accessibility**
+- [ ] Launch user-friendly mobile app for widespread participation in the network
+- [ ] Implement intuitive interfaces for non-technical users to contribute and benefit from optimized AI models
+- [ ] Fully integrate EdgeMaxxing with w.ai, making all optimized models instantly available and usable on the platform
+
+**Long-term Vision**
+- [ ] Transform EdgeMaxxing into a cornerstone of decentralized AI, where:
+- [ ] Any device, from smartphones to high-end GPUs, can contribute to and benefit from the network
+- [ ] Optimized models power a new generation of AI-driven applications
+- [ ] EdgeMaxxing becomes the go-to platform for rapid benchmarking and optimization of new AI models on diverse hardware
 
 <br>
+
+Through each phase, we'll continuously refine our techniques, expand hardware support, and push the boundaries of AI optimization for edge computing.
+
 <br>
 <br>
 
