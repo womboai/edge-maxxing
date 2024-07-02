@@ -38,12 +38,12 @@ w.ai envisions a future where artificial intelligence is decentralized, democrat
 
 ## EdgeMaxxing Subnet
 
-#### What is the goal?
+### What is the goal?
 The EdgeMaxxing subnet aims to create the world's most optimized AI models for consumer devices, starting with Stable Diffusion XL on the NVIDIA GeForce RTX 4090. 
 
 The subnet will expand to support optimization for various end devices, models, and modalities overtime.
 
-#### Key Benefits of Optimized Models:
+### Key Benefits of Optimized Models:
 Optimizing AI models is crucial to realizing a vision of decentralized AI.
 - **Accessibility:** Enabling these advanced models to run on consumer devices, from smartphones to laptops, bringing AI capabilities to everyone.
 - **Decentralization:** Allowing millions of users to contribute their computing power, rather than relying on a small number of powerful miners, creating a truly distributed AI network.
