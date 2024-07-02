@@ -1,6 +1,7 @@
 <div align="center">
 
-# WOMBO EdgeMaxxing Subnet: Optimizing AI Models for Consumer Devices, Enabling Millions to Contribute to a Decentralized Network
+# WOMBO EdgeMaxxing Subnet: Optimizing AI Models for Consumer Devices
+#### Enabling Millions to Contribute to a Decentralized Network
 
 ![WOMBO Cover](https://content.wombo.ai/bittensor/SN39_cover.jpeg "WOMBO AI")
 #### *In the annals of the digital age, a grand saga unfolds. In a realm where the forces of artificial intelligence are harnessed by a select few, the question arises: shall this power remain concentrated, or shall it be distributed for the benefit of all humankind?*
