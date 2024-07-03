@@ -24,6 +24,7 @@
 -  [Get Started with Mining or Validating](#running-miners-and-validators)
     - [Running a miner](#running-a-miner)
     - [Running a validator](#validator-setup)
+- [Proposals for Optimizations](#proposals-for-optimizations)
 - [Roadmap](#roadmap)
 
 ## About WOMBO
@@ -160,6 +161,20 @@ pm2 start poetry --name edge-validator --interpreter none -- \
     --logging.debug
 ```
 
+## Proposals for Optimizations
+
+There are several effective techniques to explore when optimizing machine learning models for edge devices. Here are some key approaches to consider:
+
+1. **Knowledge Distillation**: Train a smaller, more efficient model to mimic a larger, more complex one. This technique is particularly useful for deploying models on devices with limited computational resources.
+
+2. **Quantization**: Reduce the precision of the model's weights and activations, typically from 32-bit floating-point to 8-bit integers. This decreases memory usage and computational requirements, making it possible to run models on edge devices. Additionally, exploring low-precision representation for weights (e.g., using 8-bit integers) can reduce memory bandwidth usage for memory-bound models, even if the actual compute is done in higher precision (e.g., 32-bit).
+
+3. **TensorRT and Hardware-Specific Optimizations**: Utilize NVIDIA's TensorRT to optimize deep learning models for inference on NVIDIA GPUs. This involves more than just layer fusion; it includes optimizing assembly, identifying prefetch opportunities, optimizing L2 memory allocation, writing specialized kernels, and performing graph optimizations. These techniques enhance performance and reduce latency by tailoring the model to the specific hardware configuration.
+
+4. **Hyperparameter Tuning**: Optimize the configuration settings of the model to improve its performance. This can be done manually or through automated methods such as grid search or Bayesian optimization. While not a direct edge optimization, it is an essential step in the overall process of model optimization.
+
+We encourage developers to explore these optimization techniques or develop other approaches to enhance model performance and efficiency specifically for edge devices.
+
 ## Roadmap
 Our mission is to create the world's most optimized AI models for edge devices, democratizing access to powerful AI capabilities. Here's our path forward:
 
@@ -188,8 +203,8 @@ Integrate initial set of optimized models into the w.ai platform
 
 Through each phase, we'll continuously refine our techniques, expand hardware support, and push the boundaries of AI optimization for edge computing.
 
-<br>
-<br>
+## License
+The WOMBO Bittensor subnet is released under the [MIT License](./LICENSE).
 
 <div align="center">
   <img src="https://content.wombo.ai/bittensor/logo.png" alt="WOMBO AI" width="100" style="margin-bottom: 10px;"/>
