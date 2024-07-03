@@ -1,11 +1,14 @@
 <div align="center">
 
 # WOMBO EdgeMaxxing Subnet: Optimizing AI Models for Consumer Devices
+
 #### Enabling Millions to Contribute to a Decentralized Network
 
 ![WOMBO Cover](https://content.wombo.ai/bittensor/SN39_cover.jpeg "WOMBO AI")
+
 #### *In the annals of the digital age, a grand saga unfolds. In a realm where the forces of artificial intelligence are harnessed by a select few, the question arises: shall this power remain concentrated, or shall it be distributed for the benefit of all humankind?*
 
+[![License](https://img.shields.io/github/license/womboai/edge-optimization-subnet)](https://github.com/womboai/edge-optimization-subnet/blob/main/LICENSE)
 
 </div>
 
@@ -66,13 +69,14 @@ Miners are incentivized through a ranking-based reward system. The more effectiv
 
 Validators receive rewards for their consistent operation and accurate scoring.
 
+![WOMBO Cover](https://content.wombo.ai/bittensor/sn-explain.png "WOMBO AI")
+
 
 ### Competition Structure
 1. Miners submit optimized models
 2. Validators score submissions
 3. Contest runs daily at 12 PM New York time
 4. Miners receive rewards based on their ranking
-
 
 ### Miners
 - Actively submit optimized checkpoints of the specified model or pipeline. No need for continuous operation; can wait for results after submission
