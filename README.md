@@ -96,8 +96,6 @@ Validators receive rewards for their consistent operation and accurate scoring.
 
 ## Running Miners and Validators
 
-### Running a miner
-
 To start working with a registered hotkey, clone the repository and install poetry
 ```bash
 # Poetry
@@ -121,6 +119,7 @@ There is no need to manage venvs in any way, as poetry will handle that.
 1. Go to the miner directory after cloning the repository,
     ```bash
     cd miner
+    poetry install
     ```
 2. Clone the base model into a directory `model`
     ```bash
@@ -150,6 +149,8 @@ All that is needed for a validator is running on the current contest's GPU with 
 This assumes using PM2, feel free to adjust for anything else
 ```bash
 cd validator
+
+poetry install
 
 pm2 start poetry --name edge-validator --interpreter none -- \
     run python validator/validator.py \
