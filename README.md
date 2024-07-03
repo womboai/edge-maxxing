@@ -187,7 +187,7 @@ Our mission is to create the world's most optimized AI models for edge devices, 
 **Phase 2: Expansion**
 - [ ] Support a diverse range of AI models, pipelines, and consumer-grade hardware
 - [ ] Develop tools to lower entry barriers for new participants
-Integrate initial set of optimized models into the w.ai platform
+- [ ] Integrate initial set of optimized models into the w.ai platform
 
 **Phase 3: Mass Adoption and Accessibility**
 - [ ] Launch user-friendly mobile app for widespread participation in the network
