@@ -74,8 +74,6 @@ Miners are incentivized through a ranking-based reward system. The more effectiv
 
 Validators receive rewards for their consistent operation and accurate scoring.
 
-Validators receive rewards for their consistent operation and accurate scoring.
-
 ![WOMBO Cover](https://content.wombo.ai/bittensor/sn-explain.png "WOMBO AI")
 
 
