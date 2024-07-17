@@ -66,7 +66,11 @@ By optimizing popular models like LLAMA3 and Stable Diffusion, we transform idle
 
 The EdgeMaxxing subnet defines specific models, pipelines, and target hardware for optimization. Miners and validators collaborate in a daily competition to improve AI model performance on consumer devices.
 
-Miners are incentivized through a ranking-based reward system. The more effective their optimization, the higher their potential earnings.
+Miners are incentivized through a ranking-based reward system. The more effective their optimization, the higher their potential earnings. Every day at 12PM EST a contest is run, where:
+- 🥇 1st place: 80% of the total reward pool
+- 🥈 2nd place: 16%
+- 🥉 3rd place: 3.2%
+- 🎖️ All other participants share the remaining pool
 
 Validators receive rewards for their consistent operation and accurate scoring.
 
@@ -187,7 +191,7 @@ Our mission is to create the world's most optimized AI models for edge devices, 
 **Phase 2: Expansion**
 - [ ] Support a diverse range of AI models, pipelines, and consumer-grade hardware
 - [ ] Develop tools to lower entry barriers for new participants
-Integrate initial set of optimized models into the w.ai platform
+- [ ] Integrate initial set of optimized models into the w.ai platform
 
 **Phase 3: Mass Adoption and Accessibility**
 - [ ] Launch user-friendly mobile app for widespread participation in the network
