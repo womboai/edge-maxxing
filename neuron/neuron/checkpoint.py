@@ -1,5 +1,6 @@
 import traceback
 from dataclasses import dataclass
+from datetime import date
 from os import urandom
 from struct import pack, unpack
 from time import perf_counter
@@ -42,6 +43,7 @@ class CheckpointSubmission(BaseModel):
     average_time: float
     spec_version: int = SPEC_VERSION
     contest: ContestId = CURRENT_CONTEST.id
+    submission_date: date
 
     def to_bytes(self):
         data = bytearray()
@@ -57,6 +59,9 @@ class CheckpointSubmission(BaseModel):
         write_int(float_bits(self.average_time))
         write_int(self.spec_version)
         write_int(self.contest.value)
+        write_int(self.submission_date.year)
+        write_int(self.submission_date.month)
+        write_int(self.submission_date.day)
 
         if len(data) > 128:
             raise RuntimeError(f"CheckpointSubmission {self} is too large({len(data)}, can not exceed 128 bytes.")
@@ -90,11 +95,14 @@ class CheckpointSubmission(BaseModel):
         spec_version = read_int()
         contest_id = ContestId(read_int())
 
+        submission_date = date(read_int(), read_int(), read_int())
+
         return cls(
             repository=repository,
             average_time=average_time,
             spec_version=spec_version,
             contest=contest_id,
+            submission_date=submission_date,
         )
 
 
@@ -106,7 +114,12 @@ class CheckpointBenchmark:
         self.failed = failed
 
 
-def get_submission(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey: str) -> CheckpointSubmission | None:
+def get_submission(
+    subtensor: bt.subtensor,
+    metagraph: bt.metagraph,
+    hotkey: str,
+    today: date | None = None,
+) -> CheckpointSubmission | None:
     try:
         metadata = cast(dict[str, dict[str, list[dict[str, str]]]], get_metadata(subtensor, metagraph.netuid, hotkey))
 
@@ -121,7 +134,8 @@ def get_submission(subtensor: bt.subtensor, metagraph: bt.metagraph, hotkey: str
         if (
             info.spec_version != SPEC_VERSION or
             info.contest != CURRENT_CONTEST.id or
-            info.repository == CURRENT_CONTEST.baseline_repository
+            info.repository == CURRENT_CONTEST.baseline_repository or
+            (today is not None and info.submission_date != today)
         ):
             return None
 

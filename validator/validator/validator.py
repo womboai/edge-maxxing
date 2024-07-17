@@ -332,7 +332,7 @@ class Validator:
 
             bt.logging.info("Collecting all submissions")
             miner_info = [
-                get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid])
+                get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid], self.last_day)
                 for uid in range(self.metagraph.n.item())
             ]
 
