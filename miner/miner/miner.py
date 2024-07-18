@@ -69,7 +69,7 @@ def main():
         expected_average_time = None
     else:
         for uid in sorted(range(metagraph.n.item()), key=lambda i: metagraph.incentive[i].item(), reverse=True):
-            info = get_submission(subtensor, metagraph, metagraph.hotkeys[uid], None)
+            info = get_submission(subtensor, metagraph, metagraph.hotkeys[uid])
 
             if info:
                 repository = info.repository

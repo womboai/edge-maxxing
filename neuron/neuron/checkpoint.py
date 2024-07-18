@@ -17,7 +17,7 @@ from torch import Generator, cosine_similarity, Tensor
 from .contest import ContestId, CURRENT_CONTEST, Contest
 from .random_inputs import generate_random_prompt
 
-SPEC_VERSION = 0
+SPEC_VERSION = 1
 
 SAMPLE_COUNT = 5
 
@@ -43,7 +43,6 @@ class CheckpointSubmission(BaseModel):
     average_time: float
     spec_version: int = SPEC_VERSION
     contest: ContestId = CURRENT_CONTEST.id
-    submission_date: date
 
     def to_bytes(self):
         data = bytearray()
@@ -59,9 +58,6 @@ class CheckpointSubmission(BaseModel):
         write_int(float_bits(self.average_time))
         write_int(self.spec_version)
         write_int(self.contest.value)
-        write_int(self.submission_date.year)
-        write_int(self.submission_date.month)
-        write_int(self.submission_date.day)
 
         if len(data) > 128:
             raise RuntimeError(f"CheckpointSubmission {self} is too large({len(data)}, can not exceed 128 bytes.")
@@ -95,14 +91,11 @@ class CheckpointSubmission(BaseModel):
         spec_version = read_int()
         contest_id = ContestId(read_int())
 
-        submission_date = date(read_int(), read_int(), read_int())
-
         return cls(
             repository=repository,
             average_time=average_time,
             spec_version=spec_version,
             contest=contest_id,
-            submission_date=submission_date,
         )
 
 
@@ -118,7 +111,6 @@ def get_submission(
     subtensor: bt.subtensor,
     metagraph: bt.metagraph,
     hotkey: str,
-    today: date | None = None,
 ) -> CheckpointSubmission | None:
     try:
         metadata = cast(dict[str, dict[str, list[dict[str, str]]]], get_metadata(subtensor, metagraph.netuid, hotkey))
@@ -134,8 +126,7 @@ def get_submission(
         if (
             info.spec_version != SPEC_VERSION or
             info.contest != CURRENT_CONTEST.id or
-            info.repository == CURRENT_CONTEST.baseline_repository or
-            (today is not None and info.submission_date != today)
+            info.repository == CURRENT_CONTEST.baseline_repository
         ):
             return None
 

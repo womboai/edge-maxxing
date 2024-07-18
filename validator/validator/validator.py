@@ -281,7 +281,6 @@ class Validator:
             # Finished all submissions
             bt.logging.info(f"Contest {self.contest_state.id} done for {self.last_day}")
 
-            self.contest_state = None
             self.should_set_weights = True
 
             return
@@ -323,30 +322,56 @@ class Validator:
 
         if not self.contest_state and (not self.last_day or self.last_day < now.date()) and now.hour >= 12:
             # Past noon, should start collecting submissions
-            self.contest = CURRENT_CONTEST
+
             self.last_day = now.date()
 
-            bt.logging.info(f"Working on contest {self.contest.id.name} today's submission")
+            if self.contest.id != CURRENT_CONTEST.id:
+                # New contest, restart
+                self.contest = CURRENT_CONTEST
 
-            self.contest.validate()
+                bt.logging.info(f"Working on contest {self.contest.id.name} today's submissions")
 
-            bt.logging.info("Collecting all submissions")
-            miner_info = [
-                get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid], self.last_day)
-                for uid in range(self.metagraph.n.item())
-            ]
+                self.contest.validate()
+
+                bt.logging.info("Collecting all submissions")
+                miner_info = [
+                    get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid])
+                    for uid in range(self.metagraph.n.item())
+                ]
+
+                self.scores = [0.0] * self.metagraph.n.item()
+                self.should_set_weights = False
+
+                self.contest_state = ContestState(self.contest.id, miner_info)
+
+                bt.logging.info(f"Got the following valid submissions: {list(enumerate(miner_info))}")
+            else:
+                bt.logging.info("Collecting all submissions")
+
+                miner_info = [
+                    get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid])
+                    for uid in range(self.metagraph.n.item())
+                ]
+
+                updated_uids = set([
+                    uid
+                    for uid in range(self.metagraph.n.item())
+                    if miner_info[uid].repository != self.contest_state.miner_info[uid]
+                ])
+
+                for uid in updated_uids:
+                    self.scores[uid] = 0.0
+
+                self.should_set_weights = False
+
+                self.contest_state.miner_info = miner_info
+                self.contest_state.miners_checked -= updated_uids
+
+                bt.logging.info(f"Miners {updated_uids} changed their submissions")
 
             self.sequence_ratio = _winner_percentage_sequence_ratio(len(miner_info) - miner_info.count(None))
 
-            self.scores = [0.0] * self.metagraph.n.item()
-            self.should_set_weights = False
-
-            self.contest_state = ContestState(self.contest.id, miner_info)
-
-            bt.logging.info(f"Got the following valid submissions: {list(enumerate(miner_info))}")
-
             self.step += 1
-
             return
 
         if block - self.metagraph.last_update[self.uid] >= self.config.epoch_length:
