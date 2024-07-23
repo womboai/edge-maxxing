@@ -201,7 +201,11 @@ class Validator:
                     self.contest_state.miner_info[uid] = None
 
         if not self.should_set_weights:
+            bt.logging.info("Will not set weights as none are present yet")
+
             return
+
+        bt.logging.info("Setting weights")
 
         sorted_scores = sorted(enumerate(self.scores), key=lambda score: score[1], reverse=True)
 
@@ -349,8 +353,17 @@ class Validator:
 
             return
 
-        if block - self.metagraph.last_update[self.uid] >= self.config.epoch_length:
+        last_update = self.metagraph.last_update[self.uid]
+        blocks_elapsed = block - last_update
+
+        if blocks_elapsed >= self.config.epoch_length:
+            bt.logging.info(f"{blocks_elapsed} since last update, resyncing metagraph and setting weights")
             self.sync()
+        else:
+            bt.logging.info(
+                f"{blocks_elapsed} since last update, "
+                f"{self.config.epoch_length - blocks_elapsed} blocks remaining until metagraph sync"
+            )
 
         if not self.contest_state:
             self.step += 1
