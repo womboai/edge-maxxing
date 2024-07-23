@@ -361,7 +361,15 @@ class Validator:
 
                 self.contest_state.miner_info = miner_info
                 self.contest_state.miners_checked -= updated_uids
-                self.contest_state.last_winner = max(enumerate(self.scores), key=lambda contestant: contestant[1])
+
+                highest_uid, highest_score = max(enumerate(self.scores), key=lambda contestant: contestant[1])
+
+                if self.contest_state.last_winner:
+                    winner_score = self.contest_state.last_winner[1]
+
+                    if highest_score >= winner_score + winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
+                        # New winner
+                        self.contest_state.last_winner = highest_uid, highest_score
 
                 bt.logging.info(f"Miners {updated_uids} changed their submissions")
 
