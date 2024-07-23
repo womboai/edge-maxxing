@@ -208,7 +208,7 @@ class Validator:
 
             return
 
-          bt.logging.info("Setting weights")
+        bt.logging.info("Setting weights")
 
         sorted_uids = [uid for uid, score in sorted(enumerate(self.scores), key=lambda score: score[1], reverse=True)]
 
