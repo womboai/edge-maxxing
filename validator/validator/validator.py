@@ -26,6 +26,7 @@ from neuron import (
 )
 
 WINNER_PERCENTAGE = 0.8
+IMPROVEMENT_BENCHMARK_PERCENTAGE = 0.01
 
 
 def _get_incentive(rank: int, sequence_ratio: float):
@@ -46,6 +47,7 @@ class ContestState:
     id: ContestId
     miners_checked: set[int]
     miner_info: list[CheckpointSubmission | None]
+    last_winner: tuple[int, float] | None
 
     def __init__(
         self,
@@ -55,6 +57,7 @@ class ContestState:
         self.id = contest_id
         self.miners_checked = set()
         self.miner_info = miner_info
+        self.last_winner = None
 
 
 class Validator:
@@ -322,10 +325,18 @@ class Validator:
 
         if not self.contest_state and (not self.last_day or self.last_day < now.date()) and now.hour >= 12:
             # Past noon, should start collecting submissions
-
             self.last_day = now.date()
 
-            if self.contest.id != CURRENT_CONTEST.id:
+            bt.logging.info("Collecting all submissions")
+
+            miner_info = [
+                get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid])
+                for uid in range(self.metagraph.n.item())
+            ]
+
+            self.should_set_weights = False
+
+            if self.contest_state.id != CURRENT_CONTEST.id:
                 # New contest, restart
                 self.contest = CURRENT_CONTEST
 
@@ -333,26 +344,12 @@ class Validator:
 
                 self.contest.validate()
 
-                bt.logging.info("Collecting all submissions")
-                miner_info = [
-                    get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid])
-                    for uid in range(self.metagraph.n.item())
-                ]
-
                 self.scores = [0.0] * self.metagraph.n.item()
-                self.should_set_weights = False
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
 
                 bt.logging.info(f"Got the following valid submissions: {list(enumerate(miner_info))}")
             else:
-                bt.logging.info("Collecting all submissions")
-
-                miner_info = [
-                    get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid])
-                    for uid in range(self.metagraph.n.item())
-                ]
-
                 updated_uids = set([
                     uid
                     for uid in range(self.metagraph.n.item())
@@ -362,10 +359,9 @@ class Validator:
                 for uid in updated_uids:
                     self.scores[uid] = 0.0
 
-                self.should_set_weights = False
-
                 self.contest_state.miner_info = miner_info
                 self.contest_state.miners_checked -= updated_uids
+                self.contest_state.last_winner = max(enumerate(self.scores), key=lambda contestant: contestant[1])
 
                 bt.logging.info(f"Miners {updated_uids} changed their submissions")
 
