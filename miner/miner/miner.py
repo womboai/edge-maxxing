@@ -102,7 +102,7 @@ def main():
 
             return
 
-        upload_folder(config.repository, MODEL_DIRECTORY, commit_message=config.commit_message)
+        upload_folder(repo_id=config.repository, folder_path=MODEL_DIRECTORY, commit_message=config.commit_message)
         bt.logging.info(f"Pushed to huggingface at {config.repository}")
 
     now = datetime.now(tz=ZoneInfo("America/New_York"))
