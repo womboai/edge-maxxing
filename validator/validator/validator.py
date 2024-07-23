@@ -281,10 +281,11 @@ class Validator:
         uid = self.get_next_uid()
 
         if uid is None:
-            # Finished all submissions
-            bt.logging.info(f"Contest {self.contest_state.id} done for {self.last_day}")
+            if not self.should_set_weights:
+                # Finished all submissions
+                bt.logging.info(f"Contest {self.contest_state.id} done for {self.last_day}")
 
-            self.should_set_weights = True
+                self.should_set_weights = True
 
             return
 
