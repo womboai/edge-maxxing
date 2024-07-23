@@ -26,7 +26,7 @@ from neuron import (
 )
 
 WINNER_PERCENTAGE = 0.8
-IMPROVEMENT_BENCHMARK_PERCENTAGE = 0.01
+IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.01
 
 
 def _get_incentive(rank: int, sequence_ratio: float):
@@ -47,7 +47,6 @@ class ContestState:
     id: ContestId
     miners_checked: set[int]
     miner_info: list[CheckpointSubmission | None]
-    last_winner: tuple[int, float] | None
 
     def __init__(
         self,
@@ -57,7 +56,6 @@ class ContestState:
         self.id = contest_id
         self.miners_checked = set()
         self.miner_info = miner_info
-        self.last_winner = None
 
 
 class Validator:
@@ -74,6 +72,7 @@ class Validator:
 
     last_day: date | None
     contest_state: ContestState | None
+    winner_override: tuple[int, float] | None
     should_set_weights: bool
 
     def __init__(self):
@@ -94,6 +93,7 @@ class Validator:
 
         self.last_day = None
         self.contest_state = None
+        self.winner_override = None
         self.should_set_weights = False
 
         self.load_state()
@@ -206,15 +206,23 @@ class Validator:
         if not self.should_set_weights:
             return
 
-        sorted_scores = sorted(enumerate(self.scores), key=lambda score: score[1], reverse=True)
+        sorted_uids = [uid for uid, score in sorted(enumerate(self.scores), key=lambda score: score[1], reverse=True)]
+
+        if self.winner_override:
+            _, highest_score = self.current_best_contestant()
+            winner_uid, winner_score = self.winner_override
+
+            if highest_score >= winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
+                sorted_uids = [winner_uid] + [uid for uid in sorted_uids if uid != winner_uid]
 
         ranked_scores = [
-            (uid, (_get_incentive(index, self.sequence_ratio) if score > 0.0 else 0.0))
-            for index, (uid, score) in enumerate(sorted_scores)
+            (uid, _get_incentive(index, self.sequence_ratio))
+            for index, uid in enumerate(sorted_uids)
         ]
 
         ranked_scores = sorted(ranked_scores, key=lambda score: score[0])
 
+        uids = numpy.array([uid for uid, _ in ranked_scores])
         weights = numpy.array([weight for _, weight in ranked_scores])
 
         if numpy.isnan(weights).any():
@@ -227,14 +235,14 @@ class Validator:
         raw_weights = weights / numpy.linalg.norm(weights, ord=1, axis=0, keepdims=True)
 
         bt.logging.debug("raw_weights", raw_weights)
-        bt.logging.debug("raw_weight_uids", self.metagraph.uids)
+        bt.logging.debug("raw_weight_uids", uids)
         # Process the raw weights to final_weights via subtensor limitations.
 
         (
             processed_weight_uids,
             processed_weights,
         ) = process_weights_for_netuid(
-            uids=self.metagraph.uids,
+            uids=uids,
             weights=raw_weights,
             netuid=self.config.netuid,
             subtensor=self.subtensor,
@@ -321,6 +329,9 @@ class Validator:
 
         self.contest_state.miners_checked.add(uid)
 
+    def current_best_contestant(self) -> tuple[int, float]:
+        return max(enumerate(self.scores), key=lambda contestant: contestant[1])
+
     def do_step(self, block: int):
         now = datetime.now(tz=ZoneInfo("America/New_York"))
 
@@ -348,6 +359,7 @@ class Validator:
                 self.scores = [0.0] * self.metagraph.n.item()
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
+                self.winner_override = None
 
                 bt.logging.info(f"Got the following valid submissions: {list(enumerate(miner_info))}")
             else:
@@ -363,14 +375,16 @@ class Validator:
                 self.contest_state.miner_info = miner_info
                 self.contest_state.miners_checked -= updated_uids
 
-                highest_uid, highest_score = max(enumerate(self.scores), key=lambda contestant: contestant[1])
+                highest_uid, highest_score = self.current_best_contestant()
 
-                if self.contest_state.last_winner:
-                    winner_score = self.contest_state.last_winner[1]
+                if self.winner_override:
+                    winner_score = self.winner_override[1]
 
-                    if highest_score >= winner_score + winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
+                    if highest_score >= winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
                         # New winner
-                        self.contest_state.last_winner = highest_uid, highest_score
+                        self.winner_override = highest_uid, highest_score
+                else:
+                    self.winner_override = highest_uid, highest_score
 
                 bt.logging.info(f"Miners {updated_uids} changed their submissions")
 
