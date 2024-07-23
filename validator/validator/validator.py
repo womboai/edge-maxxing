@@ -382,7 +382,7 @@ class Validator:
         if block - self.metagraph.last_update[self.uid] >= self.config.epoch_length:
             self.sync()
 
-        if not self.contest_state:
+        if self.should_set_weights:
             self.step += 1
 
             bt.logging.info(f"Nothing to do in this step, sleeping for {self.config.epoch_length} blocks")
