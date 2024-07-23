@@ -323,7 +323,7 @@ class Validator:
     def do_step(self, block: int):
         now = datetime.now(tz=ZoneInfo("America/New_York"))
 
-        if not self.contest_state and (not self.last_day or self.last_day < now.date()) and now.hour >= 12:
+        if (not self.last_day or self.last_day < now.date()) and now.hour >= 12:
             # Past noon, should start collecting submissions
             self.last_day = now.date()
 
@@ -336,7 +336,7 @@ class Validator:
 
             self.should_set_weights = False
 
-            if self.contest_state.id != CURRENT_CONTEST.id:
+            if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
                 # New contest, restart
                 self.contest = CURRENT_CONTEST
 
