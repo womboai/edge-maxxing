@@ -22,7 +22,7 @@ from neuron import (
     ContestId,
     get_submission,
     CURRENT_CONTEST,
-    find_contest, ContestDeviceValidationError,
+    find_contest, ContestDeviceValidationError, UnrecoverableException,
 )
 
 WINNER_PERCENTAGE = 0.8
@@ -463,8 +463,9 @@ class Validator:
 
     def run(self):
         while True:
+            block = self.subtensor.get_current_block()
+
             try:
-                block = self.subtensor.get_current_block()
                 bt.logging.info(f"Step {self.step}, block {block}")
 
                 self.do_step(block)
