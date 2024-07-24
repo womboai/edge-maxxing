@@ -1,7 +1,5 @@
 from argparse import ArgumentParser
-from datetime import date, datetime, timedelta
 from os.path import isdir
-from zoneinfo import ZoneInfo
 
 import bittensor as bt
 from bittensor.extrinsics.serving import publish_metadata
@@ -69,7 +67,7 @@ def main():
         expected_average_time = None
     else:
         for uid in sorted(range(metagraph.n.item()), key=lambda i: metagraph.incentive[i].item(), reverse=True):
-            info = get_submission(subtensor, metagraph, metagraph.hotkeys[uid], None)
+            info = get_submission(subtensor, metagraph, metagraph.hotkeys[uid])
 
             if info:
                 repository = info.repository
@@ -105,21 +103,9 @@ def main():
         upload_folder(repo_id=config.repository, folder_path=MODEL_DIRECTORY, commit_message=config.commit_message)
         bt.logging.info(f"Pushed to huggingface at {config.repository}")
 
-    now = datetime.now(tz=ZoneInfo("America/New_York"))
-
-    if now.hour >= 12:
-        submission_date = (now + timedelta(days=1)).date()
-
-        bt.logging.info(f"Deadline for submission today is already past, submitting for tomorrow({submission_date})")
-    else:
-        submission_date = now.date()
-
-        bt.logging.info(f"Submitting for today({submission_date})")
-
     checkpoint_info = CheckpointSubmission(
         repository=config.repository,
         average_time=comparison.average_time,
-        submission_date=submission_date,
     )
 
     encoded = checkpoint_info.to_bytes()

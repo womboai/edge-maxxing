@@ -26,6 +26,7 @@ from neuron import (
 )
 
 WINNER_PERCENTAGE = 0.8
+IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.01
 
 
 def _get_incentive(rank: int, sequence_ratio: float):
@@ -71,6 +72,7 @@ class Validator:
 
     last_day: date | None
     contest_state: ContestState | None
+    winner_override: tuple[int, float] | None
     should_set_weights: bool
 
     def __init__(self):
@@ -91,6 +93,7 @@ class Validator:
 
         self.last_day = None
         self.contest_state = None
+        self.winner_override = None
         self.should_set_weights = False
 
         self.load_state()
@@ -201,21 +204,29 @@ class Validator:
                     self.contest_state.miner_info[uid] = None
 
         if not self.should_set_weights:
-            bt.logging.info("Will not set weights as none are present yet")
+            bt.logging.info("Will not set weights as contest is not done")
 
             return
 
         bt.logging.info("Setting weights")
 
-        sorted_scores = sorted(enumerate(self.scores), key=lambda score: score[1], reverse=True)
+        sorted_uids = [uid for uid, score in sorted(enumerate(self.scores), key=lambda score: score[1], reverse=True)]
+
+        if self.winner_override:
+            _, highest_score = self.current_best_contestant()
+            winner_uid, winner_score = self.winner_override
+
+            if highest_score >= winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
+                sorted_uids = [winner_uid] + [uid for uid in sorted_uids if uid != winner_uid]
 
         ranked_scores = [
-            (uid, (_get_incentive(index, self.sequence_ratio) if score > 0.0 else 0.0))
-            for index, (uid, score) in enumerate(sorted_scores)
+            (uid, _get_incentive(index, self.sequence_ratio))
+            for index, uid in enumerate(sorted_uids)
         ]
 
         ranked_scores = sorted(ranked_scores, key=lambda score: score[0])
 
+        uids = numpy.array([uid for uid, _ in ranked_scores])
         weights = numpy.array([weight for _, weight in ranked_scores])
 
         if numpy.isnan(weights).any():
@@ -228,14 +239,14 @@ class Validator:
         raw_weights = weights / numpy.linalg.norm(weights, ord=1, axis=0, keepdims=True)
 
         bt.logging.debug("raw_weights", raw_weights)
-        bt.logging.debug("raw_weight_uids", self.metagraph.uids)
+        bt.logging.debug("raw_weight_uids", uids)
         # Process the raw weights to final_weights via subtensor limitations.
 
         (
             processed_weight_uids,
             processed_weights,
         ) = process_weights_for_netuid(
-            uids=self.metagraph.uids,
+            uids=uids,
             weights=raw_weights,
             netuid=self.config.netuid,
             subtensor=self.subtensor,
@@ -282,11 +293,11 @@ class Validator:
         uid = self.get_next_uid()
 
         if uid is None:
-            # Finished all submissions
-            bt.logging.info(f"Contest {self.contest_state.id} done for {self.last_day}")
+            if not self.should_set_weights:
+                # Finished all submissions
+                bt.logging.info(f"Contest {self.contest_state.id} done for {self.last_day}")
 
-            self.contest_state = None
-            self.should_set_weights = True
+                self.should_set_weights = True
 
             return
 
@@ -322,35 +333,77 @@ class Validator:
 
         self.contest_state.miners_checked.add(uid)
 
+    def current_best_contestant(self) -> tuple[int, float]:
+        return max(enumerate(self.scores), key=lambda contestant: contestant[1])
+
     def do_step(self, block: int):
         now = datetime.now(tz=ZoneInfo("America/New_York"))
 
-        if not self.contest_state and (not self.last_day or self.last_day < now.date()) and now.hour >= 12:
+        if (not self.last_day or self.last_day < now.date()) and now.hour >= 12:
             # Past noon, should start collecting submissions
-            self.contest = CURRENT_CONTEST
             self.last_day = now.date()
 
-            bt.logging.info(f"Working on contest {self.contest.id.name} today's submission")
-
-            self.contest.validate()
-
             bt.logging.info("Collecting all submissions")
+
             miner_info = [
-                get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid], self.last_day)
+                get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid])
                 for uid in range(self.metagraph.n.item())
             ]
 
-            self.sequence_ratio = _winner_percentage_sequence_ratio(len(miner_info) - miner_info.count(None))
-
-            self.scores = [0.0] * self.metagraph.n.item()
             self.should_set_weights = False
 
-            self.contest_state = ContestState(self.contest.id, miner_info)
+            if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
+                # New contest, restart
+                self.contest = CURRENT_CONTEST
 
-            bt.logging.info(f"Got the following valid submissions: {list(enumerate(miner_info))}")
+                bt.logging.info(f"Working on contest {self.contest.id.name} today's submissions")
+
+                self.contest.validate()
+
+                self.scores = [0.0] * self.metagraph.n.item()
+
+                self.contest_state = ContestState(self.contest.id, miner_info)
+                self.winner_override = None
+
+                bt.logging.info(f"Got the following valid submissions: {list(enumerate(miner_info))}")
+            else:
+                def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
+                    if not old_info and not new_info:
+                        return False
+
+                    if (not old_info) != (not new_info):
+                        return True
+
+                    return old_info.repository != new_info.repository
+
+                updated_uids = set([
+                    uid
+                    for uid in range(self.metagraph.n.item())
+                    if should_update(self.contest_state.miner_info[uid], miner_info[uid])
+                ])
+
+                for uid in updated_uids:
+                    self.scores[uid] = 0.0
+
+                self.contest_state.miner_info = miner_info
+                self.contest_state.miners_checked -= updated_uids
+
+                highest_uid, highest_score = self.current_best_contestant()
+
+                if self.winner_override:
+                    winner_score = self.winner_override[1]
+
+                    if highest_score >= winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
+                        # New winner
+                        self.winner_override = highest_uid, highest_score
+                else:
+                    self.winner_override = highest_uid, highest_score
+
+                bt.logging.info(f"Miners {updated_uids} changed their submissions")
+
+            self.sequence_ratio = _winner_percentage_sequence_ratio(len(miner_info) - miner_info.count(None))
 
             self.step += 1
-
             return
 
         last_update = self.metagraph.last_update[self.uid]
@@ -365,7 +418,7 @@ class Validator:
                 f"{self.config.epoch_length - blocks_elapsed} blocks remaining until metagraph sync"
             )
 
-        if not self.contest_state:
+        if self.should_set_weights:
             self.step += 1
 
             bt.logging.info(f"Nothing to do in this step, sleeping for {self.config.epoch_length} blocks")
