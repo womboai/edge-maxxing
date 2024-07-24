@@ -105,21 +105,9 @@ def main():
         upload_folder(repo_id=config.repository, folder_path=MODEL_DIRECTORY, commit_message=config.commit_message)
         bt.logging.info(f"Pushed to huggingface at {config.repository}")
 
-    now = datetime.now(tz=ZoneInfo("America/New_York"))
-
-    if now.hour >= 12:
-        submission_date = (now + timedelta(days=1)).date()
-
-        bt.logging.info(f"Deadline for submission today is already past, submitting for tomorrow({submission_date})")
-    else:
-        submission_date = now.date()
-
-        bt.logging.info(f"Submitting for today({submission_date})")
-
     checkpoint_info = CheckpointSubmission(
         repository=config.repository,
         average_time=comparison.average_time,
-        submission_date=submission_date,
     )
 
     encoded = checkpoint_info.to_bytes()
