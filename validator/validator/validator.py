@@ -138,6 +138,7 @@ class Validator:
                 "scores": self.scores,
                 "last_day": self.last_day,
                 "contest_state": self.contest_state,
+                "winner_override": self.winner_override,
                 "should_set_weights": self.should_set_weights,
             },
             self.state_path(),
@@ -159,6 +160,7 @@ class Validator:
         self.scores = state["scores"]
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
+        self.winner_override = state.get("winner_override", self.winner_override)
         self.should_set_weights = state["should_set_weights"]
 
     def sync(self):
