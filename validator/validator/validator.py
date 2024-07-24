@@ -207,6 +207,8 @@ class Validator:
 
                     self.contest_state.miner_info[uid] = None
 
+        self.hotkeys = self.metagraph.hotkeys
+
         if not self.should_set_weights:
             bt.logging.info("Will not set weights as contest is not done")
 
