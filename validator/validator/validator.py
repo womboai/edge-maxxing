@@ -22,7 +22,7 @@ from neuron import (
     ContestId,
     get_submission,
     CURRENT_CONTEST,
-    find_contest, ContestDeviceValidationError, UnrecoverableException,
+    find_contest, ContestDeviceValidationError,
 )
 
 WINNER_PERCENTAGE = 0.8
