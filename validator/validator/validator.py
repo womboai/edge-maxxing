@@ -202,7 +202,9 @@ class Validator:
                 self.scores[uid] = 0.0
 
                 if self.contest_state:
-                    self.contest_state.miners_checked.remove(uid)
+                    if uid in self.contest_state.miners_checked:
+                        self.contest_state.miners_checked.remove(uid)
+
                     self.contest_state.miner_info[uid] = None
 
         if not self.should_set_weights:
