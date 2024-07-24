@@ -1,6 +1,5 @@
 import traceback
 from dataclasses import dataclass
-from datetime import date
 from os import urandom
 from struct import pack, unpack
 from time import perf_counter

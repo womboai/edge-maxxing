@@ -1,7 +1,5 @@
 from argparse import ArgumentParser
-from datetime import date, datetime, timedelta
 from os.path import isdir
-from zoneinfo import ZoneInfo
 
 import bittensor as bt
 from bittensor.extrinsics.serving import publish_metadata
