@@ -2,7 +2,6 @@ from argparse import ArgumentParser
 from os.path import isdir
 
 import bittensor as bt
-from bittensor.extrinsics.serving import publish_metadata
 from diffusers import DiffusionPipeline
 from huggingface_hub import upload_folder
 
@@ -12,6 +11,7 @@ from neuron import (
     get_config,
     compare_checkpoints,
     CURRENT_CONTEST,
+    make_submission,
 )
 
 MODEL_DIRECTORY = "model"
@@ -67,9 +67,11 @@ def main():
         expected_average_time = None
     else:
         for uid in sorted(range(metagraph.n.item()), key=lambda i: metagraph.incentive[i].item(), reverse=True):
-            info = get_submission(subtensor, metagraph, metagraph.hotkeys[uid])
+            submission = get_submission(subtensor, metagraph, metagraph.hotkeys[uid])
 
-            if info:
+            if submission:
+                info, _ = submission
+
                 repository = info.repository
                 expected_average_time = info.average_time
                 break
@@ -108,15 +110,11 @@ def main():
         average_time=comparison.average_time,
     )
 
-    encoded = checkpoint_info.to_bytes()
-
-    publish_metadata(
+    make_submission(
         subtensor,
+        metagraph,
         wallet,
-        metagraph.netuid,
-        f"Raw{len(encoded)}",
-        encoded,
-        wait_for_finalization=False,
+        checkpoint_info,
     )
 
     bt.logging.info(f"Submitted {checkpoint_info} as the info for this miner")

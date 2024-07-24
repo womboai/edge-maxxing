@@ -338,6 +338,36 @@ class Validator:
     def current_best_contestant(self) -> tuple[int, float]:
         return max(enumerate(self.scores), key=lambda contestant: contestant[1])
 
+    def get_miner_submissions(self):
+        visited_repositories: dict[str, tuple[int, int]] = {}
+
+        miner_info: list[CheckpointSubmission | None] = []
+
+        for uid in range(self.metagraph.n.item()):
+            submission = get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid])
+
+            if not submission:
+                miner_info.append(None)
+                continue
+
+            info, block = submission
+
+            existing_submission = visited_repositories.get(info.repository)
+
+            if existing_submission:
+                existing_uid, existing_block = existing_submission
+
+                if block > existing_block:
+                    miner_info.append(None)
+                    continue
+
+                miner_info[existing_uid] = None
+
+            miner_info.append(info)
+            visited_repositories[info.repository] = uid, block
+
+        return miner_info
+
     def do_step(self, block: int):
         now = datetime.now(tz=ZoneInfo("America/New_York"))
 
@@ -347,10 +377,7 @@ class Validator:
 
             bt.logging.info("Collecting all submissions")
 
-            miner_info = [
-                get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid])
-                for uid in range(self.metagraph.n.item())
-            ]
+            miner_info = self.get_miner_submissions()
 
             self.should_set_weights = False
 

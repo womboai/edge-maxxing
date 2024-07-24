@@ -1,23 +1,22 @@
 import traceback
 from dataclasses import dataclass
 from os import urandom
-from struct import pack, unpack
 from time import perf_counter
-from typing import cast
+from typing import cast, Any
 
 import bittensor as bt
 import torch
-from bittensor.extrinsics.serving import get_metadata
+from bittensor.extrinsics.serving import get_metadata, publish_metadata
 from diffusers import DiffusionPipeline
 from numpy import ndarray
 from pydantic import BaseModel
 from torch import Generator, cosine_similarity, Tensor
 
+from .network_commitments import Encoder, Decoder
 from .contest import ContestId, CURRENT_CONTEST, Contest
 from .random_inputs import generate_random_prompt
 
-SPEC_VERSION = 1
-
+SPEC_VERSION = 2
 SAMPLE_COUNT = 5
 
 
@@ -29,71 +28,25 @@ class GenerationOutput:
     generation_time: float
 
 
-def float_bits(value: float):
-    return unpack(">L", pack(">f", value))[0]
-
-
-def float_from_bits(bits: int):
-    return unpack(">f", pack(">L", bits))[0]
-
-
 class CheckpointSubmission(BaseModel):
     repository: str = CURRENT_CONTEST.baseline_repository
     average_time: float
-    spec_version: int = SPEC_VERSION
     contest: ContestId = CURRENT_CONTEST.id
 
-    def to_bytes(self):
-        data = bytearray()
-
-        def write_bytes(byte_data: bytes):
-            data.append(len(byte_data))
-            data.extend(byte_data)
-
-        def write_int(int_value: int):
-            data.extend(int.to_bytes(int_value, 4, "big"))
-
-        write_bytes(self.repository.encode())
-        write_int(float_bits(self.average_time))
-        write_int(self.spec_version)
-        write_int(self.contest.value)
-
-        if len(data) > 128:
-            raise RuntimeError(f"CheckpointSubmission {self} is too large({len(data)}, can not exceed 128 bytes.")
-
-        return bytes(data)
+    def encode(self, encoder: Encoder):
+        encoder.write_str(self.repository)
+        encoder.write_float(self.average_time)
+        encoder.write_uint16(self.contest.value)
 
     @classmethod
-    def from_bytes(cls, data: bytes):
-        position = 0
-
-        def read_bytes():
-            nonlocal position
-            length = data[position]
-            position += 1
-
-            value = data[position:position + length]
-            position += length
-
-            return value
-
-        def read_int():
-            nonlocal position
-
-            value = int.from_bytes(data[position:position + 4], "big")
-            position += 4
-
-            return value
-
-        repository = read_bytes().decode()
-        average_time = float_from_bits(read_int())
-        spec_version = read_int()
-        contest_id = ContestId(read_int())
+    def decode(cls, decoder: Decoder):
+        repository = decoder.read_str()
+        average_time = decoder.read_float()
+        contest_id = ContestId(decoder.read_uint16())
 
         return cls(
             repository=repository,
             average_time=average_time,
-            spec_version=spec_version,
             contest=contest_id,
         )
 
@@ -106,30 +59,58 @@ class CheckpointBenchmark:
         self.failed = failed
 
 
+def make_submission(
+    subtensor: bt.subtensor,
+    metagraph: bt.metagraph,
+    wallet: bt.wallet,
+    submission: CheckpointSubmission,
+):
+    encoder = Encoder()
+
+    encoder.write_uint16(SPEC_VERSION)
+
+    submission.encode(encoder)
+
+    data = encoder.finish()
+
+    publish_metadata(
+        subtensor,
+        wallet,
+        metagraph.netuid,
+        f"Raw{len(data)}",
+        data,
+        wait_for_finalization=False,
+    )
+
+
 def get_submission(
     subtensor: bt.subtensor,
     metagraph: bt.metagraph,
     hotkey: str,
-) -> CheckpointSubmission | None:
+) -> tuple[CheckpointSubmission, int] | None:
     try:
-        metadata = cast(dict[str, dict[str, list[dict[str, str]]]], get_metadata(subtensor, metagraph.netuid, hotkey))
+        metadata = cast(dict[str, Any], get_metadata(subtensor, metagraph.netuid, hotkey))
 
         if not metadata:
             return None
 
-        commitment = metadata["info"]["fields"][0]
-        hex_data = commitment[list(commitment.keys())[0]][2:]
+        block: int = metadata["block"]
+        commitment: dict[str, str] = metadata["info"]["fields"][0]
+        hex_data = commitment.values().__iter__().__next__()
+        data = bytes.fromhex(hex_data[2:])
+        decoder = Decoder(data)
 
-        info = CheckpointSubmission.from_bytes(bytes.fromhex(hex_data))
+        spec_version = decoder.read_uint16()
 
-        if (
-            info.spec_version != SPEC_VERSION or
-            info.contest != CURRENT_CONTEST.id or
-            info.repository == CURRENT_CONTEST.baseline_repository
-        ):
+        if spec_version != SPEC_VERSION:
             return None
 
-        return info
+        info = CheckpointSubmission.decode(decoder)
+
+        if info.contest != CURRENT_CONTEST.id or info.repository == CURRENT_CONTEST.baseline_repository:
+            return None
+
+        return info, block
     except Exception as e:
         bt.logging.error(f"Failed to get submission from miner {hotkey}, {e}")
         bt.logging.debug(f"Submission parsing error, {traceback.format_exception(e)}")
