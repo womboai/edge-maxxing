@@ -34,7 +34,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.10,<3.11"
 torch = "2.2.0"
-bittensor = "7.1.1"
+bittensor = "7.3.0"
 loguru = "0.7.2"
 diffusers = "0.29.0"
 nltk = "3.8.1"
