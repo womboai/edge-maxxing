@@ -367,10 +367,19 @@ class Validator:
 
                 bt.logging.info(f"Got the following valid submissions: {list(enumerate(miner_info))}")
             else:
+                def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
+                    if not old_info and not new_info:
+                        return False
+
+                    if (not old_info) != (not new_info):
+                        return True
+
+                    return old_info.repository != new_info.repository
+
                 updated_uids = set([
                     uid
                     for uid in range(self.metagraph.n.item())
-                    if miner_info[uid].repository != self.contest_state.miner_info[uid]
+                    if should_update(self.contest_state.miner_info[uid], miner_info[uid])
                 ])
 
                 for uid in updated_uids:
