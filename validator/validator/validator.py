@@ -76,7 +76,7 @@ class Validator:
 
     last_day: date | None
     contest_state: ContestState | None
-    winner_override: tuple[int, float] | None
+    previous_day_winner: tuple[int, float] | None
     should_set_weights: bool
 
     wandb_run: Run | None
@@ -99,7 +99,7 @@ class Validator:
 
         self.last_day = None
         self.contest_state = None
-        self.winner_override = None
+        self.previous_day_winner = None
         self.should_set_weights = False
 
         self.load_state()
@@ -190,7 +190,7 @@ class Validator:
                 "scores": self.scores,
                 "last_day": self.last_day,
                 "contest_state": self.contest_state,
-                "winner_override": self.winner_override,
+                "winner_override": self.previous_day_winner,
                 "should_set_weights": self.should_set_weights,
             },
             self.state_path(),
@@ -212,7 +212,7 @@ class Validator:
         self.scores = state["scores"]
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
-        self.winner_override = state.get("winner_override", self.winner_override)
+        self.previous_day_winner = state.get("winner_override", self.previous_day_winner)
         self.should_set_weights = state["should_set_weights"]
 
         if self.contest_state:
@@ -256,6 +256,9 @@ class Validator:
                 # hotkey has been replaced
                 self.scores[uid] = 0.0
 
+                if self.previous_day_winner and uid == self.previous_day_winner[0]:
+                    self.previous_day_winner = None
+
                 if self.contest_state:
                     if uid in self.contest_state.miners_checked:
                         self.contest_state.miners_checked.remove(uid)
@@ -273,12 +276,24 @@ class Validator:
 
         sorted_uids = [uid for uid, score in sorted(enumerate(self.scores), key=lambda score: score[1], reverse=True)]
 
-        if self.winner_override:
+        if self.previous_day_winner:
             _, highest_score = self.current_best_contestant()
-            winner_uid, winner_score = self.winner_override
+            winner_uid, winner_score = self.previous_day_winner
 
             if highest_score >= winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
                 sorted_uids = [winner_uid] + [uid for uid in sorted_uids if uid != winner_uid]
+
+        self.wandb_run.log(
+            data={
+                str(uid): {
+                    "rank": rank,
+                    "score": self.scores[uid],
+                    "multiday_winner": self.previous_day_winner and uid == self.previous_day_winner[0],
+                }
+                for rank, uid in enumerate(sorted_uids)
+            },
+            step=self.step,
+        )
 
         ranked_scores = [
             (uid, _get_incentive(index, self.sequence_ratio))
@@ -453,7 +468,7 @@ class Validator:
                 self.scores = [0.0] * self.metagraph.n.item()
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
-                self.winner_override = None
+                self.previous_day_winner = None
 
                 bt.logging.info(f"Got the following valid submissions: {list(enumerate(miner_info))}")
             else:
@@ -480,14 +495,14 @@ class Validator:
 
                 highest_uid, highest_score = self.current_best_contestant()
 
-                if self.winner_override:
-                    winner_score = self.winner_override[1]
+                if self.previous_day_winner:
+                    winner_score = self.previous_day_winner[1]
 
                     if highest_score >= winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
                         # New winner
-                        self.winner_override = highest_uid, highest_score
+                        self.previous_day_winner = highest_uid, highest_score
                 else:
-                    self.winner_override = highest_uid, highest_score
+                    self.previous_day_winner = highest_uid, highest_score
 
                 bt.logging.info(f"Miners {updated_uids} changed their submissions")
 
