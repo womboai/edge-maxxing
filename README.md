@@ -166,6 +166,13 @@ pm2 start poetry --name edge-validator --interpreter none -- \
     --logging.debug
 ```
 
+If you want this to auto-update(which is recommended), start another pm2 process using `auto-update.sh` like the following:
+```bash
+pm2 start auto-update.sh --name edge-validator-updater --interpreter bash -- edge-validator
+```
+
+The argument at the end is the name of the main PM2 process. This will keep your PM2 validator instance up to date as long as it is running.
+
 ## Proposals for Optimizations
 
 There are several effective techniques to explore when optimizing machine learning models for edge devices. Here are some key approaches to consider:
