@@ -1,4 +1,3 @@
-import atexit
 import time
 import traceback
 from argparse import ArgumentParser
@@ -27,7 +26,7 @@ from neuron import (
     CURRENT_CONTEST,
     find_contest, ContestDeviceValidationError,
 )
-from validator.validator.wandb_args import add_wandb_args
+from .wandb_args import add_wandb_args
 
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.01
