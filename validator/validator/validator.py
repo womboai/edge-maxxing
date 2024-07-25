@@ -1,3 +1,4 @@
+import atexit
 import time
 import traceback
 from argparse import ArgumentParser
@@ -9,10 +10,12 @@ from zoneinfo import ZoneInfo
 
 import bittensor as bt
 import numpy
+import wandb
 from bittensor.utils.weight_utils import process_weights_for_netuid, convert_weights_and_uids_for_emit
 from numpy import real, isreal
 from numpy.polynomial import Polynomial
 from torch import save, load
+from wandb.sdk.wandb_run import Run
 
 from neuron import (
     CheckpointSubmission,
@@ -24,6 +27,7 @@ from neuron import (
     CURRENT_CONTEST,
     find_contest, ContestDeviceValidationError,
 )
+from validator.validator.wandb_args import add_wandb_args
 
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.01
@@ -75,6 +79,8 @@ class Validator:
     winner_override: tuple[int, float] | None
     should_set_weights: bool
 
+    wandb_run: Run | None
+
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
 
@@ -102,6 +108,50 @@ class Validator:
 
         self.contest.validate()
 
+    def new_wandb_run(self):
+        """Creates a new wandb run to save information to."""
+        day = self.last_day
+        hotkey = self.wallet.hotkey.ss58_address
+        uid = self.metagraph.hotkeys.index(hotkey)
+        netuid = self.metagraph.netuid
+
+        name = f"validator-{uid}-{day.year}-{day.month}-{day.day}"
+
+        self.wandb_run = wandb.init(
+            name=name,
+            id=name,
+            resume="allow",
+            mode="offline" if self.config.wandb.offline else "online",
+            project=self.config.wandb.project_name,
+            entity=self.config.wandb.entity,
+            notes=self.config.wandb.notes,
+            config={
+                "hotkey": hotkey,
+                "type": "validator",
+                "uid": uid,
+                "contest": self.contest_state.id.name,
+            },
+            allow_val_change=True,
+            anonymous="allow",
+            tags=[
+                f"version_{SPEC_VERSION}",
+                f"sn{netuid}",
+            ],
+        )
+
+        bt.logging.debug(f"Started a new wandb run: {name}")
+
+    def start_wandb_run(self):
+        if self.config.wandb.off:
+            return
+
+        if self.wandb_run:
+            bt.logging.info(f"New contest day, starting a new wandb run.")
+
+            self.wandb_run.finish()
+
+        self.new_wandb_run()
+
     @classmethod
     def add_extra_args(cls, argument_parser: ArgumentParser):
         argument_parser.add_argument(
@@ -110,6 +160,8 @@ class Validator:
             help="The default epoch length (how often we pull the metagraph, measured in 12 second blocks).",
             default=100,
         )
+
+        add_wandb_args(argument_parser)
 
     def state_path(self):
         full_path = expanduser(
@@ -162,6 +214,9 @@ class Validator:
         self.contest_state = state["contest_state"]
         self.winner_override = state.get("winner_override", self.winner_override)
         self.should_set_weights = state["should_set_weights"]
+
+        if self.contest_state:
+            self.start_wandb_run()
 
     def sync(self):
         # --- Check for registration.
@@ -378,6 +433,8 @@ class Validator:
         if (not self.last_day or self.last_day < now.date()) and now.hour >= 12:
             # Past noon, should start collecting submissions
             self.last_day = now.date()
+
+            self.start_wandb_run()
 
             bt.logging.info("Collecting all submissions")
 
