@@ -5,14 +5,17 @@ from datetime import date, datetime
 from os import makedirs
 from os.path import isfile, expanduser, join
 from random import choice
+from typing import cast
 from zoneinfo import ZoneInfo
 
 import bittensor as bt
 import numpy
+import wandb
 from bittensor.utils.weight_utils import process_weights_for_netuid, convert_weights_and_uids_for_emit
 from numpy import real, isreal
 from numpy.polynomial import Polynomial
 from torch import save, load
+from wandb.sdk.wandb_run import Run
 
 from neuron import (
     CheckpointSubmission,
@@ -24,6 +27,7 @@ from neuron import (
     CURRENT_CONTEST,
     find_contest, ContestDeviceValidationError,
 )
+from .wandb_args import add_wandb_args
 
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.01
@@ -72,8 +76,10 @@ class Validator:
 
     last_day: date | None
     contest_state: ContestState | None
-    winner_override: tuple[int, float] | None
+    previous_day_winner: tuple[int, float] | None
     should_set_weights: bool
+
+    wandb_run: Run | None
 
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
@@ -93,14 +99,64 @@ class Validator:
 
         self.last_day = None
         self.contest_state = None
-        self.winner_override = None
+        self.previous_day_winner = None
         self.should_set_weights = False
+
+        self.wandb_run = None
 
         self.load_state()
 
         self.contest = find_contest(self.contest_state.id) if self.contest_state else CURRENT_CONTEST
 
         self.contest.validate()
+
+    def new_wandb_run(self):
+        """Creates a new wandb run to save information to."""
+        day = self.last_day
+        hotkey = self.wallet.hotkey.ss58_address
+        uid = self.metagraph.hotkeys.index(hotkey)
+        netuid = self.metagraph.netuid
+
+        name = f"validator-{uid}-{day.year}-{day.month}-{day.day}"
+
+        signing_message = f"{uid}:{hotkey}:{self.contest_state.id.name}"
+        signature = f"0x{self.wallet.hotkey.sign(signing_message).hex()}"
+
+        self.wandb_run = wandb.init(
+            name=name,
+            id=name,
+            resume="allow",
+            mode="offline" if self.config.wandb.offline else "online",
+            project=self.config.wandb.project_name,
+            entity=self.config.wandb.entity,
+            notes=self.config.wandb.notes,
+            config={
+                "hotkey": hotkey,
+                "type": "validator",
+                "uid": uid,
+                "contest": self.contest_state.id.name,
+                "signature": signature,
+            },
+            allow_val_change=True,
+            anonymous="allow",
+            tags=[
+                f"version_{SPEC_VERSION}",
+                f"sn{netuid}",
+            ],
+        )
+
+        bt.logging.debug(f"Started a new wandb run: {name}")
+
+    def start_wandb_run(self):
+        if self.config.wandb.off:
+            return
+
+        if self.wandb_run:
+            bt.logging.info("New contest day, starting a new wandb run.")
+
+            self.wandb_run.finish()
+
+        self.new_wandb_run()
 
     @classmethod
     def add_extra_args(cls, argument_parser: ArgumentParser):
@@ -110,6 +166,8 @@ class Validator:
             help="The default epoch length (how often we pull the metagraph, measured in 12 second blocks).",
             default=100,
         )
+
+        add_wandb_args(argument_parser)
 
     def state_path(self):
         full_path = expanduser(
@@ -138,7 +196,7 @@ class Validator:
                 "scores": self.scores,
                 "last_day": self.last_day,
                 "contest_state": self.contest_state,
-                "winner_override": self.winner_override,
+                "winner_override": self.previous_day_winner,
                 "should_set_weights": self.should_set_weights,
             },
             self.state_path(),
@@ -160,8 +218,11 @@ class Validator:
         self.scores = state["scores"]
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
-        self.winner_override = state.get("winner_override", self.winner_override)
+        self.previous_day_winner = state.get("winner_override", self.previous_day_winner)
         self.should_set_weights = state["should_set_weights"]
+
+        if self.contest_state:
+            self.start_wandb_run()
 
     def sync(self):
         # --- Check for registration.
@@ -201,6 +262,9 @@ class Validator:
                 # hotkey has been replaced
                 self.scores[uid] = 0.0
 
+                if self.previous_day_winner and uid == self.previous_day_winner[0]:
+                    self.previous_day_winner = None
+
                 if self.contest_state:
                     if uid in self.contest_state.miners_checked:
                         self.contest_state.miners_checked.remove(uid)
@@ -218,12 +282,29 @@ class Validator:
 
         sorted_uids = [uid for uid, score in sorted(enumerate(self.scores), key=lambda score: score[1], reverse=True)]
 
-        if self.winner_override:
+        if self.previous_day_winner:
             _, highest_score = self.current_best_contestant()
-            winner_uid, winner_score = self.winner_override
+            winner_uid, winner_score = self.previous_day_winner
 
-            if highest_score >= winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
+            if highest_score < winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
                 sorted_uids = [winner_uid] + [uid for uid in sorted_uids if uid != winner_uid]
+        else:
+            winner_uid = None
+
+        self.wandb_run.log(
+            data={
+                str(uid): {
+                    "rank": rank,
+                    "model": cast(CheckpointSubmission, self.contest_state.miner_info[uid]).repository,
+                    "score": self.scores[uid],
+                    "hotkey": self.hotkeys[uid],
+                    "multiday_winner": uid == winner_uid,
+                }
+                for rank, uid in enumerate(sorted_uids)
+                if self.scores[uid] > 0.0
+            },
+            step=self.step,
+        )
 
         ranked_scores = [
             (uid, _get_incentive(index, self.sequence_ratio))
@@ -379,6 +460,8 @@ class Validator:
             # Past noon, should start collecting submissions
             self.last_day = now.date()
 
+            self.start_wandb_run()
+
             bt.logging.info("Collecting all submissions")
 
             miner_info = self.get_miner_submissions()
@@ -396,7 +479,7 @@ class Validator:
                 self.scores = [0.0] * self.metagraph.n.item()
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
-                self.winner_override = None
+                self.previous_day_winner = None
 
                 bt.logging.info(f"Got the following valid submissions: {list(enumerate(miner_info))}")
             else:
@@ -423,14 +506,14 @@ class Validator:
 
                 highest_uid, highest_score = self.current_best_contestant()
 
-                if self.winner_override:
-                    winner_score = self.winner_override[1]
+                if self.previous_day_winner:
+                    winner_score = self.previous_day_winner[1]
 
-                    if highest_score >= winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
+                    if highest_score > winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
                         # New winner
-                        self.winner_override = highest_uid, highest_score
+                        self.previous_day_winner = highest_uid, highest_score
                 else:
-                    self.winner_override = highest_uid, highest_score
+                    self.previous_day_winner = highest_uid, highest_score
 
                 bt.logging.info(f"Miners {updated_uids} changed their submissions")
 
