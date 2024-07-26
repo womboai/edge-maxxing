@@ -119,6 +119,9 @@ class Validator:
 
         name = f"validator-{uid}-{day.year}-{day.month}-{day.day}"
 
+        signing_message = f"{uid}:{hotkey}:{self.contest_state.id.name}"
+        signature = f"0x{self.wallet.hotkey.sign(signing_message).hex()}"
+
         self.wandb_run = wandb.init(
             name=name,
             id=name,
@@ -132,6 +135,7 @@ class Validator:
                 "type": "validator",
                 "uid": uid,
                 "contest": self.contest_state.id.name,
+                "signature": signature,
             },
             allow_val_change=True,
             anonymous="allow",
@@ -284,6 +288,8 @@ class Validator:
 
             if highest_score < winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
                 sorted_uids = [winner_uid] + [uid for uid in sorted_uids if uid != winner_uid]
+        else:
+            winner_uid = None
 
         self.wandb_run.log(
             data={
@@ -291,7 +297,8 @@ class Validator:
                     "rank": rank,
                     "model": cast(CheckpointSubmission, self.contest_state.miner_info[uid]).repository,
                     "score": self.scores[uid],
-                    "multiday_winner": self.previous_day_winner and uid == self.previous_day_winner[0],
+                    "hotkey": self.hotkeys[uid],
+                    "multiday_winner": uid == winner_uid,
                 }
                 for rank, uid in enumerate(sorted_uids)
                 if self.scores[uid] > 0.0
