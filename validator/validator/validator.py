@@ -281,7 +281,7 @@ class Validator:
             _, highest_score = self.current_best_contestant()
             winner_uid, winner_score = self.previous_day_winner
 
-            if highest_score >= winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
+            if highest_score < winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
                 sorted_uids = [winner_uid] + [uid for uid in sorted_uids if uid != winner_uid]
 
         self.wandb_run.log(
@@ -500,7 +500,7 @@ class Validator:
                 if self.previous_day_winner:
                     winner_score = self.previous_day_winner[1]
 
-                    if highest_score >= winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
+                    if highest_score > winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
                         # New winner
                         self.previous_day_winner = highest_uid, highest_score
                 else:
