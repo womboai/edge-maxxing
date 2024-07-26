@@ -152,7 +152,7 @@ class Validator:
             return
 
         if self.wandb_run:
-            bt.logging.info(f"New contest day, starting a new wandb run.")
+            bt.logging.info("New contest day, starting a new wandb run.")
 
             self.wandb_run.finish()
 
