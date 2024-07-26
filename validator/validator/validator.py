@@ -292,6 +292,7 @@ class Validator:
                     "multiday_winner": self.previous_day_winner and uid == self.previous_day_winner[0],
                 }
                 for rank, uid in enumerate(sorted_uids)
+                if self.scores[uid] > 0.0
             },
             step=self.step,
         )
