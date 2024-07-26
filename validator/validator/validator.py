@@ -101,6 +101,8 @@ class Validator:
         self.previous_day_winner = None
         self.should_set_weights = False
 
+        self.wandb_run = None
+
         self.load_state()
 
         self.contest = find_contest(self.contest_state.id) if self.contest_state else CURRENT_CONTEST
