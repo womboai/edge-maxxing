@@ -5,6 +5,7 @@ from datetime import date, datetime
 from os import makedirs
 from os.path import isfile, expanduser, join
 from random import choice
+from typing import cast
 from zoneinfo import ZoneInfo
 
 import bittensor as bt
@@ -288,6 +289,7 @@ class Validator:
             data={
                 str(uid): {
                     "rank": rank,
+                    "model": cast(CheckpointSubmission, self.contest_state.miner_info[uid]).repository,
                     "score": self.scores[uid],
                     "multiday_winner": self.previous_day_winner and uid == self.previous_day_winner[0],
                 }
