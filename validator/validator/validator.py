@@ -21,7 +21,6 @@ from neuron import (
     CheckpointSubmission,
     compare_checkpoints,
     get_config,
-    SPEC_VERSION,
     ContestId,
     get_submission,
     CURRENT_CONTEST,
@@ -29,6 +28,7 @@ from neuron import (
 )
 from wandb_args import add_wandb_args
 
+WEIGHTS_VERSION = 3
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.01
 
@@ -140,7 +140,7 @@ class Validator:
             allow_val_change=True,
             anonymous="allow",
             tags=[
-                f"version_{SPEC_VERSION}",
+                f"version_{WEIGHTS_VERSION}",
                 f"sn{netuid}",
             ],
         )
@@ -364,7 +364,7 @@ class Validator:
             self.metagraph.netuid,
             uint_uids,
             uint_weights,
-            SPEC_VERSION,
+            WEIGHTS_VERSION,
         )
 
         if result:
