@@ -280,7 +280,11 @@ class Validator:
 
         bt.logging.info("Setting weights")
 
-        sorted_uids = [uid for uid, score in sorted(enumerate(self.scores), key=lambda score: score[1], reverse=True)]
+        sorted_uids = [
+            uid
+            for uid, score in sorted(enumerate(self.scores), key=lambda score: score[1], reverse=True)
+            if score > 0.0
+        ]
 
         if self.previous_day_winner:
             _, highest_score = self.current_best_contestant()
