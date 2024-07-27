@@ -291,20 +291,21 @@ class Validator:
         else:
             winner_uid = None
 
-        self.wandb_run.log(
-            data={
-                str(uid): {
-                    "rank": rank,
-                    "model": cast(CheckpointSubmission, self.contest_state.miner_info[uid]).repository,
-                    "score": self.scores[uid],
-                    "hotkey": self.hotkeys[uid],
-                    "multiday_winner": uid == winner_uid,
-                }
-                for rank, uid in enumerate(sorted_uids)
-                if self.scores[uid] > 0.0
-            },
-            step=self.step,
-        )
+        if self.wandb_run:
+            self.wandb_run.log(
+                data={
+                    str(uid): {
+                        "rank": rank,
+                        "model": cast(CheckpointSubmission, self.contest_state.miner_info[uid]).repository,
+                        "score": self.scores[uid],
+                        "hotkey": self.hotkeys[uid],
+                        "multiday_winner": uid == winner_uid,
+                    }
+                    for rank, uid in enumerate(sorted_uids)
+                    if self.scores[uid] > 0.0
+                },
+                step=self.step,
+            )
 
         ranked_scores = [
             (uid, _get_incentive(index, self.sequence_ratio))
