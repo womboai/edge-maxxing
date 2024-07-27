@@ -38,6 +38,9 @@ def _get_incentive(rank: int, sequence_ratio: float):
 
 
 def _winner_percentage_sequence_ratio(sample_count: int):
+    if not sample_count:
+        return 1 - WINNER_PERCENTAGE
+
     if sample_count == 1:
         return 1 / WINNER_PERCENTAGE
 
@@ -70,7 +73,6 @@ class Validator:
     uid: int
 
     scores: list[float]
-    sequence_ratio: float = 1.0 - WINNER_PERCENTAGE
     hotkeys: list[str]
     step: int
 
@@ -311,8 +313,10 @@ class Validator:
                 step=self.step,
             )
 
+        sequence_ratio = _winner_percentage_sequence_ratio(len(sorted_uids))
+
         ranked_scores = [
-            (uid, _get_incentive(index, self.sequence_ratio))
+            (uid, _get_incentive(index, sequence_ratio))
             for index, uid in enumerate(sorted_uids)
         ]
 
@@ -521,8 +525,6 @@ class Validator:
                     self.previous_day_winner = highest_uid, highest_score
 
                 bt.logging.info(f"Miners {updated_uids} changed their submissions")
-
-            self.sequence_ratio = _winner_percentage_sequence_ratio(len(miner_info) - miner_info.count(None))
 
             self.step += 1
             return
