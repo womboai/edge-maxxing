@@ -475,6 +475,8 @@ class Validator:
 
             miner_info = self.get_miner_submissions()
 
+            bt.logging.info(f"Got {miner_info} submissions")
+
             self.should_set_weights = False
 
             if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
@@ -489,8 +491,6 @@ class Validator:
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
                 self.previous_day_winner = None
-
-                bt.logging.info(f"Got the following valid submissions: {list(enumerate(miner_info))}")
             else:
                 def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
                     if not old_info and not new_info:
@@ -506,6 +506,8 @@ class Validator:
                     for uid in range(self.metagraph.n.item())
                     if should_update(self.contest_state.miner_info[uid], miner_info[uid])
                 ])
+
+                bt.logging.info(f"Miners {updated_uids} changed their submissions")
 
                 for uid in updated_uids:
                     self.scores[uid] = 0.0
@@ -523,8 +525,6 @@ class Validator:
                         self.previous_day_winner = highest_uid, highest_score
                 else:
                     self.previous_day_winner = highest_uid, highest_score
-
-                bt.logging.info(f"Miners {updated_uids} changed their submissions")
 
             self.step += 1
             return
