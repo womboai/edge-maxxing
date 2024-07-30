@@ -51,12 +51,12 @@ class CheckpointSubmission(BaseModel):
         )
 
 
+@dataclass
 class CheckpointBenchmark:
-    def __init__(self, baseline_average: float, average_time: float, average_similarity: float, failed: bool):
-        self.baseline_average = baseline_average
-        self.average_time = average_time
-        self.average_similarity = average_similarity
-        self.failed = failed
+    baseline_average: float
+    average_time: float
+    average_similarity: float
+    failed: bool
 
 
 def make_submission(
@@ -209,6 +209,9 @@ def compare_checkpoints(
         if reported_average_time and average_time >= reported_average_time * 1.0625:
             # Too slow compared to reported speed, rank immediately based on current time
             failed = True
+            bt.logging.info(
+                f"Reported speed of {reported_average_time} is inaccurate as model is getting {average_time}"
+            )
             break
 
         if average_time < baseline_average * 1.0625:
@@ -221,10 +224,12 @@ def compare_checkpoints(
             # Needs %33 faster than current performance to beat the baseline,
             # thus we shouldn't waste compute testing farther
             failed = True
+            bt.logging.info("Current average is 75% of the baseline average")
             break
 
         if average_similarity < 0.85:
             # Deviating too much from original quality
+            bt.logging.info("Too different from baseline, failing")
             failed = True
             break
 
