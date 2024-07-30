@@ -397,10 +397,10 @@ class Validator:
 
             return
 
-        axon = self.metagraph.axons[uid]
+        hotkey = self.metagraph.hotkeys[uid]
 
         try:
-            bt.logging.info(f"Checking miner {uid}, hotkey: {axon.hotkey}")
+            bt.logging.info(f"Checking miner {uid}, hotkey: {hotkey}")
 
             checkpoint_info = self.contest_state.miner_info[uid]
 
