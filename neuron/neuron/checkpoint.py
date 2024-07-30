@@ -143,7 +143,7 @@ def generate(pipeline: DiffusionPipeline, prompt: str, seed: int) -> GenerationO
 def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmark:
     failed = False
 
-    baseline_pipeline = contest.load(contest.baseline_repository)
+    baseline_pipeline = contest.load_baseline()
 
     bt.logging.info("Generating baseline samples to compare")
 

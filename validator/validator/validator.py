@@ -29,7 +29,7 @@ from neuron import (
 )
 from wandb_args import add_wandb_args
 
-WEIGHTS_VERSION = 4
+WEIGHTS_VERSION = 5
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.01
 

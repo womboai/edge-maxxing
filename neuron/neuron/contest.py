@@ -21,6 +21,9 @@ class Contest(ABC):
         self.id = contest_id
         self.baseline_repository = baseline_repository
 
+    def load_baseline(self):
+        return self.load()
+
     @abstractmethod
     def load(self, repository: str | None = None):
         ...
