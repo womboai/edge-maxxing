@@ -428,6 +428,8 @@ class Validator:
 
             comparison = compare_checkpoints(self.contest, checkpoint_info.repository)
 
+            bt.logging.info(f"Benchmark results: {comparison}")
+
             if comparison.failed:
                 self.scores[uid] = 0.0
             else:
