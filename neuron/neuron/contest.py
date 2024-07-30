@@ -44,7 +44,7 @@ class CudaContest(Contest):
         return StableDiffusionXLPipeline.from_pretrained(
             repository or self.baseline_repository,
             torch_dtype=torch.float16,
-            use_safetensors=bool(repository),
+            use_safetensors=True if repository else None,
         ).to("cuda")
 
     def validate(self):
