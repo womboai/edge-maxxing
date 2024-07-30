@@ -157,7 +157,7 @@ def compare_checkpoints(
             generate_random_prompt(),
             int.from_bytes(urandom(4), "little"),
         )
-        for i in range(SAMPLE_COUNT)
+        for _ in range(SAMPLE_COUNT)
     ]
 
     del baseline_pipeline
