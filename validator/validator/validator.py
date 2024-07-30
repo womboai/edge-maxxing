@@ -24,11 +24,12 @@ from neuron import (
     ContestId,
     get_submission,
     CURRENT_CONTEST,
-    find_contest, ContestDeviceValidationError,
+    find_contest,
+    ContestDeviceValidationError,
 )
 from wandb_args import add_wandb_args
 
-WEIGHTS_VERSION = 3
+WEIGHTS_VERSION = 4
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.01
 
@@ -52,7 +53,7 @@ def _winner_percentage_sequence_ratio(sample_count: int):
 
 class ContestState:
     id: ContestId
-    miners_checked: set[int]
+    miner_score_versions: dict[int, int]
     miner_info: list[CheckpointSubmission | None]
 
     def __init__(
@@ -61,8 +62,14 @@ class ContestState:
         miner_info: list[CheckpointSubmission | None],
     ):
         self.id = contest_id
-        self.miners_checked = set()
+        self.miner_score_versions = {}
         self.miner_info = miner_info
+
+    def __setstate__(self, state):
+        del state["miners_checked"]
+
+        self.miner_score_versions = state.get("miner_score_versions", {})
+        self.__dict__.update(state)
 
 
 class Validator:
@@ -223,6 +230,13 @@ class Validator:
         self.previous_day_winner = state.get("winner_override", self.previous_day_winner)
         self.should_set_weights = state["should_set_weights"]
 
+        # Remove outdated checks
+        self.contest_state.miner_score_versions = {
+            uid: version
+            for uid, version in self.contest_state.miner_score_versions.items()
+            if version == WEIGHTS_VERSION
+        }
+
         if self.contest_state:
             self.start_wandb_run()
 
@@ -268,8 +282,8 @@ class Validator:
                     self.previous_day_winner = None
 
                 if self.contest_state:
-                    if uid in self.contest_state.miners_checked:
-                        self.contest_state.miners_checked.remove(uid)
+                    if uid in self.contest_state.miner_score_versions:
+                        del self.contest_state.miner_score_versions[uid]
 
                     self.contest_state.miner_info[uid] = None
 
@@ -378,7 +392,7 @@ class Validator:
 
     def get_next_uid(self) -> int | None:
         uids = set([uid for uid, info in enumerate(self.contest_state.miner_info) if info])
-        remaining_uids = uids - self.contest_state.miners_checked
+        remaining_uids = uids - self.contest_state.miner_score_versions.keys()
 
         if not len(remaining_uids):
             return None
@@ -396,6 +410,8 @@ class Validator:
                 self.should_set_weights = True
 
             return
+
+        self.should_set_weights = False
 
         hotkey = self.metagraph.hotkeys[uid]
 
@@ -423,7 +439,7 @@ class Validator:
             bt.logging.info(f"Failed to query miner {uid}, {e}")
             bt.logging.debug(f"Miner {uid} error, {traceback.format_exception(e)}")
 
-        self.contest_state.miners_checked.add(uid)
+        self.contest_state.miner_score_versions[uid] = WEIGHTS_VERSION
 
     def current_best_contestant(self) -> tuple[int, float]:
         return max(enumerate(self.scores), key=lambda contestant: contestant[1])
@@ -507,9 +523,9 @@ class Validator:
 
                 for uid in updated_uids:
                     self.scores[uid] = 0.0
+                    del self.contest_state.miner_score_versions[uid]
 
                 self.contest_state.miner_info = miner_info
-                self.contest_state.miners_checked -= updated_uids
 
                 highest_uid, highest_score = self.current_best_contestant()
 
@@ -537,6 +553,8 @@ class Validator:
                 f"{self.config.epoch_length - blocks_elapsed} blocks remaining until metagraph sync"
             )
 
+        self.test_next_miner()
+
         if self.should_set_weights:
             self.step += 1
 
@@ -544,8 +562,6 @@ class Validator:
             time.sleep(self.config.epoch_length * 12)
 
             return
-
-        self.test_next_miner()
 
         self.step += 1
 
