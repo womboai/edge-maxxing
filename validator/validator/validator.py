@@ -65,6 +65,7 @@ class ContestState:
         self.miner_score_versions = {}
         self.miner_info = miner_info
 
+    # Backwards compatibility
     def __setstate__(self, state):
         del state["miners_checked"]
 
