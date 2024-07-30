@@ -67,7 +67,8 @@ class ContestState:
 
     # Backwards compatibility
     def __setstate__(self, state):
-        del state["miners_checked"]
+        if "miners_checked" in state:
+            del state["miners_checked"]
 
         self.miner_score_versions = state.get("miner_score_versions", {})
         self.__dict__.update(state)
@@ -526,7 +527,9 @@ class Validator:
 
                 for uid in updated_uids:
                     self.scores[uid] = 0.0
-                    del self.contest_state.miner_score_versions[uid]
+
+                    if uid in self.contest_state.miner_score_versions:
+                        del self.contest_state.miner_score_versions[uid]
 
                 self.contest_state.miner_info = miner_info
 
