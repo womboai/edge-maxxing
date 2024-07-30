@@ -174,7 +174,7 @@ class Validator:
             "--epoch_length",
             type=int,
             help="The default epoch length (how often we pull the metagraph, measured in 12 second blocks).",
-            default=100,
+            default=500,
         )
 
         add_wandb_args(argument_parser)
