@@ -140,11 +140,7 @@ def generate(pipeline: DiffusionPipeline, prompt: str, seed: int) -> GenerationO
     )
 
 
-def compare_checkpoints(
-    contest: Contest,
-    repository: str,
-    reported_average_time: float | None = None,
-) -> CheckpointBenchmark:
+def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmark:
     failed = False
 
     baseline_pipeline = contest.load(contest.baseline_repository)
@@ -205,14 +201,6 @@ def compare_checkpoints(
             average_time = generation.generation_time
 
         average_similarity = (average_similarity * generated + similarity) / (generated + 1)
-
-        if reported_average_time and average_time >= reported_average_time * 1.0625:
-            # Too slow compared to reported speed, rank immediately based on current time
-            failed = True
-            bt.logging.info(
-                f"Reported speed of {reported_average_time} is inaccurate as model is getting {average_time}"
-            )
-            break
 
         if average_time < baseline_average * 1.0625:
             # So far, the average time is better than the baseline, so we can continue

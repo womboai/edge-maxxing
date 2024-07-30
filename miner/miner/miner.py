@@ -73,11 +73,9 @@ def main():
                 info, _ = submission
 
                 repository = info.repository
-                expected_average_time = info.average_time
                 break
         else:
             repository = CURRENT_CONTEST.baseline_repository
-            expected_average_time = None
 
     if config.optimize:
         pipeline = optimize(CURRENT_CONTEST.load(repository))
@@ -86,19 +84,11 @@ def main():
 
         repository = MODEL_DIRECTORY
 
-    comparison = compare_checkpoints(CURRENT_CONTEST, repository, expected_average_time)
+    comparison = compare_checkpoints(CURRENT_CONTEST, repository)
 
     if config.commit:
         if comparison.failed:
             bt.logging.warning("Not pushing to huggingface as the checkpoint failed to beat the baseline.")
-
-            return
-
-        if expected_average_time and comparison.average_time > expected_average_time:
-            bt.logging.warning(
-                f"Not pushing to huggingface as the average time {comparison.average_time} "
-                f"is worse than the expected {expected_average_time}"
-            )
 
             return
 

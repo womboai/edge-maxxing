@@ -409,11 +409,7 @@ class Validator:
                 f"with a reported speed of {checkpoint_info.average_time}"
             )
 
-            comparison = compare_checkpoints(
-                self.contest,
-                checkpoint_info.repository,
-                checkpoint_info.average_time,
-            )
+            comparison = compare_checkpoints(self.contest, checkpoint_info.repository)
 
             if comparison.failed:
                 self.scores[uid] = 0.0
