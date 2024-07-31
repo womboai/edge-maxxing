@@ -566,8 +566,6 @@ class Validator:
                 f"{self.config.epoch_length - blocks_elapsed} blocks remaining until metagraph sync"
             )
 
-        self.test_next_miner()
-
         if self.should_set_weights:
             self.step += 1
 
@@ -575,6 +573,8 @@ class Validator:
             time.sleep(self.config.epoch_length * 12)
 
             return
+
+        self.test_next_miner()
 
         self.step += 1
 
