@@ -597,5 +597,4 @@ class Validator:
 
 
 if __name__ == '__main__':
-    x = load("state(2).pt")
-    print()
+    Validator().run()
