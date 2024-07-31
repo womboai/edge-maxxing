@@ -37,3 +37,6 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry-monorepo.deps]
+
+[tool.pytype]
+inputs = ["miner"]

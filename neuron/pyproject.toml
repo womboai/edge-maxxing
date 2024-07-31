@@ -43,8 +43,14 @@ accelerate = "0.31.0"
 omegaconf = "2.3.0"
 python_coreml_stable_diffusion = { git = "https://github.com/apple/ml-stable-diffusion", tag = "1.1.1" }
 
+[tool.poetry.dev-dependencies]
+pytype = "2024.4.11"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry-monorepo.deps]
+
+[tool.pytype]
+inputs = ["neuron"]
