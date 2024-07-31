@@ -29,7 +29,7 @@ from neuron import (
 )
 from wandb_args import add_wandb_args
 
-WEIGHTS_VERSION = 5
+WEIGHTS_VERSION = 6
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.01
 
@@ -440,7 +440,7 @@ class Validator:
             if comparison.failed:
                 self.scores[uid] = 0.0
             else:
-                self.scores[uid] = min(
+                self.scores[uid] = max(
                     0.0,
                     comparison.baseline_average - comparison.average_time,
                 ) * comparison.average_similarity
@@ -515,10 +515,10 @@ class Validator:
                 self.previous_day_winner = None
             else:
                 def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
-                    if not old_info and not new_info:
+                    if old_info is None and new_info is None:
                         return False
 
-                    if (not old_info) != (not new_info):
+                    if (old_info is None) != (new_info is None):
                         return True
 
                     return old_info.repository != new_info.repository
@@ -597,4 +597,5 @@ class Validator:
 
 
 if __name__ == '__main__':
-    Validator().run()
+    x = load("state(2).pt")
+    print()
