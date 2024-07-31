@@ -239,6 +239,9 @@ class Validator:
             if version == WEIGHTS_VERSION
         }
 
+        if self.previous_day_winner and self.previous_day_winner[1] <= 0.0:
+            self.previous_day_winner = None
+
         if self.contest_state:
             self.start_wandb_run()
 
@@ -306,10 +309,14 @@ class Validator:
 
         if self.previous_day_winner:
             _, highest_score = self.current_best_contestant()
-            winner_uid, winner_score = self.previous_day_winner
 
-            if highest_score < winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
-                sorted_uids = [winner_uid] + [uid for uid in sorted_uids if uid != winner_uid]
+            if highest_score <= 0.0:
+                winner_uid = None
+            else:
+                winner_uid, winner_score = self.previous_day_winner
+
+                if highest_score < winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
+                    sorted_uids = [winner_uid] + [uid for uid in sorted_uids if uid != winner_uid]
         else:
             winner_uid = None
 
@@ -324,7 +331,6 @@ class Validator:
                         "multiday_winner": uid == winner_uid,
                     }
                     for rank, uid in enumerate(sorted_uids)
-                    if self.scores[uid] > 0.0
                 },
                 step=self.step,
             )
@@ -535,14 +541,15 @@ class Validator:
 
                 highest_uid, highest_score = self.current_best_contestant()
 
-                if self.previous_day_winner:
-                    winner_score = self.previous_day_winner[1]
+                if highest_score > 0.0:
+                    if self.previous_day_winner:
+                        winner_score = self.previous_day_winner[1]
 
-                    if highest_score > winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
-                        # New winner
+                        if highest_score > winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
+                            # New winner
+                            self.previous_day_winner = highest_uid, highest_score
+                    else:
                         self.previous_day_winner = highest_uid, highest_score
-                else:
-                    self.previous_day_winner = highest_uid, highest_score
 
             self.step += 1
             return
