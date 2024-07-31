@@ -34,15 +34,15 @@ def add_wandb_args(parser: ArgumentParser):
     )
 
     parser.add_argument(
-        "--wandb.project_name",
-        type=str,
-        help="The name of the project where you are sending the new run.",
-        default="edge-maxxing-subnet",
-    )
-
-    parser.add_argument(
         "--wandb.entity",
         type=str,
         help="Wandb entity to log to.",
-        default="wombo-ai",
+        default="w-ai-wombo",
+    )
+
+    parser.add_argument(
+        "--wandb.project_name",
+        type=str,
+        help="The name of the project where you are sending the new run.",
+        default="edge-maxxing",
     )
