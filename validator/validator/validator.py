@@ -408,6 +408,9 @@ class Validator:
         return choice(list(remaining_uids))
 
     def test_next_miner(self):
+        if not self.contest_state:
+            return
+
         uid = self.get_next_uid()
 
         if uid is None:
