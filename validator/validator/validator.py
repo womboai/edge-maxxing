@@ -31,7 +31,7 @@ from wandb_args import add_wandb_args
 
 WEIGHTS_VERSION = 6
 WINNER_PERCENTAGE = 0.8
-IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.01
+IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
 
 
 def _get_incentive(rank: int, sequence_ratio: float):
