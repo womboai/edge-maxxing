@@ -1,11 +1,12 @@
 import time
 import traceback
 from argparse import ArgumentParser
+from dataclasses import dataclass
 from datetime import date, datetime
 from os import makedirs
 from os.path import isfile, expanduser, join
 from random import choice
-from typing import cast
+from typing import cast, NewType, TypeAlias
 from zoneinfo import ZoneInfo
 
 import bittensor as bt
@@ -29,9 +30,18 @@ from neuron import (
 )
 from wandb_args import add_wandb_args
 
-WEIGHTS_VERSION = 6
+WEIGHTS_VERSION = 7
 WINNER_PERCENTAGE = 0.8
-IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.01
+IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
+
+Uid = NewType("Uid", int)
+WinnerList: TypeAlias = list[tuple[Uid, float]]
+
+
+@dataclass
+class ContestSubmissionsBucket:
+    scores: WinnerList
+    previous_day_winners: bool = False
 
 
 def _get_incentive(rank: int, sequence_ratio: float):
@@ -87,7 +97,7 @@ class Validator:
 
     last_day: date | None
     contest_state: ContestState | None
-    previous_day_winner: tuple[int, float] | None
+    previous_day_winners: WinnerList | None
     should_set_weights: bool
 
     wandb_run: Run | None
@@ -110,7 +120,7 @@ class Validator:
 
         self.last_day = None
         self.contest_state = None
-        self.previous_day_winner = None
+        self.previous_day_winners = None
         self.should_set_weights = False
 
         self.wandb_run = None
@@ -207,7 +217,7 @@ class Validator:
                 "scores": self.scores,
                 "last_day": self.last_day,
                 "contest_state": self.contest_state,
-                "winner_override": self.previous_day_winner,
+                "previous_day_winners": self.previous_day_winners,
                 "should_set_weights": self.should_set_weights,
             },
             self.state_path(),
@@ -229,7 +239,7 @@ class Validator:
         self.scores = state["scores"]
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
-        self.previous_day_winner = state.get("winner_override", self.previous_day_winner)
+        self.previous_day_winners = state.get("previous_day_winners", self.previous_day_winners)
         self.should_set_weights = state["should_set_weights"]
 
         # Remove outdated checks
@@ -238,9 +248,6 @@ class Validator:
             for uid, version in self.contest_state.miner_score_versions.items()
             if version == WEIGHTS_VERSION
         }
-
-        if self.previous_day_winner and self.previous_day_winner[1] <= 0.0:
-            self.previous_day_winner = None
 
         if self.contest_state:
             self.start_wandb_run()
@@ -283,8 +290,14 @@ class Validator:
                 # hotkey has been replaced
                 self.scores[uid] = 0.0
 
-                if self.previous_day_winner and uid == self.previous_day_winner[0]:
-                    self.previous_day_winner = None
+                if self.previous_day_winners:
+                    filtered_winners = [
+                        (winner_uid, score)
+                        for winner_uid, score in self.previous_day_winners
+                        if uid != winner_uid
+                    ]
+
+                    self.previous_day_winners = filtered_winners if len(filtered_winners) else None
 
                 if self.contest_state:
                     if uid in self.contest_state.miner_score_versions:
@@ -301,62 +314,53 @@ class Validator:
 
         bt.logging.info("Setting weights")
 
-        sorted_uids = [
-            uid
-            for uid, score in sorted(enumerate(self.scores), key=lambda score: score[1], reverse=True)
-            if score > 0.0
-        ]
+        buckets = [ContestSubmissionsBucket(scores) for scores in self.get_score_buckets()]
 
-        if self.previous_day_winner:
-            _, highest_score = self.current_best_contestant()
+        if self.previous_day_winners:
+            _, highest_score = self.current_winners()
 
-            if highest_score <= 0.0:
-                winner_uid = None
-            else:
-                winner_uid, winner_score = self.previous_day_winner
+            if highest_score > 0.0:
+                winner_overrides = [
+                    (uid, score)
+                    for uid, score in self.previous_day_winners if
+                    score > highest_score * IMPROVEMENT_BENCHMARK_PERCENTAGE
+                ]
 
-                if highest_score < winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
-                    sorted_uids = [winner_uid] + [uid for uid in sorted_uids if uid != winner_uid]
-        else:
-            winner_uid = None
+                if len(winner_overrides):
+                    buckets.append(ContestSubmissionsBucket(winner_overrides, previous_day_winners=True))
+
+        highest_bucket = len(buckets) - 1
 
         if self.wandb_run:
-            self.wandb_run.log(
-                data={
-                    str(uid): {
-                        "rank": rank,
+            log_data = {}
+
+            for index, bucket in enumerate(buckets):
+                bucket_rank = highest_bucket - index
+
+                for uid, score in bucket.scores:
+                    log_data[str(uid)] = {
+                        "rank": bucket_rank,
                         "model": cast(CheckpointSubmission, self.contest_state.miner_info[uid]).repository,
-                        "score": self.scores[uid],
+                        "score": score,
                         "hotkey": self.hotkeys[uid],
-                        "multiday_winner": uid == winner_uid,
+                        "multiday_winner": bucket.previous_day_winners,
                     }
-                    for rank, uid in enumerate(sorted_uids)
-                },
-                step=self.step,
-            )
 
-        sequence_ratio = _winner_percentage_sequence_ratio(len(sorted_uids))
+            self.wandb_run.log(data=log_data)
 
-        ranked_scores = [
-            (uid, _get_incentive(index, sequence_ratio))
-            for index, uid in enumerate(sorted_uids)
-        ]
+        sequence_ratio = _winner_percentage_sequence_ratio(len(buckets))
 
-        ranked_scores = sorted(ranked_scores, key=lambda score: score[0])
+        weights = numpy.zeros(self.metagraph.n)
 
-        uids = numpy.array([uid for uid, _ in ranked_scores])
-        weights = numpy.array([weight for _, weight in ranked_scores])
+        for index, bucket in enumerate(buckets):
+            bucket_incentive = _get_incentive(highest_bucket - index, sequence_ratio)
 
-        if numpy.isnan(weights).any():
-            bt.logging.warning(
-                f"Scores contain NaN values. This may be due to a lack of responses from miners, or a bug in your reward functions."
-            )
+            for uid, score in bucket.scores:
+                weights[uid] = bucket_incentive / len(bucket.scores)
 
-        # Calculate the average reward for each uid across non-zero values.
-        # Replace any NaN values with 0
-        raw_weights = weights / numpy.linalg.norm(weights, ord=1, axis=0, keepdims=True)
+        uids = numpy.indices(weights.shape)[0]
 
-        bt.logging.debug("raw_weights", raw_weights)
+        bt.logging.debug("raw_weights", weights)
         bt.logging.debug("raw_weight_uids", uids)
         # Process the raw weights to final_weights via subtensor limitations.
 
@@ -365,7 +369,7 @@ class Validator:
             processed_weights,
         ) = process_weights_for_netuid(
             uids=uids,
-            weights=raw_weights,
+            weights=weights,
             netuid=self.config.netuid,
             subtensor=self.subtensor,
             metagraph=self.metagraph,
@@ -454,8 +458,34 @@ class Validator:
 
         self.contest_state.miner_score_versions[uid] = WEIGHTS_VERSION
 
-    def current_best_contestant(self) -> tuple[int, float]:
-        return max(enumerate(self.scores), key=lambda contestant: contestant[1])
+    def get_score_buckets(self) -> list[WinnerList]:
+        uid: Uid
+
+        sorted_contestants = [
+            (uid, score)
+            for uid, score in sorted(enumerate(self.scores), key=lambda score: score[1])
+            if score > 0.0
+        ]
+
+        buckets: list[WinnerList] = [[]]
+
+        last_score = sorted_contestants[0][1] if len(sorted_contestants) else None
+
+        for contestant in sorted_contestants:
+            _, score = contestant
+
+            if last_score and score > last_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
+                # New bucket
+                buckets.append([contestant])
+            else:
+                buckets[len(buckets) - 1].append(contestant)
+
+            last_score = score
+
+        return buckets
+
+    def current_winners(self) -> WinnerList:
+        return [(uid, score) for uid, score in self.get_score_buckets()[-1] if score > 0.0]
 
     def get_miner_submissions(self):
         visited_repositories: dict[str, tuple[int, int]] = {}
@@ -515,7 +545,7 @@ class Validator:
                 self.scores = [0.0] * self.metagraph.n.item()
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
-                self.previous_day_winner = None
+                self.previous_day_winners = None
             else:
                 def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
                     if old_info is None and new_info is None:
@@ -542,17 +572,19 @@ class Validator:
 
                 self.contest_state.miner_info = miner_info
 
-                highest_uid, highest_score = self.current_best_contestant()
+                winners = self.current_winners()
 
-                if highest_score > 0.0:
-                    if self.previous_day_winner:
-                        winner_score = self.previous_day_winner[1]
+                if len(winners):
+                    if self.previous_day_winners:
+                        bucket_score = min([score for _, score in self.previous_day_winners])
 
-                        if highest_score > winner_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
+                        new_winners = [(uid, score) for uid, score in winners if score > bucket_score * IMPROVEMENT_BENCHMARK_PERCENTAGE]
+
+                        if len(new_winners):
                             # New winner
-                            self.previous_day_winner = highest_uid, highest_score
+                            self.previous_day_winners = new_winners
                     else:
-                        self.previous_day_winner = highest_uid, highest_score
+                        self.previous_day_winners = winners
 
             self.step += 1
             return
