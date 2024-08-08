@@ -340,22 +340,19 @@ class Validator:
                         "multiday_winner": bucket.previous_day_winners,
                     }
 
-            self.wandb_run.log(
-                data=log_data,
-                step=self.step,
-            )
+            self.wandb_run.log(data=log_data)
 
         sequence_ratio = _winner_percentage_sequence_ratio(len(buckets))
 
         weights = numpy.zeros(self.metagraph.n)
 
         for index, bucket in enumerate(buckets):
-            bucket_rank = highest_bucket - index
+            bucket_incentive = _get_incentive(highest_bucket - index, sequence_ratio)
 
             for uid, score in bucket.scores:
-                weights[uid] = _get_incentive(bucket_rank, sequence_ratio) / len(bucket.scores)
+                weights[uid] = bucket_incentive / len(bucket.scores)
 
-        uids = numpy.indices(weights.shape)
+        uids = numpy.indices(weights.shape)[0]
 
         bt.logging.debug("raw_weights", weights)
         bt.logging.debug("raw_weight_uids", uids)
