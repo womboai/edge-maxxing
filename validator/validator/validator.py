@@ -290,8 +290,14 @@ class Validator:
                 # hotkey has been replaced
                 self.scores[uid] = 0.0
 
-                if self.previous_day_winners and uid == self.previous_day_winners[0]:
-                    self.previous_day_winners = None
+                if self.previous_day_winners:
+                    filtered_winners = [
+                        (winner_uid, score)
+                        for winner_uid, score in self.previous_day_winners
+                        if uid != winner_uid
+                    ]
+
+                    self.previous_day_winners = filtered_winners if len(filtered_winners) else None
 
                 if self.contest_state:
                     if uid in self.contest_state.miner_score_versions:
