@@ -97,7 +97,7 @@ class Validator:
 
     last_day: date | None
     contest_state: ContestState | None
-    previous_day_winners: WinnerList | None
+    previous_day_winners: WinnerList
     should_set_weights: bool
 
     wandb_run: Run | None
@@ -120,7 +120,7 @@ class Validator:
 
         self.last_day = None
         self.contest_state = None
-        self.previous_day_winners = None
+        self.previous_day_winners = []
         self.should_set_weights = False
 
         self.wandb_run = None
@@ -239,7 +239,10 @@ class Validator:
         self.scores = state["scores"]
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
-        self.previous_day_winners = state.get("previous_day_winners", self.previous_day_winners)
+        self.previous_day_winners = (
+            state.get("previous_day_winners", self.previous_day_winners) or
+            self.previous_day_winners
+        )
         self.should_set_weights = state["should_set_weights"]
 
         # Remove outdated checks
@@ -290,14 +293,13 @@ class Validator:
                 # hotkey has been replaced
                 self.scores[uid] = 0.0
 
-                if self.previous_day_winners:
-                    filtered_winners = [
-                        (winner_uid, score)
-                        for winner_uid, score in self.previous_day_winners
-                        if uid != winner_uid
-                    ]
+                filtered_winners = [
+                    (winner_uid, score)
+                    for winner_uid, score in self.previous_day_winners
+                    if uid != winner_uid
+                ]
 
-                    self.previous_day_winners = filtered_winners if len(filtered_winners) else None
+                self.previous_day_winners = filtered_winners
 
                 if self.contest_state:
                     if uid in self.contest_state.miner_score_versions:
@@ -316,7 +318,7 @@ class Validator:
 
         buckets = [ContestSubmissionsBucket(scores) for scores in self.get_score_buckets()]
 
-        if self.previous_day_winners:
+        if len(self.previous_day_winners):
             _, highest_score = self.current_winners()
 
             if highest_score > 0.0:
@@ -545,7 +547,7 @@ class Validator:
                 self.scores = [0.0] * self.metagraph.n.item()
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
-                self.previous_day_winners = None
+                self.previous_day_winners = []
             else:
                 def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
                     if old_info is None and new_info is None:
@@ -575,7 +577,7 @@ class Validator:
                 winners = self.current_winners()
 
                 if len(winners):
-                    if self.previous_day_winners:
+                    if len(self.previous_day_winners):
                         bucket_score = min([score for _, score in self.previous_day_winners])
 
                         new_winners = [(uid, score) for uid, score in winners if score > bucket_score * IMPROVEMENT_BENCHMARK_PERCENTAGE]
