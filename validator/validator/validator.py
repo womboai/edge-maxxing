@@ -321,9 +321,11 @@ class Validator:
         buckets = [ContestSubmissionsBucket(scores) for scores in self.get_score_buckets()]
 
         if len(self.previous_day_winners):
-            _, highest_score = self.current_winners()
+            winners = self.current_winners()
 
-            if highest_score > 0.0:
+            if len(winners):
+                highest_score = max([score for _, score in winners])
+
                 winner_overrides = [
                     (uid, score)
                     for uid, score in self.previous_day_winners if
