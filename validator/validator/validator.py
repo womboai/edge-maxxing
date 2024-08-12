@@ -30,11 +30,11 @@ from neuron import (
 )
 from wandb_args import add_wandb_args
 
-WEIGHTS_VERSION = 8
+WEIGHTS_VERSION = 9
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
 BUCKET_IMPROVEMENT_FACTOR = 1.1
-BUCKET_IMPROVEMENT_THRESHOLD = 0.1
+BUCKET_IMPROVEMENT_THRESHOLD = 0.5
 
 Uid = NewType("Uid", int)
 WinnerList: TypeAlias = list[tuple[Uid, float]]
