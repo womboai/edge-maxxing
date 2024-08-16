@@ -28,6 +28,7 @@ from neuron import (
     find_contest,
     ContestDeviceValidationError,
 )
+from metrics import Metrics
 from wandb_args import add_wandb_args
 
 WEIGHTS_VERSION = 10
@@ -93,9 +94,7 @@ class Validator:
     wallet: bt.wallet
     uid: int
 
-    baseline_averages: list[float]
-    model_averages: list[float]
-    similarity_averages: list[float]
+    metrics: Metrics
 
     hotkeys: list[str]
     step: int
@@ -116,9 +115,7 @@ class Validator:
         self.metagraph = self.subtensor.metagraph(netuid=self.config.netuid)
         self.wallet = bt.wallet(config=self.config)
 
-        self.baseline_averages = [0.0] * self.metagraph.n.item()
-        self.model_averages = [0.0] * self.metagraph.n.item()
-        self.similarity_averages = [0.0] * self.metagraph.n.item()
+        self.metrics = Metrics(self.metagraph)
 
         self.hotkeys = self.metagraph.hotkeys
 
@@ -221,9 +218,9 @@ class Validator:
             {
                 "step": self.step,
                 "hotkeys": self.hotkeys,
-                "baseline_averages": self.baseline_averages,
-                "model_averages": self.model_averages,
-                "similarity_averages": self.similarity_averages,
+                "baseline_averages": self.metrics.baseline_averages,
+                "model_averages": self.metrics.model_averages,
+                "similarity_averages": self.metrics.similarity_averages,
                 "last_day": self.last_day,
                 "contest_state": self.contest_state,
                 "previous_day_winners": self.previous_day_winners,
@@ -245,9 +242,9 @@ class Validator:
         state = load(path)
         self.step = state["step"]
         self.hotkeys = state["hotkeys"]
-        self.baseline_averages = state["baseline_averages"]
-        self.model_averages = state["model_averages"]
-        self.similarity_averages = state["similarity_averages"]
+        self.metrics.baseline_averages = state["baseline_averages"]
+        self.metrics.model_averages = state["model_averages"]
+        self.metrics.similarity_averages = state["similarity_averages"]
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
         self.previous_day_winners = (
@@ -285,7 +282,7 @@ class Validator:
 
     def set_weights(self):
         if len(self.hotkeys) != len(self.metagraph.hotkeys):
-            self.resize()
+            self.metrics.resize(len(self.hotkeys))
 
             if self.contest_state:
                 new_miner_info = [None] * self.metagraph.n.item()
@@ -297,7 +294,7 @@ class Validator:
         for uid, hotkey in enumerate(self.hotkeys):
             if hotkey != self.metagraph.hotkeys[uid]:
                 # hotkey has been replaced
-                self.reset(uid)
+                self.metrics.reset(uid)
 
                 filtered_winners = [
                     (winner_uid, score)
@@ -351,9 +348,8 @@ class Validator:
                     log_data[str(uid)] = {
                         "rank": bucket_rank,
                         "model": cast(CheckpointSubmission, self.contest_state.miner_info[uid]).repository,
-                        "baseline": self.baseline_averages[uid],
-                        "generation_time": self.model_averages[uid],
-                        "similarity": self.similarity_averages[uid],
+                        "generation_time": self.metrics.model_averages[uid],
+                        "similarity": self.metrics.similarity_averages[uid],
                         "hotkey": self.hotkeys[uid],
                         "multiday_winner": bucket.previous_day_winners,
                     }
@@ -457,13 +453,11 @@ class Validator:
             bt.logging.info(f"Benchmark results: {comparison}")
 
             if comparison.failed:
-                self.reset(uid)
+                self.metrics.reset(uid)
             else:
-                self.baseline_averages[uid] = comparison.baseline_average
-                self.model_averages[uid] = comparison.average_time
-                self.similarity_averages[uid] = comparison.average_similarity
+                self.metrics.update(uid, comparison.baseline_average, comparison.average_time, comparison.average_similarity)
         except Exception as e:
-            self.reset(uid)
+            self.metrics.reset(uid)
             bt.logging.info(f"Failed to query miner {uid}, {e}")
             bt.logging.debug(f"Miner {uid} error, {traceback.format_exception(e)}")
 
@@ -472,7 +466,7 @@ class Validator:
     def get_score_buckets(self) -> list[WinnerList]:
         uid: Uid
 
-        scores = [self.calculate_score(uid) for uid in range(self.metagraph.n.item())]
+        scores = [self.metrics.calculate_score(uid) for uid in range(self.metagraph.n.item())]
 
         sorted_contestants = [
             (uid, score)
@@ -558,9 +552,7 @@ class Validator:
 
                 self.contest.validate()
 
-                self.baseline_averages = [0.0] * self.metagraph.n.item()
-                self.model_averages = [0.0] * self.metagraph.n.item()
-                self.similarity_averages = [0.0] * self.metagraph.n.item()
+                self.metrics.clear()
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
                 self.previous_day_winners = []
@@ -583,7 +575,7 @@ class Validator:
                 bt.logging.info(f"Miners {updated_uids} changed their submissions")
 
                 for uid in updated_uids:
-                    self.reset(uid)
+                    self.metrics.reset(uid)
 
                     if uid in self.contest_state.miner_score_versions:
                         del self.contest_state.miner_score_versions[uid]
@@ -647,30 +639,6 @@ class Validator:
                     continue
 
                 raise
-
-    def reset(self, uid: int):
-        self.baseline_averages[uid] = 0.0
-        self.model_averages[uid] = 0.0
-        self.similarity_averages[uid] = 0.0
-
-    def resize(self):
-        def resize_data(data: list[float]) -> list[float]:
-            new_data = [0.0] * self.metagraph.n.item()
-
-            length = len(self.hotkeys)
-            new_data[:length] = data[:length]
-
-            return new_data
-
-        self.baseline_averages = resize_data(self.baseline_averages)
-        self.model_averages = resize_data(self.model_averages)
-        self.similarity_averages = resize_data(self.similarity_averages)
-
-    def calculate_score(self, uid: int) -> float:
-        return max(
-            0.0,
-            self.baseline_averages[uid] - self.model_averages[uid]
-        ) * self.similarity_averages[uid]
 
 
 if __name__ == '__main__':
