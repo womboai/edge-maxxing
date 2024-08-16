@@ -246,15 +246,15 @@ class Validator:
             self.previous_day_winners
         )
         self.should_set_weights = state["should_set_weights"]
-
+        
         # Remove outdated checks
-        self.contest_state.miner_score_versions = {
-            uid: version
-            for uid, version in self.contest_state.miner_score_versions.items()
-            if version == WEIGHTS_VERSION
-        }
-
         if self.contest_state:
+            self.contest_state.miner_score_versions = {
+                uid: version
+                for uid, version in self.contest_state.miner_score_versions.items()
+                if version == WEIGHTS_VERSION
+            }
+
             self.start_wandb_run()
 
     def sync(self):
