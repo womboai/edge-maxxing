@@ -218,9 +218,7 @@ class Validator:
             {
                 "step": self.step,
                 "hotkeys": self.hotkeys,
-                "baseline_averages": self.metrics.baseline_averages,
-                "model_averages": self.metrics.model_averages,
-                "similarity_averages": self.metrics.similarity_averages,
+                "metrics": self.metrics,
                 "last_day": self.last_day,
                 "contest_state": self.contest_state,
                 "previous_day_winners": self.previous_day_winners,
@@ -242,9 +240,7 @@ class Validator:
         state = load(path)
         self.step = state["step"]
         self.hotkeys = state["hotkeys"]
-        self.metrics.baseline_averages = state["baseline_averages"]
-        self.metrics.model_averages = state["model_averages"]
-        self.metrics.similarity_averages = state["similarity_averages"]
+        self.metrics = state.get("metrics", self.metrics)
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
         self.previous_day_winners = (
@@ -282,7 +278,7 @@ class Validator:
 
     def set_weights(self):
         if len(self.hotkeys) != len(self.metagraph.hotkeys):
-            self.metrics.resize(len(self.hotkeys))
+            self.metrics.resize()
 
             if self.contest_state:
                 new_miner_info = [None] * self.metagraph.n.item()

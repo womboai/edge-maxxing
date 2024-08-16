@@ -27,9 +27,10 @@ class Metrics:
         self.model_averages[uid] = generation_time
         self.similarity_averages[uid] = similarity
 
-    def resize(self, length: int):
+    def resize(self):
         def resize_data(data: list[float]) -> list[float]:
             new_data = [0.0] * self.metagraph.n.item()
+            length = len(self.metagraph.hotkeys)
             new_data[:length] = data[:length]
             return new_data
 
@@ -42,3 +43,15 @@ class Metrics:
             0.0,
             self.baseline_averages[uid] - self.model_averages[uid]
         ) * self.similarity_averages[uid]
+
+    def __getstate__(self):
+        return {
+            "baseline_averages": self.baseline_averages,
+            "model_averages": self.model_averages,
+            "similarity_averages": self.similarity_averages,
+        }
+
+    def __setstate__(self, state):
+        self.baseline_averages = state.get("baseline_averages", [0.0] * self.metagraph.n.item())
+        self.model_averages = state.get("model_averages", [0.0] * self.metagraph.n.item())
+        self.similarity_averages = state.get("similarity_averages", [0.0] * self.metagraph.n.item())
