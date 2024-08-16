@@ -534,8 +534,6 @@ class Validator:
             # Past noon, should start collecting submissions
             self.last_day = now.date()
 
-            self.start_wandb_run()
-
             bt.logging.info("Collecting all submissions")
 
             miner_info = self.get_miner_submissions()
@@ -556,6 +554,7 @@ class Validator:
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
                 self.previous_day_winners = []
+                self.start_wandb_run()
             else:
                 def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
                     if old_info is None and new_info is None:
@@ -565,7 +564,9 @@ class Validator:
                         return True
 
                     return old_info.repository != new_info.repository
-
+                    
+                self.start_wandb_run()
+                
                 updated_uids = set([
                     uid
                     for uid in range(self.metagraph.n.item())
