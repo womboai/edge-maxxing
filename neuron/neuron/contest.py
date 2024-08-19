@@ -98,3 +98,4 @@ def find_contest(contest_id: ContestId):
 
 
 CURRENT_CONTEST = find_contest(ContestId.NVIDIA_4090)
+CURRENT_BASELINE_AVERAGE = 2.5  # TODO: Placeholder value

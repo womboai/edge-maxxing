@@ -241,6 +241,7 @@ class Validator:
         self.step = state["step"]
         self.hotkeys = state["hotkeys"]
         self.metrics = state.get("metrics", self.metrics)
+        self.metrics.set_metagraph(self.metagraph)
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
         self.previous_day_winners = (
@@ -248,7 +249,7 @@ class Validator:
             self.previous_day_winners
         )
         self.should_set_weights = state["should_set_weights"]
-        
+
         # Remove outdated checks
         if self.contest_state:
             self.contest_state.miner_score_versions = {
@@ -257,7 +258,8 @@ class Validator:
                 if version == WEIGHTS_VERSION
             }
 
-            self.start_wandb_run()
+            if self.last_day:
+                self.start_wandb_run()
 
     def sync(self):
         # --- Check for registration.
@@ -451,7 +453,7 @@ class Validator:
             if comparison.failed:
                 self.metrics.reset(uid)
             else:
-                self.metrics.update(uid, comparison.baseline_average, comparison.average_time, comparison.average_similarity)
+                self.metrics.update(uid, comparison.average_time, comparison.average_similarity)
         except Exception as e:
             self.metrics.reset(uid)
             bt.logging.info(f"Failed to query miner {uid}, {e}")

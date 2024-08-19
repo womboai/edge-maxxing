@@ -1,10 +1,11 @@
 import bittensor as bt
 
+from neuron.neuron import CURRENT_BASELINE_AVERAGE
+
 
 class Metrics:
     metagraph: bt.metagraph
 
-    baseline_averages: list[float]
     model_averages: list[float]
     similarity_averages: list[float]
 
@@ -13,17 +14,14 @@ class Metrics:
         self.clear()
 
     def clear(self):
-        self.baseline_averages = [0.0] * self.metagraph.n.item()
         self.model_averages = [0.0] * self.metagraph.n.item()
         self.similarity_averages = [0.0] * self.metagraph.n.item()
 
     def reset(self, uid: int):
-        self.baseline_averages[uid] = 0.0
         self.model_averages[uid] = 0.0
         self.similarity_averages[uid] = 0.0
 
-    def update(self, uid: int, baseline: float, generation_time: float, similarity: float):
-        self.baseline_averages[uid] = baseline
+    def update(self, uid: int, generation_time: float, similarity: float):
         self.model_averages[uid] = generation_time
         self.similarity_averages[uid] = similarity
 
@@ -34,24 +32,22 @@ class Metrics:
             new_data[:length] = data[:length]
             return new_data
 
-        self.baseline_averages = resize_data(self.baseline_averages)
         self.model_averages = resize_data(self.model_averages)
         self.similarity_averages = resize_data(self.similarity_averages)
 
     def calculate_score(self, uid: int) -> float:
         return max(
             0.0,
-            self.baseline_averages[uid] - self.model_averages[uid]
+            CURRENT_BASELINE_AVERAGE - self.model_averages[uid]
         ) * self.similarity_averages[uid]
 
+    def set_metagraph(self, metagraph: bt.metagraph):
+        self.metagraph = metagraph
+
     def __getstate__(self):
-        return {
-            "baseline_averages": self.baseline_averages,
-            "model_averages": self.model_averages,
-            "similarity_averages": self.similarity_averages,
-        }
+        state = self.__dict__.copy()
+        del state["metagraph"]
+        return state
 
     def __setstate__(self, state):
-        self.baseline_averages = state.get("baseline_averages", [0.0] * self.metagraph.n.item())
-        self.model_averages = state.get("model_averages", [0.0] * self.metagraph.n.item())
-        self.similarity_averages = state.get("similarity_averages", [0.0] * self.metagraph.n.item())
+        self.__dict__.update(state)
