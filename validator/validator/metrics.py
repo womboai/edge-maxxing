@@ -1,7 +1,6 @@
 import bittensor as bt
 
-from neuron.neuron import CURRENT_BASELINE_AVERAGE
-
+from neuron import CURRENT_CONTEST
 
 class Metrics:
     metagraph: bt.metagraph
@@ -38,7 +37,7 @@ class Metrics:
     def calculate_score(self, uid: int) -> float:
         return max(
             0.0,
-            CURRENT_BASELINE_AVERAGE - self.model_averages[uid]
+            CURRENT_CONTEST.baseline_average - self.model_averages[uid]
         ) * self.similarity_averages[uid]
 
     def set_metagraph(self, metagraph: bt.metagraph):
