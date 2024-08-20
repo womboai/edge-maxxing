@@ -85,7 +85,7 @@ class ContestDeviceValidationError(Exception):
 
 CONTESTS = [
     AppleSiliconContest(ContestId.APPLE_SILICON, 2.5, "wombo/coreml-stable-diffusion-xl-base-1.0"),
-    CudaContest(ContestId.NVIDIA_4090, 2.52, "stablediffusionapi/newdream-sdxl-20", "NVIDIA GeForce RTX 4090"),
+    CudaContest(ContestId.NVIDIA_4090, 2.58, "stablediffusionapi/newdream-sdxl-20", "NVIDIA GeForce RTX 4090"),
 ]
 
 
