@@ -31,7 +31,9 @@ from neuron import (
 from metrics import Metrics
 from wandb_args import add_wandb_args
 
-WEIGHTS_VERSION = 10
+WEIGHTS_VERSION = 11
+VALIDATOR_VERSION = "1.0.0"
+
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
 BUCKET_IMPROVEMENT_FACTOR = 1.5
@@ -165,7 +167,7 @@ class Validator:
             allow_val_change=True,
             anonymous="allow",
             tags=[
-                f"version_{WEIGHTS_VERSION}",
+                f"version_{VALIDATOR_VERSION}",
                 f"sn{netuid}",
             ],
         )
