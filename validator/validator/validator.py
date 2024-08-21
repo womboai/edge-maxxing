@@ -31,13 +31,11 @@ from neuron import (
 from metrics import Metrics
 from wandb_args import add_wandb_args
 
-WEIGHTS_VERSION = 11
-VALIDATOR_VERSION = "1.0.1"
+WEIGHTS_VERSION = 12
+VALIDATOR_VERSION = "1.0.2"
 
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
-BUCKET_IMPROVEMENT_FACTOR = 1.5
-BUCKET_IMPROVEMENT_THRESHOLD = 0.5
 
 Uid = NewType("Uid", int)
 WinnerList: TypeAlias = list[tuple[Uid, float]]
@@ -488,10 +486,7 @@ class Validator:
         for contestant in sorted_contestants:
             _, score = contestant
 
-            if last_score and (
-                    score > last_score * BUCKET_IMPROVEMENT_FACTOR or
-                    score - last_score > BUCKET_IMPROVEMENT_THRESHOLD
-            ):
+            if last_score and score > last_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
                 # New bucket
                 buckets.append([contestant])
             else:

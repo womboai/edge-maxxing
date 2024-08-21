@@ -146,6 +146,8 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
 
     baseline_pipeline = contest.load_baseline()
 
+    baseline_pipeline(prompt="")
+
     bt.logging.info("Generating baseline samples to compare")
 
     baseline_outputs: list[GenerationOutput] = [
@@ -168,9 +170,11 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
 
     pipeline = contest.load(repository)
 
+    pipeline(prompt="")
+
     i = 0
 
-    # Take {SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been
+    f"Take {SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been"
     for i, baseline in enumerate(baseline_outputs):
         bt.logging.info(f"Sample {i}, prompt {baseline.prompt} and seed {baseline.seed}")
 
