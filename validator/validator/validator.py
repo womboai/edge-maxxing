@@ -109,7 +109,7 @@ class Validator:
     wandb_run: Run | None
 
     current_block: int
-    last_block_fetch: datetime = None
+    last_block_fetch: datetime | None = None
 
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
