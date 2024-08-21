@@ -108,6 +108,9 @@ class Validator:
 
     wandb_run: Run | None
 
+    current_block: int
+    last_block_fetch: datetime = None
+
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
 
@@ -268,6 +271,7 @@ class Validator:
         if not self.subtensor.is_hotkey_registered(
             netuid=self.config.netuid,
             hotkey_ss58=self.wallet.hotkey.ss58_address,
+            block=self.current_block,
         ):
             bt.logging.error(
                 f"Wallet: {self.wallet} is not registered on netuid {self.config.netuid}."
@@ -276,7 +280,10 @@ class Validator:
 
             exit()
 
-        self.metagraph.sync(subtensor=self.subtensor)
+        self.metagraph.sync(
+            subtensor=self.subtensor,
+            block=self.current_block
+        )
 
         self.set_weights()
 
@@ -503,7 +510,7 @@ class Validator:
         miner_info: list[CheckpointSubmission | None] = []
 
         for uid in range(self.metagraph.n.item()):
-            submission = get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid])
+            submission = get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid], self.current_block)
 
             if not submission:
                 miner_info.append(None)
@@ -628,12 +635,14 @@ class Validator:
 
     def run(self):
         while True:
-            block = self.subtensor.get_current_block()
+            if not self.last_block_fetch or (datetime.now() - self.last_block_fetch).seconds >= 12:
+                self.current_block = self.subtensor.get_current_block()
+                self.last_block_fetch = datetime.now()
 
             try:
-                bt.logging.info(f"Step {self.step}, block {block}")
+                bt.logging.info(f"Step {self.step}, block {self.current_block}")
 
-                self.do_step(block)
+                self.do_step(self.current_block)
             except Exception as e:
                 if not isinstance(e, ContestDeviceValidationError):
                     bt.logging.error(f"Error during validation step {self.step}, {traceback.format_exception(e)}")

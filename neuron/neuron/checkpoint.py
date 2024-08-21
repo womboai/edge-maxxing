@@ -2,7 +2,7 @@ import traceback
 from dataclasses import dataclass
 from os import urandom
 from time import perf_counter
-from typing import cast, Any
+from typing import cast, Any, Optional
 
 import bittensor as bt
 import torch
@@ -87,9 +87,10 @@ def get_submission(
     subtensor: bt.subtensor,
     metagraph: bt.metagraph,
     hotkey: str,
+    block: Optional[int] = None
 ) -> tuple[CheckpointSubmission, int] | None:
     try:
-        metadata = cast(dict[str, Any], get_metadata(subtensor, metagraph.netuid, hotkey))
+        metadata = cast(dict[str, Any], get_metadata(subtensor, metagraph.netuid, hotkey, block))
 
         if not metadata:
             return None
