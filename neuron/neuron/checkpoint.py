@@ -88,9 +88,10 @@ def get_submission(
     subtensor: bt.subtensor,
     metagraph: bt.metagraph,
     hotkey: str,
+    block: int | None = None
 ) -> tuple[CheckpointSubmission, int] | None:
     try:
-        metadata = cast(dict[str, Any], get_metadata(subtensor, metagraph.netuid, hotkey))
+        metadata = cast(dict[str, Any], get_metadata(subtensor, metagraph.netuid, hotkey, block))
 
         if not metadata:
             return None
@@ -146,6 +147,8 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
 
     baseline_pipeline = contest.load_baseline()
 
+    baseline_pipeline(prompt="")
+
     bt.logging.info("Generating baseline samples to compare")
 
     baseline_outputs: list[GenerationOutput] = [
@@ -170,7 +173,7 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
 
         i = 0
 
-        # Take {SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been
+        f"Take {SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been"
         for i, baseline in enumerate(baseline_outputs):
             bt.logging.info(f"Sample {i}, prompt {baseline.prompt} and seed {baseline.seed}")
 

@@ -31,13 +31,11 @@ from neuron import (
 from metrics import Metrics
 from wandb_args import add_wandb_args
 
-WEIGHTS_VERSION = 11
-VALIDATOR_VERSION = "1.0.0"
+WEIGHTS_VERSION = 12
+VALIDATOR_VERSION = "1.0.2"
 
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
-BUCKET_IMPROVEMENT_FACTOR = 1.5
-BUCKET_IMPROVEMENT_THRESHOLD = 0.5
 
 Uid = NewType("Uid", int)
 WinnerList: TypeAlias = list[tuple[Uid, float]]
@@ -107,6 +105,9 @@ class Validator:
     should_set_weights: bool
 
     wandb_run: Run | None
+
+    current_block: int
+    last_block_fetch: datetime | None = None
 
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
@@ -268,6 +269,7 @@ class Validator:
         if not self.subtensor.is_hotkey_registered(
             netuid=self.config.netuid,
             hotkey_ss58=self.wallet.hotkey.ss58_address,
+            block=self.current_block,
         ):
             bt.logging.error(
                 f"Wallet: {self.wallet} is not registered on netuid {self.config.netuid}."
@@ -276,7 +278,10 @@ class Validator:
 
             exit()
 
-        self.metagraph.sync(subtensor=self.subtensor)
+        self.metagraph.sync(
+            subtensor=self.subtensor,
+            block=self.current_block
+        )
 
         self.set_weights()
 
@@ -481,10 +486,7 @@ class Validator:
         for contestant in sorted_contestants:
             _, score = contestant
 
-            if last_score and (
-                    score > last_score * BUCKET_IMPROVEMENT_FACTOR or
-                    score - last_score > BUCKET_IMPROVEMENT_THRESHOLD
-            ):
+            if last_score and score > last_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
                 # New bucket
                 buckets.append([contestant])
             else:
@@ -503,7 +505,7 @@ class Validator:
         miner_info: list[CheckpointSubmission | None] = []
 
         for uid in range(self.metagraph.n.item()):
-            submission = get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid])
+            submission = get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid], self.current_block)
 
             if not submission:
                 miner_info.append(None)
@@ -628,12 +630,14 @@ class Validator:
 
     def run(self):
         while True:
-            block = self.subtensor.get_current_block()
+            if not self.last_block_fetch or (datetime.now() - self.last_block_fetch).seconds >= 12:
+                self.current_block = self.subtensor.get_current_block()
+                self.last_block_fetch = datetime.now()
 
             try:
-                bt.logging.info(f"Step {self.step}, block {block}")
+                bt.logging.info(f"Step {self.step}, block {self.current_block}")
 
-                self.do_step(block)
+                self.do_step(self.current_block)
             except Exception as e:
                 if not isinstance(e, ContestDeviceValidationError):
                     bt.logging.error(f"Error during validation step {self.step}, {traceback.format_exception(e)}")

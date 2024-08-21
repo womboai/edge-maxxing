@@ -2,6 +2,7 @@ import bittensor as bt
 
 from neuron import CURRENT_CONTEST
 
+
 class Metrics:
     metagraph: bt.metagraph
 
