@@ -1,22 +1,12 @@
-import os
 from argparse import ArgumentParser
-import bittensor as bt
 
 
 def add_wandb_args(parser: ArgumentParser):
-    wandb_off = not os.getenv("WANDB_API_KEY")
-
-    if wandb_off:
-        bt.logging.warning(
-            "WANDB_API_KEY not set, running without wandb. "
-            "We highly recommend setting WANDB_API_KEY to enable W&B."
-        )
-
     parser.add_argument(
         "--wandb.off",
         action="store_true",
         help="Turn off wandb.",
-        default=wandb_off,
+        default=False,
     )
 
     parser.add_argument(

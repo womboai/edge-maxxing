@@ -14,11 +14,13 @@ class ContestId(Enum):
 
 class Contest(ABC):
     id: ContestId
+    baseline_average: float
     baseline_repository: str
     device_name: str | None
 
-    def __init__(self, contest_id: ContestId, baseline_repository: str):
+    def __init__(self, contest_id: ContestId, baseline_average: float, baseline_repository: str):
         self.id = contest_id
+        self.baseline_average = baseline_average
         self.baseline_repository = baseline_repository
 
     def load_baseline(self):
@@ -38,8 +40,8 @@ class Contest(ABC):
 
 
 class CudaContest(Contest):
-    def __init__(self, contest_id: ContestId, baseline_repository: str, expected_device_name: str):
-        super().__init__(contest_id, baseline_repository)
+    def __init__(self, contest_id: ContestId, baseline_average: float, baseline_repository: str, expected_device_name: str):
+        super().__init__(contest_id, baseline_average, baseline_repository)
 
         self.expected_device_name = expected_device_name
 
@@ -82,8 +84,8 @@ class ContestDeviceValidationError(Exception):
 
 
 CONTESTS = [
-    AppleSiliconContest(ContestId.APPLE_SILICON, "wombo/coreml-stable-diffusion-xl-base-1.0"),
-    CudaContest(ContestId.NVIDIA_4090, "stablediffusionapi/newdream-sdxl-20", "NVIDIA GeForce RTX 4090"),
+    AppleSiliconContest(ContestId.APPLE_SILICON, 2.5, "wombo/coreml-stable-diffusion-xl-base-1.0"),
+    CudaContest(ContestId.NVIDIA_4090, 2.58, "stablediffusionapi/newdream-sdxl-20", "NVIDIA GeForce RTX 4090"),
 ]
 
 

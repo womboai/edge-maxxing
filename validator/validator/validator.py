@@ -28,13 +28,16 @@ from neuron import (
     find_contest,
     ContestDeviceValidationError,
 )
+from metrics import Metrics
 from wandb_args import add_wandb_args
 
-WEIGHTS_VERSION = 8
+WEIGHTS_VERSION = 11
+VALIDATOR_VERSION = "1.0.0"
+
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
-BUCKET_IMPROVEMENT_FACTOR = 1.1
-BUCKET_IMPROVEMENT_THRESHOLD = 0.1
+BUCKET_IMPROVEMENT_FACTOR = 1.5
+BUCKET_IMPROVEMENT_THRESHOLD = 0.5
 
 Uid = NewType("Uid", int)
 WinnerList: TypeAlias = list[tuple[Uid, float]]
@@ -93,7 +96,8 @@ class Validator:
     wallet: bt.wallet
     uid: int
 
-    scores: list[float]
+    metrics: Metrics
+
     hotkeys: list[str]
     step: int
 
@@ -113,7 +117,7 @@ class Validator:
         self.metagraph = self.subtensor.metagraph(netuid=self.config.netuid)
         self.wallet = bt.wallet(config=self.config)
 
-        self.scores = [0.0] * self.metagraph.n.item()
+        self.metrics = Metrics(self.metagraph)
 
         self.hotkeys = self.metagraph.hotkeys
 
@@ -163,7 +167,7 @@ class Validator:
             allow_val_change=True,
             anonymous="allow",
             tags=[
-                f"version_{WEIGHTS_VERSION}",
+                f"version_{VALIDATOR_VERSION}",
                 f"sn{netuid}",
             ],
         )
@@ -216,7 +220,7 @@ class Validator:
             {
                 "step": self.step,
                 "hotkeys": self.hotkeys,
-                "scores": self.scores,
+                "metrics": self.metrics,
                 "last_day": self.last_day,
                 "contest_state": self.contest_state,
                 "previous_day_winners": self.previous_day_winners,
@@ -238,7 +242,8 @@ class Validator:
         state = load(path)
         self.step = state["step"]
         self.hotkeys = state["hotkeys"]
-        self.scores = state["scores"]
+        self.metrics = state.get("metrics", self.metrics)
+        self.metrics.set_metagraph(self.metagraph)
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
         self.previous_day_winners = (
@@ -248,14 +253,15 @@ class Validator:
         self.should_set_weights = state["should_set_weights"]
 
         # Remove outdated checks
-        self.contest_state.miner_score_versions = {
-            uid: version
-            for uid, version in self.contest_state.miner_score_versions.items()
-            if version == WEIGHTS_VERSION
-        }
-
         if self.contest_state:
-            self.start_wandb_run()
+            self.contest_state.miner_score_versions = {
+                uid: version
+                for uid, version in self.contest_state.miner_score_versions.items()
+                if version == WEIGHTS_VERSION
+            }
+
+            if self.last_day:
+                self.start_wandb_run()
 
     def sync(self):
         # --- Check for registration.
@@ -276,16 +282,11 @@ class Validator:
 
     def set_weights(self):
         if len(self.hotkeys) != len(self.metagraph.hotkeys):
-            # resize
-            new_scores = [0.0] * self.metagraph.n.item()
-
-            length = len(self.hotkeys)
-            new_scores[:length] = self.scores[:length]
-
-            self.scores = new_scores
+            self.metrics.resize()
 
             if self.contest_state:
                 new_miner_info = [None] * self.metagraph.n.item()
+                length = len(self.hotkeys)
                 new_miner_info[:length] = self.contest_state.miner_info[:length]
 
                 self.contest_state.miner_info = new_miner_info
@@ -293,7 +294,7 @@ class Validator:
         for uid, hotkey in enumerate(self.hotkeys):
             if hotkey != self.metagraph.hotkeys[uid]:
                 # hotkey has been replaced
-                self.scores[uid] = 0.0
+                self.metrics.reset(uid)
 
                 filtered_winners = [
                     (winner_uid, score)
@@ -321,9 +322,11 @@ class Validator:
         buckets = [ContestSubmissionsBucket(scores) for scores in self.get_score_buckets()]
 
         if len(self.previous_day_winners):
-            _, highest_score = self.current_winners()
+            winners = self.current_winners()
 
-            if highest_score > 0.0:
+            if len(winners):
+                highest_score = max([score for _, score in winners])
+
                 winner_overrides = [
                     (uid, score)
                     for uid, score in self.previous_day_winners if
@@ -345,7 +348,8 @@ class Validator:
                     log_data[str(uid)] = {
                         "rank": bucket_rank,
                         "model": cast(CheckpointSubmission, self.contest_state.miner_info[uid]).repository,
-                        "score": score,
+                        "generation_time": self.metrics.model_averages[uid],
+                        "similarity": self.metrics.similarity_averages[uid],
                         "hotkey": self.hotkeys[uid],
                         "multiday_winner": bucket.previous_day_winners,
                     }
@@ -449,14 +453,11 @@ class Validator:
             bt.logging.info(f"Benchmark results: {comparison}")
 
             if comparison.failed:
-                self.scores[uid] = 0.0
+                self.metrics.reset(uid)
             else:
-                self.scores[uid] = max(
-                    0.0,
-                    comparison.baseline_average - comparison.average_time,
-                ) * comparison.average_similarity
+                self.metrics.update(uid, comparison.average_time, comparison.average_similarity)
         except Exception as e:
-            self.scores[uid] = 0.0
+            self.metrics.reset(uid)
             bt.logging.info(f"Failed to query miner {uid}, {e}")
             bt.logging.debug(f"Miner {uid} error, {traceback.format_exception(e)}")
 
@@ -465,9 +466,11 @@ class Validator:
     def get_score_buckets(self) -> list[WinnerList]:
         uid: Uid
 
+        scores = [self.metrics.calculate_score(uid) for uid in range(self.metagraph.n.item())]
+
         sorted_contestants = [
             (uid, score)
-            for uid, score in sorted(enumerate(self.scores), key=lambda score: score[1])
+            for uid, score in sorted(enumerate(scores), key=lambda score: score[1])
             if score > 0.0
         ]
 
@@ -531,8 +534,6 @@ class Validator:
             # Past noon, should start collecting submissions
             self.last_day = now.date()
 
-            self.start_wandb_run()
-
             bt.logging.info("Collecting all submissions")
 
             miner_info = self.get_miner_submissions()
@@ -549,10 +550,11 @@ class Validator:
 
                 self.contest.validate()
 
-                self.scores = [0.0] * self.metagraph.n.item()
+                self.metrics.clear()
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
                 self.previous_day_winners = []
+                self.start_wandb_run()
             else:
                 def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
                     if old_info is None and new_info is None:
@@ -562,7 +564,9 @@ class Validator:
                         return True
 
                     return old_info.repository != new_info.repository
-
+                    
+                self.start_wandb_run()
+                
                 updated_uids = set([
                     uid
                     for uid in range(self.metagraph.n.item())
@@ -572,7 +576,7 @@ class Validator:
                 bt.logging.info(f"Miners {updated_uids} changed their submissions")
 
                 for uid in updated_uids:
-                    self.scores[uid] = 0.0
+                    self.metrics.reset(uid)
 
                     if uid in self.contest_state.miner_score_versions:
                         del self.contest_state.miner_score_versions[uid]
@@ -600,7 +604,7 @@ class Validator:
         blocks_elapsed = block - last_update
 
         if blocks_elapsed >= self.config.epoch_length:
-            bt.logging.info(f"{blocks_elapsed} since last update, resyncing metagraph and setting weights")
+            bt.logging.info(f"{blocks_elapsed} blocks since last update, resyncing metagraph")
             self.sync()
         else:
             bt.logging.info(
