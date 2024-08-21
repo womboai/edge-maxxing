@@ -1,10 +1,14 @@
+import shutil
 from abc import ABC, abstractmethod
 from enum import Enum
+from pathlib import Path
 
 import torch
 from diffusers import StableDiffusionXLPipeline
 
 from .coreml_pipeline import CoreMLStableDiffusionXLPipeline
+
+MODEL_CACHE_DIR = Path("model-cache")
 
 
 class ContestId(Enum):
@@ -25,6 +29,11 @@ class Contest(ABC):
 
     def load_baseline(self):
         return self.load()
+
+    def delete_model_cache(self):
+        models_path = Path(MODEL_CACHE_DIR)
+        if models_path.exists():
+            shutil.rmtree(models_path)
 
     @abstractmethod
     def load(self, repository: str | None = None):
@@ -50,6 +59,7 @@ class CudaContest(Contest):
             repository or self.baseline_repository,
             torch_dtype=torch.float16,
             use_safetensors=True if repository else None,
+            cache_dir=MODEL_CACHE_DIR if repository else None,
         ).to("cuda")
 
     def validate(self):
