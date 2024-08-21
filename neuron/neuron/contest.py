@@ -8,7 +8,7 @@ from diffusers import StableDiffusionXLPipeline
 
 from .coreml_pipeline import CoreMLStableDiffusionXLPipeline
 
-MODEL_CACHE_DIR = Path("models/.cache")
+MODEL_CACHE_DIR = Path("model-cache")
 
 
 class ContestId(Enum):

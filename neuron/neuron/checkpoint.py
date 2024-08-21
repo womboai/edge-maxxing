@@ -237,11 +237,9 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
 
 
 @contextmanager
-def load_pipeline(contest: Contest, repository: str | None = None):
+def load_pipeline(contest: Contest, repository: str):
     try:
         pipeline = contest.load(repository)
         yield pipeline
     finally:
-        del pipeline
-        if repository:
-            contest.delete_model_cache()
+        contest.delete_model_cache()
