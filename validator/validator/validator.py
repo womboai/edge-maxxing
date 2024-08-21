@@ -32,7 +32,7 @@ from metrics import Metrics
 from wandb_args import add_wandb_args
 
 WEIGHTS_VERSION = 11
-VALIDATOR_VERSION = "1.0.0"
+VALIDATOR_VERSION = "1.0.1"
 
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
