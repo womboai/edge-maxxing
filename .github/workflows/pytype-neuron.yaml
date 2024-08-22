@@ -2,9 +2,6 @@ on:
   pull_request:
     type:
       - opened
-  push:
-    paths:
-      - 'neuron/**'
 
 jobs:
   test-types:
