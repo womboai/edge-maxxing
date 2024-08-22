@@ -1,4 +1,5 @@
 import traceback
+from contextlib import contextmanager
 from dataclasses import dataclass
 from os import urandom
 from time import perf_counter
@@ -12,8 +13,8 @@ from numpy import ndarray
 from pydantic import BaseModel
 from torch import Generator, cosine_similarity, Tensor
 
-from .network_commitments import Encoder, Decoder
 from .contest import ContestId, CURRENT_CONTEST, Contest
+from .network_commitments import Encoder, Decoder
 from .random_inputs import generate_random_prompt
 
 SPEC_VERSION = 2
@@ -168,69 +169,67 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
     average_time = float("inf")
     average_similarity = 1.0
 
-    pipeline = contest.load(repository)
+    with load_pipeline(contest, repository) as pipeline:
 
-    pipeline(prompt="")
+        i = 0
 
-    i = 0
+        f"Take {SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been"
+        for i, baseline in enumerate(baseline_outputs):
+            bt.logging.info(f"Sample {i}, prompt {baseline.prompt} and seed {baseline.seed}")
 
-    f"Take {SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been"
-    for i, baseline in enumerate(baseline_outputs):
-        bt.logging.info(f"Sample {i}, prompt {baseline.prompt} and seed {baseline.seed}")
+            generated = i
+            remaining = SAMPLE_COUNT - generated
 
-        generated = i
-        remaining = SAMPLE_COUNT - generated
+            generation = generate(
+                pipeline,
+                baseline.prompt,
+                baseline.seed,
+            )
 
-        generation = generate(
-            pipeline,
-            baseline.prompt,
-            baseline.seed,
-        )
+            similarity = (cosine_similarity(
+                baseline.output.flatten(),
+                generation.output.flatten(),
+                eps=1e-3,
+                dim=0,
+            ).item() * 0.5 + 0.5) ** 4
 
-        similarity = (cosine_similarity(
-            baseline.output.flatten(),
-            generation.output.flatten(),
-            eps=1e-3,
-            dim=0,
-        ).item() * 0.5 + 0.5) ** 4
+            bt.logging.info(
+                f"Sample {i} generated "
+                f"with generation time of {generation.generation_time} "
+                f"and similarity {similarity}"
+            )
+
+            if generated:
+                average_time = (average_time * generated + generation.generation_time) / (generated + 1)
+            else:
+                average_time = generation.generation_time
+
+            average_similarity = (average_similarity * generated + similarity) / (generated + 1)
+
+            if average_time < baseline_average * 1.0625:
+                # So far, the average time is better than the baseline, so we can continue
+                continue
+
+            needed_time = (baseline_average * SAMPLE_COUNT - generated * average_time) / remaining
+
+            if needed_time < average_time * 0.75:
+                # Needs %33 faster than current performance to beat the baseline,
+                # thus we shouldn't waste compute testing farther
+                failed = True
+                bt.logging.info("Current average is 75% of the baseline average")
+                break
+
+            if average_similarity < 0.85:
+                # Deviating too much from original quality
+                bt.logging.info("Too different from baseline, failing")
+                failed = True
+                break
 
         bt.logging.info(
-            f"Sample {i} generated "
-            f"with generation time of {generation.generation_time} "
-            f"and similarity {similarity}"
+            f"Tested {i + 1} samples, "
+            f"average similarity of {average_similarity}, "
+            f"and speed of {average_time}"
         )
-
-        if generated:
-            average_time = (average_time * generated + generation.generation_time) / (generated + 1)
-        else:
-            average_time = generation.generation_time
-
-        average_similarity = (average_similarity * generated + similarity) / (generated + 1)
-
-        if average_time < baseline_average * 1.0625:
-            # So far, the average time is better than the baseline, so we can continue
-            continue
-
-        needed_time = (baseline_average * SAMPLE_COUNT - generated * average_time) / remaining
-
-        if needed_time < average_time * 0.75:
-            # Needs %33 faster than current performance to beat the baseline,
-            # thus we shouldn't waste compute testing farther
-            failed = True
-            bt.logging.info("Current average is 75% of the baseline average")
-            break
-
-        if average_similarity < 0.85:
-            # Deviating too much from original quality
-            bt.logging.info("Too different from baseline, failing")
-            failed = True
-            break
-
-    bt.logging.info(
-        f"Tested {i + 1} samples, "
-        f"average similarity of {average_similarity}, "
-        f"and speed of {average_time}"
-    )
 
     return CheckpointBenchmark(
         baseline_average,
@@ -238,3 +237,12 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
         average_similarity,
         failed,
     )
+
+
+@contextmanager
+def load_pipeline(contest: Contest, repository: str):
+    try:
+        pipeline = contest.load(repository)
+        yield pipeline
+    finally:
+        contest.delete_model_cache()
