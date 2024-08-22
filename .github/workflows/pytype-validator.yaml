@@ -1,7 +1,8 @@
 on:
+  pull_request:
+    type:
+      - opened
   push:
-    branches:
-      - main
     paths:
       - 'neuron/**'
       - 'validator/**'
