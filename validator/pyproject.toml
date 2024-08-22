@@ -32,6 +32,9 @@ python = ">=3.10,<3.11"
 wandb = "0.17.5"
 edge-optimization-subnet-neuron = { path = "../neuron", develop = true }
 
+[tool.poetry.dev-dependencies]
+pytype = "2024.4.11"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
