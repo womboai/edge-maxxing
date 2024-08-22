@@ -1,0 +1,20 @@
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'neuron/**'
+      - 'validator/**'
+
+jobs:
+  test-types:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test Types
+        working-directory: validator
+        run: |
+          poetry install
+          poetry run pytype
