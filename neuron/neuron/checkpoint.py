@@ -31,23 +31,19 @@ class GenerationOutput:
 
 class CheckpointSubmission(BaseModel):
     repository: str = CURRENT_CONTEST.baseline_repository
-    average_time: float
     contest: ContestId = CURRENT_CONTEST.id
 
     def encode(self, encoder: Encoder):
         encoder.write_str(self.repository)
-        encoder.write_float(self.average_time)
         encoder.write_uint16(self.contest.value)
 
     @classmethod
     def decode(cls, decoder: Decoder):
         repository = decoder.read_str()
-        average_time = decoder.read_float()
         contest_id = ContestId(decoder.read_uint16())
 
         return cls(
             repository=repository,
-            average_time=average_time,
             contest=contest_id,
         )
 
