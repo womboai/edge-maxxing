@@ -86,6 +86,9 @@ class ContestState:
         self.miner_score_versions = state.get("miner_score_versions", {})
         self.__dict__.update(state)
 
+    def __repr__(self):
+        return f"ContestState(id={self.id}, miner_score_versions={self.miner_score_versions}, miner_info={self.miner_info})"
+
 
 class Validator:
     config: bt.config
@@ -111,6 +114,9 @@ class Validator:
 
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
+
+        from diagnostics import save_validator_diagnostics
+        save_validator_diagnostics(self.config)
 
         bt.logging.info("Setting up bittensor objects")
 
