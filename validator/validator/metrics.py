@@ -51,3 +51,6 @@ class Metrics:
 
     def __setstate__(self, state):
         self.__dict__.update(state)
+
+    def __repr__(self):
+        return f"Metrics(model_averages={self.model_averages}, similarity_averages={self.similarity_averages})"
