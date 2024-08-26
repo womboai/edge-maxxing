@@ -1,6 +1,8 @@
 import json
 import pprint
+import shutil
 import sys
+import zipfile
 from dataclasses import dataclass
 from os import makedirs
 from os.path import expanduser, join, isfile
@@ -11,7 +13,8 @@ from torch import load
 
 from validator import ContestState  # noqa
 
-PATH: Path = Path(".diagnostics.json")
+DIAGNOSTICS_DIR: Path = Path(".diagnostics")
+DIAGNOSTICS_FILE_PATH: Path = DIAGNOSTICS_DIR / "diagnostics.json"
 
 
 @dataclass
@@ -61,15 +64,16 @@ def save_validator_diagnostics(config: bt.config):
         },
     }
 
-    with open(PATH, "w") as f:
+    DIAGNOSTICS_DIR.mkdir(exist_ok=True)
+    with open(DIAGNOSTICS_FILE_PATH, "w") as f:
         json.dump(data, f, indent=4)
 
 
 def load_validator_diagnostics() -> DiagnosticsData:
-    if not isfile(PATH):
+    if not isfile(DIAGNOSTICS_FILE_PATH):
         exit("No diagnostics file found")
 
-    with open(PATH, "r") as f:
+    with open(DIAGNOSTICS_FILE_PATH, "r") as f:
         data = json.load(f)
 
         return DiagnosticsData(
@@ -83,8 +87,21 @@ def load_validator_diagnostics() -> DiagnosticsData:
 
 if __name__ == "__main__":
     diagnostics = load_validator_diagnostics()
-    print("Process Command:")
-    print(diagnostics.process_command)
-    print("Validator State:")
+
+    print("Gathering validator state")
     data = load_state(diagnostics)
-    pprint.pprint(data)
+    with open(DIAGNOSTICS_DIR / "state.txt", 'w') as file:
+        pprint.pprint(data, stream=file)
+
+    print("Gathering logs")
+    logs = Path(expanduser("~/.pm2/logs"))
+    for file in logs.iterdir():
+        shutil.copy(file, DIAGNOSTICS_DIR)
+
+    with zipfile.ZipFile("diagnostics.zip", "w") as zf:
+        for file in DIAGNOSTICS_DIR.iterdir():
+            zf.write(file)
+
+    print(f"Exported diagnostics to {Path.cwd()}/diagnostics.zip")
+
+    shutil.rmtree(DIAGNOSTICS_DIR, ignore_errors=True)
