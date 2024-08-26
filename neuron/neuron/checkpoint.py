@@ -27,6 +27,7 @@ class GenerationOutput:
     seed: int
     output: Tensor
     generation_time: float
+    vram_used: int
 
 
 class CheckpointSubmission(BaseModel):
@@ -57,6 +58,10 @@ class CheckpointBenchmark:
     baseline_average: float
     average_time: float
     average_similarity: float
+    baseline_size: int
+    size: int
+    baseline_vram_used: int
+    vram_used: int
     failed: bool
 
 
@@ -119,7 +124,8 @@ def get_submission(
         return None
 
 
-def generate(pipeline: DiffusionPipeline, prompt: str, seed: int) -> GenerationOutput:
+def generate(contest: Contest, pipeline: DiffusionPipeline, prompt: str, seed: int) -> GenerationOutput:
+    start_vram = contest.get_vram_used(pipeline.device)
     start = perf_counter()
 
     output = pipeline(
@@ -130,6 +136,7 @@ def generate(pipeline: DiffusionPipeline, prompt: str, seed: int) -> GenerationO
     ).images
 
     generation_time = perf_counter() - start
+    vram_used = contest.get_vram_used(pipeline.device) - start_vram
 
     if isinstance(output, ndarray):
         output = torch.from_numpy(output)
@@ -139,6 +146,7 @@ def generate(pipeline: DiffusionPipeline, prompt: str, seed: int) -> GenerationO
         seed=seed,
         output=output,
         generation_time=generation_time,
+        vram_used=vram_used,
     )
 
 
@@ -153,6 +161,7 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
 
     baseline_outputs: list[GenerationOutput] = [
         generate(
+            contest,
             baseline_pipeline,
             generate_random_prompt(),
             int.from_bytes(urandom(4), "little"),
@@ -165,11 +174,15 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
     contest.empty_cache()
 
     baseline_average = sum([output.generation_time for output in baseline_outputs]) / len(baseline_outputs)
+    baseline_size = contest.get_baseline_size()
+    baseline_vram_used = int(sum([output.vram_used for output in baseline_outputs]) / len(baseline_outputs))
 
     average_time = float("inf")
     average_similarity = 1.0
 
     with load_pipeline(contest, repository) as pipeline:
+
+        size = contest.get_model_size()
 
         i = 0
 
@@ -181,6 +194,7 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
             remaining = SAMPLE_COUNT - generated
 
             generation = generate(
+                contest,
                 pipeline,
                 baseline.prompt,
                 baseline.seed,
@@ -197,12 +211,15 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
                 f"Sample {i} generated "
                 f"with generation time of {generation.generation_time} "
                 f"and similarity {similarity}"
+                f"and VRAM usage of {generation.vram_used}"
             )
 
             if generated:
                 average_time = (average_time * generated + generation.generation_time) / (generated + 1)
+                vram_used = (baseline.vram_used * generated + generation.vram_used) / (generated + 1)
             else:
                 average_time = generation.generation_time
+                vram_used = generation.vram_used
 
             average_similarity = (average_similarity * generated + similarity) / (generated + 1)
 
@@ -229,12 +246,18 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
             f"Tested {i + 1} samples, "
             f"average similarity of {average_similarity}, "
             f"and speed of {average_time}"
+            f"and model size of {size}"
+            f"and VRAM usage of {vram_used}"
         )
 
     return CheckpointBenchmark(
         baseline_average,
         average_time,
         average_similarity,
+        baseline_size,
+        size,
+        baseline_vram_used,
+        vram_used,
         failed,
     )
 

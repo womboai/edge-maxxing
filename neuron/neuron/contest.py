@@ -5,6 +5,7 @@ from pathlib import Path
 
 import torch
 from diffusers import StableDiffusionXLPipeline
+from huggingface_hub import constants
 
 from .coreml_pipeline import CoreMLStableDiffusionXLPipeline
 
@@ -31,12 +32,22 @@ class Contest(ABC):
         return self.load()
 
     def delete_model_cache(self):
-        models_path = Path(MODEL_CACHE_DIR)
-        if models_path.exists():
-            shutil.rmtree(models_path)
+        if MODEL_CACHE_DIR.exists():
+            shutil.rmtree(MODEL_CACHE_DIR)
+
+    def get_model_size(self):
+        return sum(file.stat().st_size for file in MODEL_CACHE_DIR.rglob("*"))
 
     @abstractmethod
     def load(self, repository: str | None = None):
+        ...
+
+    @abstractmethod
+    def get_baseline_size(self):
+        ...
+
+    @abstractmethod
+    def get_vram_used(self, device: torch.device):
         ...
 
     @abstractmethod
@@ -49,7 +60,8 @@ class Contest(ABC):
 
 
 class CudaContest(Contest):
-    def __init__(self, contest_id: ContestId, baseline_average: float, baseline_repository: str, expected_device_name: str):
+    def __init__(self, contest_id: ContestId, baseline_average: float, baseline_repository: str,
+                 expected_device_name: str):
         super().__init__(contest_id, baseline_average, baseline_repository)
 
         self.expected_device_name = expected_device_name
@@ -61,6 +73,13 @@ class CudaContest(Contest):
             use_safetensors=True if repository else None,
             cache_dir=MODEL_CACHE_DIR if repository else None,
         ).to("cuda")
+
+    def get_baseline_size(self):
+        baseline_dir = Path(constants.HF_HUB_CACHE) / f"models--{self.baseline_repository.replace('/', '--')}"
+        return sum(file.stat().st_size for file in baseline_dir.rglob("*"))
+
+    def get_vram_used(self, device: torch.device):
+        return torch.cuda.memory_allocated(device)
 
     def validate(self):
         device_name = torch.cuda.get_device_name("cuda")
@@ -77,6 +96,12 @@ class CudaContest(Contest):
 class AppleSiliconContest(Contest):
     def load(self, repository: str | None = None):
         return CoreMLStableDiffusionXLPipeline.from_pretrained(repository or self.baseline_repository).to("mps")
+
+    def get_baseline_size(self):
+        return 0 # TODO
+
+    def get_vram_used(self, device: torch.device):
+        return torch.mps.current_allocated_memory()
 
     def validate(self):
         if not torch.backends.mps.is_available():
