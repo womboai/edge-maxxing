@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 import bittensor as bt
+from diffusers import DiffusionPipeline
 from huggingface_hub import snapshot_download
 
 
@@ -16,7 +17,10 @@ def main():
 
     config = bt.config(argument_parser)
 
-    snapshot_download(config.repository, cache_dir=Path(__file__).parent.parent / "inference" / "models")
+    DiffusionPipeline.from_pretrained(
+        config.repository,
+        cache_dir=Path(__file__).parent.parent / "inference" / "models",
+    )
 
 
 if __name__ == '__main__':
