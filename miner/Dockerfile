@@ -1,3 +1,5 @@
+FROM ubuntu:22.04
+
 COPY inference /app
 
 WORKDIR /app/inference
