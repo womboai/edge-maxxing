@@ -127,8 +127,11 @@ class Validator:
         self.metrics = Metrics(self.metagraph)
 
         self.hotkeys = self.metagraph.hotkeys
-
-        self.uid = self.hotkeys.index(self.wallet.hotkey.ss58_address)
+        hotkey = self.wallet.hotkey.ss58_address
+        if hotkey not in self.hotkeys:
+            bt.logging.error(f"Hotkey '{hotkey}' has not been registered in SN{self.config.netuid}!")
+            exit(1)
+        self.uid = self.hotkeys.index(hotkey)
         self.step = 0
 
         self.last_day = None
@@ -424,20 +427,21 @@ class Validator:
         else:
             bt.logging.warning(f"set_weights failed, {message}")
 
-    def get_next_uid(self) -> int | None:
-        uids = set([uid for uid, info in enumerate(self.contest_state.miner_info) if info])
-        remaining_uids = uids - self.contest_state.miner_score_versions.keys()
+    def get_uids(self) -> set[int]:
+        return set([uid for uid, info in enumerate(self.contest_state.miner_info) if info])
 
-        if not len(remaining_uids):
-            return None
-
-        return choice(list(remaining_uids))
+    def get_next_uid(self, remaining_uids: set[int]) -> int | None:
+        return None if not len(remaining_uids) else choice(list(remaining_uids))
 
     def test_next_miner(self):
         if not self.contest_state:
             return
 
-        uid = self.get_next_uid()
+        uids = self.get_uids()
+        tested_uids = self.contest_state.miner_score_versions.keys()
+        remaining_uids = uids - tested_uids
+        uid = self.get_next_uid(remaining_uids)
+        bt.logging.info(f"{len(tested_uids)}/{len(uids)} submissions tested. {len(remaining_uids)} remaining.")
 
         if uid is None:
             if not self.should_set_weights:
