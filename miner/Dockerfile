@@ -1,6 +1,6 @@
 FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
 
-COPY inference /app
+COPY ./inference/ /app/inference
 
 WORKDIR /app/inference
 
