@@ -1,10 +1,10 @@
-FROM ubuntu:22.04
+FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
 
 COPY inference /app
 
 WORKDIR /app/inference
 
-ENV PATH=/validator-venv/bin/:$PATH
+RUN pip install -r requirements.txt
 
 EXPOSE 8000
 
