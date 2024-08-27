@@ -2,3 +2,5 @@ diffusers==0.29.0
 transformers==4.41.2
 accelerate==0.31.0
 omegaconf==2.3.0
+fastapi==0.112.2
+uvicorn==0.30.6
