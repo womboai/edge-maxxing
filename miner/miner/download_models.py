@@ -3,7 +3,6 @@ from pathlib import Path
 
 import bittensor as bt
 from diffusers import DiffusionPipeline
-from huggingface_hub import snapshot_download
 
 
 def main():

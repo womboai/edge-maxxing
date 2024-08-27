@@ -19,7 +19,7 @@ def load_pipeline() -> StableDiffusionXLPipeline:
         "stablediffusionapi/newdream-sdxl-20",
         cache_dir="./models",
         local_files_only=True,
-    )
+    ).to("cuda")
 
 
 def infer(request: GenerationRequest, pipeline: StableDiffusionXLPipeline) -> Image:
