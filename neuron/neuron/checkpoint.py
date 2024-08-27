@@ -16,6 +16,7 @@ from torch import Generator, cosine_similarity, Tensor
 from .contest import ContestId, CURRENT_CONTEST, Contest
 from .network_commitments import Encoder, Decoder
 from .random_inputs import generate_random_prompt
+from .vram_monitor import VRamMonitor
 
 SPEC_VERSION = 2
 SAMPLE_COUNT = 5
@@ -27,7 +28,7 @@ class GenerationOutput:
     seed: int
     output: Tensor
     generation_time: float
-    vram_used: int
+    vram_used: float
     watts_used: float
 
 
@@ -61,8 +62,8 @@ class CheckpointBenchmark:
     average_similarity: float
     baseline_size: int
     size: int
-    baseline_vram_used: int
-    vram_used: int
+    baseline_vram_used: float
+    vram_used: float
     baseline_watts_used: float
     watts_used: float
     failed: bool
@@ -128,8 +129,8 @@ def get_submission(
 
 
 def generate(contest: Contest, pipeline: DiffusionPipeline, prompt: str, seed: int) -> GenerationOutput:
-    start_vram = contest.get_vram_used(pipeline.device)
     start_joules = contest.get_joules(pipeline.device)
+    vram_monitor = VRamMonitor(contest, pipeline.device)
     start = perf_counter()
 
     output = pipeline(
@@ -140,9 +141,9 @@ def generate(contest: Contest, pipeline: DiffusionPipeline, prompt: str, seed: i
     ).images
 
     generation_time = perf_counter() - start
-    vram_used = contest.get_vram_used(pipeline.device) - start_vram
     joules_used = contest.get_joules(pipeline.device) - start_joules
     watts_used = joules_used / generation_time
+    vram_used = vram_monitor.complete()
 
     if isinstance(output, ndarray):
         output = torch.from_numpy(output)
@@ -182,7 +183,7 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
 
     baseline_average = sum([output.generation_time for output in baseline_outputs]) / len(baseline_outputs)
     baseline_size = contest.get_baseline_size()
-    baseline_vram_used = int(sum([output.vram_used for output in baseline_outputs]) / len(baseline_outputs))
+    baseline_vram_used = sum([output.vram_used for output in baseline_outputs]) / len(baseline_outputs)
     baseline_watts_used = sum([output.watts_used for output in baseline_outputs]) / len(baseline_outputs)
 
     average_time = float("inf")

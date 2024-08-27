@@ -3,10 +3,10 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
 
+import pynvml
 import torch
 from diffusers import StableDiffusionXLPipeline
 from huggingface_hub import constants
-import pynvml
 
 from .coreml_pipeline import CoreMLStableDiffusionXLPipeline
 

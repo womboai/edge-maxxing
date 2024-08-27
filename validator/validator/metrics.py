@@ -10,7 +10,7 @@ class Metrics:
     model_averages: list[float]
     similarity_averages: list[float]
     sizes: list[int]
-    vram_used: list[int]
+    vram_used: list[float]
     watts_used: list[float]
 
     def __init__(self, metagraph: bt.metagraph):
@@ -22,7 +22,7 @@ class Metrics:
         self.model_averages = [0.0] * self.metagraph.n.item()
         self.similarity_averages = [0.0] * self.metagraph.n.item()
         self.sizes = [0] * self.metagraph.n.item()
-        self.vram_used = [0] * self.metagraph.n.item()
+        self.vram_used = [0.0] * self.metagraph.n.item()
         self.watts_used = [0.0] * self.metagraph.n.item()
 
     def reset(self, uid: int):
@@ -30,7 +30,7 @@ class Metrics:
         self.model_averages[uid] = 0.0
         self.similarity_averages[uid] = 0.0
         self.sizes[uid] = 0
-        self.vram_used[uid] = 0
+        self.vram_used[uid] = 0.0
         self.watts_used[uid] = 0.0
 
     def update(self, uid: int, benchmark: CheckpointBenchmark):
