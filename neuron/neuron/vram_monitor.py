@@ -3,7 +3,7 @@ import time
 
 import torch
 
-from contest import Contest
+from .contest import Contest
 
 POLL_RATE_SECONDS = 0.1
 

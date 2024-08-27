@@ -27,14 +27,23 @@ test-trackers = ["wandb", "comet-ml", "tensorboard", "dvclive"]
 testing = ["pytest (>=7.2.0,<=8.0.0)", "pytest-xdist", "pytest-subtests", "parameterized", "datasets", "diffusers", "evaluate", "torchpippy (>=0.2.0)", "transformers", "scipy", "scikit-learn", "tqdm", "bitsandbytes", "timm"]
 
 [[package]]
+name = "aiohappyeyeballs"
+version = "2.4.0"
+description = "Happy Eyeballs for asyncio"
+category = "main"
+optional = false
+python-versions = ">=3.8"
+
+[[package]]
 name = "aiohttp"
-version = "3.9.5"
+version = "3.10.5"
 description = "Async http client/server framework (asyncio)"
 category = "main"
 optional = false
 python-versions = ">=3.8"
 
 [package.dependencies]
+aiohappyeyeballs = ">=2.3.0"
 aiosignal = ">=1.1.2"
 async-timeout = {version = ">=4.0,<5.0", markers = "python_version < \"3.11\""}
 attrs = ">=17.3.0"
@@ -43,7 +52,7 @@ multidict = ">=4.5,<7.0"
 yarl = ">=1.0,<2.0"
 
 [package.extras]
-speedups = ["brotlicffi", "brotli", "aiodns"]
+speedups = ["brotlicffi", "brotli", "aiodns (>=3.2.0)"]
 
 [[package]]
 name = "aiosignal"
@@ -142,19 +151,19 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "attrs"
-version = "23.2.0"
+version = "24.2.0"
 description = "Classes Without Boilerplate"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 
 [package.extras]
-cov = ["attrs", "coverage[toml] (>=5.3)"]
-dev = ["attrs", "pre-commit"]
-docs = ["furo", "myst-parser", "sphinx", "sphinx-notfound-page", "sphinxcontrib-towncrier", "towncrier", "zope-interface"]
-tests = ["attrs", "zope-interface"]
-tests-mypy = ["mypy (>=1.6)", "pytest-mypy-plugins"]
-tests-no-zope = ["attrs", "cloudpickle", "hypothesis", "pympler", "pytest-xdist", "pytest (>=4.3.0)"]
+benchmark = ["cloudpickle", "hypothesis", "mypy (>=1.11.1)", "pympler", "pytest-codspeed", "pytest-mypy-plugins", "pytest-xdist", "pytest (>=4.3.0)"]
+cov = ["cloudpickle", "coverage[toml] (>=5.3)", "hypothesis", "mypy (>=1.11.1)", "pympler", "pytest-mypy-plugins", "pytest-xdist", "pytest (>=4.3.0)"]
+dev = ["cloudpickle", "hypothesis", "mypy (>=1.11.1)", "pre-commit", "pympler", "pytest-mypy-plugins", "pytest-xdist", "pytest (>=4.3.0)"]
+docs = ["cogapp", "furo", "myst-parser", "sphinx", "sphinx-notfound-page", "sphinxcontrib-towncrier", "towncrier (<24.7)"]
+tests = ["cloudpickle", "hypothesis", "mypy (>=1.11.1)", "pympler", "pytest-mypy-plugins", "pytest-xdist", "pytest (>=4.3.0)"]
+tests-mypy = ["mypy (>=1.11.1)", "pytest-mypy-plugins"]
 
 [[package]]
 name = "backoff"
@@ -177,7 +186,7 @@ tests = ["mypy", "PyHamcrest (>=2.0.2)", "pytest (>=4.6)", "pytest-benchmark", "
 
 [[package]]
 name = "bittensor"
-version = "7.3.0"
+version = "7.3.1"
 description = "bittensor"
 category = "main"
 optional = false
@@ -211,9 +220,9 @@ pyyaml = "*"
 requests = "*"
 retry = "*"
 rich = "*"
-scalecodec = "1.2.7"
+scalecodec = "1.2.11"
 shtab = ">=1.6.5,<1.7.0"
-substrate-interface = ">=1.7.5,<1.8.0"
+substrate-interface = ">=1.7.9,<1.8.0"
 termcolor = "*"
 tqdm = "*"
 uvicorn = "<=0.30"
@@ -254,7 +263,7 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "cffi"
-version = "1.16.0"
+version = "1.17.0"
 description = "Foreign Function Interface for Python calling C code."
 category = "main"
 optional = false
@@ -292,25 +301,25 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7
 
 [[package]]
 name = "contourpy"
-version = "1.2.1"
+version = "1.3.0"
 description = "Python library for calculating contours of 2D quadrilateral grids"
 category = "main"
 optional = false
 python-versions = ">=3.9"
 
 [package.dependencies]
-numpy = ">=1.20"
+numpy = ">=1.23"
 
 [package.extras]
 docs = ["furo", "sphinx (>=7.2)", "sphinx-copybutton"]
 bokeh = ["bokeh", "selenium"]
-mypy = ["contourpy", "docutils-stubs", "mypy (==1.8.0)", "types-pillow"]
+mypy = ["contourpy", "docutils-stubs", "mypy (==1.11.1)", "types-pillow"]
 test = ["contourpy", "matplotlib", "pillow"]
-test-no-images = ["pytest", "pytest-cov", "pytest-xdist", "wurlitzer"]
+test-no-images = ["pytest", "pytest-cov", "pytest-rerunfailures", "pytest-xdist", "wurlitzer"]
 
 [[package]]
 name = "coremltools"
-version = "8.0b1"
+version = "8.0b2"
 description = "Community Tools for Core ML"
 category = "main"
 optional = false
@@ -321,7 +330,7 @@ attrs = ">=21.3.0"
 cattrs = "*"
 numpy = ">=1.14.5"
 packaging = "*"
-protobuf = ">=3.1.0,<=4.0.0"
+protobuf = ">=3.1.0"
 pyaml = "*"
 sympy = "*"
 tqdm = "*"
@@ -444,11 +453,12 @@ develop = true
 
 [package.dependencies]
 accelerate = "0.31.0"
-bittensor = "7.3.0"
+bittensor = "7.3.1"
 diffusers = "0.29.0"
 loguru = "0.7.2"
 nltk = "3.8.1"
 omegaconf = "2.3.0"
+pynvml = "^11.5.3"
 python_coreml_stable_diffusion = {git = "https://github.com/apple/ml-stable-diffusion", tag = "1.1.1"}
 torch = "2.2.0"
 transformers = "4.41.2"
@@ -492,7 +502,7 @@ test = ["pytest (>=7.0.0)", "asn1tools (>=0.146.2)", "factory-boy (>=3.0.1)", "p
 
 [[package]]
 name = "eth-typing"
-version = "4.4.0"
+version = "5.0.0"
 description = "eth-typing: Common type annotations for ethereum python packages"
 category = "main"
 optional = false
@@ -502,7 +512,7 @@ python-versions = "<4,>=3.8"
 typing-extensions = ">=4.5.0"
 
 [package.extras]
-dev = ["build (>=0.9.0)", "bumpversion (>=0.5.3)", "ipython", "pre-commit (>=3.4.0)", "tox (>=4.0.0)", "twine", "wheel", "sphinx (>=6.0.0)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)", "pytest (>=7.0.0)", "pytest-xdist (>=2.4.0)"]
+dev = ["build (>=0.9.0)", "bumpversion (>=0.5.3)", "ipython", "mypy (==1.10.0)", "pre-commit (>=3.4.0)", "tox (>=4.0.0)", "twine", "wheel", "sphinx (>=6.0.0)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)", "pytest (>=7.0.0)", "pytest-xdist (>=2.4.0)"]
 docs = ["sphinx (>=6.0.0)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)"]
 test = ["pytest (>=7.0.0)", "pytest-xdist (>=2.4.0)"]
 
@@ -653,7 +663,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "huggingface-hub"
-version = "0.24.2"
+version = "0.24.6"
 description = "Client library to download and publish models, datasets and other repos on the huggingface.co hub"
 category = "main"
 optional = false
@@ -684,15 +694,15 @@ typing = ["typing-extensions (>=4.8.0)", "types-pyyaml", "types-requests", "type
 
 [[package]]
 name = "idna"
-version = "3.7"
+version = "3.8"
 description = "Internationalized Domain Names in Applications (IDNA)"
 category = "main"
 optional = false
-python-versions = ">=3.5"
+python-versions = ">=3.6"
 
 [[package]]
 name = "importlib-metadata"
-version = "8.1.0"
+version = "8.4.0"
 description = "Read metadata from Python packages"
 category = "main"
 optional = false
@@ -816,7 +826,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "matplotlib"
-version = "3.9.1"
+version = "3.9.2"
 description = "Python plotting package"
 category = "main"
 optional = false
@@ -846,7 +856,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "more-itertools"
-version = "10.3.0"
+version = "10.4.0"
 description = "More routines for operating on iterables, beyond itertools"
 category = "main"
 optional = false
@@ -1066,7 +1076,7 @@ python-versions = ">=3"
 
 [[package]]
 name = "nvidia-nvjitlink-cu12"
-version = "12.5.82"
+version = "12.6.20"
 description = "Nvidia JIT LTO Library"
 category = "main"
 optional = false
@@ -1158,11 +1168,11 @@ testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
 name = "protobuf"
-version = "3.20.3"
-description = "Protocol Buffers"
+version = "5.27.4"
+description = ""
 category = "main"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 
 [[package]]
 name = "psutil"
@@ -1291,8 +1301,16 @@ docs = ["sphinx (>=1.6.5)", "sphinx-rtd-theme"]
 tests = ["pytest (>=3.2.1,!=3.3.0)", "hypothesis (>=3.27.0)"]
 
 [[package]]
+name = "pynvml"
+version = "11.5.3"
+description = "Python utilities for the NVIDIA Management Library"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "pyparsing"
-version = "3.1.2"
+version = "3.1.4"
 description = "pyparsing module - Classes and methods to define and execute parsing grammars"
 category = "main"
 optional = false
@@ -1303,7 +1321,7 @@ diagrams = ["railroad-diagrams", "jinja2"]
 
 [[package]]
 name = "pytest"
-version = "8.3.1"
+version = "8.3.2"
 description = "pytest: simple powerful testing with Python"
 category = "main"
 optional = false
@@ -1381,26 +1399,29 @@ python-versions = ">=3.7,<3.13"
 
 [[package]]
 name = "pywavelets"
-version = "1.6.0"
+version = "1.7.0"
 description = "PyWavelets, wavelet transform module"
 category = "main"
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.10"
 
 [package.dependencies]
-numpy = ">=1.22.4,<3"
+numpy = ">=1.23,<3"
+
+[package.extras]
+optional = ["scipy (>=1.9)"]
 
 [[package]]
 name = "pyyaml"
-version = "6.0.1"
+version = "6.0.2"
 description = "YAML parser and emitter for Python"
 category = "main"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.8"
 
 [[package]]
 name = "rapidfuzz"
-version = "3.9.4"
+version = "3.9.6"
 description = "rapid fuzzy string matching"
 category = "main"
 optional = false
@@ -1411,7 +1432,7 @@ full = ["numpy"]
 
 [[package]]
 name = "regex"
-version = "2024.5.15"
+version = "2024.7.24"
 description = "Alternative regular expression module, to replace re."
 category = "main"
 optional = false
@@ -1463,7 +1484,7 @@ py = ">=1.4.26,<2.0.0"
 
 [[package]]
 name = "rich"
-version = "13.7.1"
+version = "13.8.0"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
 category = "main"
 optional = false
@@ -1478,7 +1499,7 @@ jupyter = ["ipywidgets (>=7.5.1,<9)"]
 
 [[package]]
 name = "safetensors"
-version = "0.4.3"
+version = "0.4.4"
 description = ""
 category = "main"
 optional = false
@@ -1499,11 +1520,11 @@ dev = ["safetensors"]
 
 [[package]]
 name = "scalecodec"
-version = "1.2.7"
+version = "1.2.11"
 description = "Python SCALE Codec Library"
 category = "main"
 optional = false
-python-versions = ">=3.6, <4"
+python-versions = "<4,>=3.6"
 
 [package.dependencies]
 base58 = ">=2.0.1"
@@ -1538,7 +1559,7 @@ maintenance = ["conda-lock (==2.5.6)"]
 
 [[package]]
 name = "scipy"
-version = "1.14.0"
+version = "1.14.1"
 description = "Fundamental algorithms for scientific computing in Python"
 category = "main"
 optional = false
@@ -1548,8 +1569,8 @@ python-versions = ">=3.10"
 numpy = ">=1.23.5,<2.3"
 
 [package.extras]
-test = ["pytest", "pytest-cov", "pytest-timeout", "pytest-xdist", "asv", "mpmath", "gmpy2", "threadpoolctl", "scikit-umfpack", "pooch", "hypothesis (>=6.30)", "array-api-strict", "cython", "meson", "ninja"]
-doc = ["sphinx (>=5.0.0)", "pydata-sphinx-theme (>=0.15.2)", "sphinx-design (>=0.4.0)", "matplotlib (>=3.5)", "numpydoc", "jupytext", "myst-nb", "pooch", "jupyterlite-sphinx (>=0.13.1)", "jupyterlite-pyodide-kernel"]
+test = ["pytest", "pytest-cov", "pytest-timeout", "pytest-xdist", "asv", "mpmath", "gmpy2", "threadpoolctl", "scikit-umfpack", "pooch", "hypothesis (>=6.30)", "array-api-strict (>=2.0)", "cython", "meson", "ninja"]
+doc = ["sphinx (>=5.0.0,<=7.3.7)", "pydata-sphinx-theme (>=0.15.2)", "sphinx-design (>=0.4.0)", "matplotlib (>=3.5)", "numpydoc", "jupytext", "myst-nb", "pooch", "jupyterlite-sphinx (>=0.13.1)", "jupyterlite-pyodide-kernel"]
 dev = ["mypy (==1.10.0)", "typing-extensions", "types-psutil", "pycodestyle", "ruff (>=0.0.292)", "cython-lint (>=0.12.2)", "rich-click", "doit (>=0.36.0)", "pydevtool"]
 
 [[package]]
@@ -1595,11 +1616,11 @@ full = ["httpx (>=0.22.0)", "itsdangerous", "jinja2", "python-multipart (>=0.0.7
 
 [[package]]
 name = "substrate-interface"
-version = "1.7.5"
+version = "1.7.10"
 description = "Library for interfacing with a Substrate node"
 category = "main"
 optional = false
-python-versions = ">=3.7, <4"
+python-versions = "<4,>=3.7"
 
 [package.dependencies]
 base58 = ">=1.0.3,<3"
@@ -1614,7 +1635,7 @@ py-sr25519-bindings = ">=0.2.0,<1"
 pycryptodome = ">=3.11.0,<4"
 PyNaCl = ">=1.0.1,<2"
 requests = ">=2.21.0,<3"
-scalecodec = ">=1.2.6,<1.3"
+scalecodec = ">=1.2.10,<1.3"
 websocket-client = ">=0.57.0,<2"
 xxhash = ">=1.3.0,<4"
 
@@ -1623,7 +1644,7 @@ test = ["coverage", "pytest"]
 
 [[package]]
 name = "sympy"
-version = "1.13.1"
+version = "1.13.2"
 description = "Computer algebra system (CAS) in Python"
 category = "main"
 optional = false
@@ -1720,7 +1741,7 @@ optree = ["optree (>=0.9.1)"]
 
 [[package]]
 name = "tqdm"
-version = "4.66.4"
+version = "4.66.5"
 description = "Fast, Extensible Progress Meter"
 category = "main"
 optional = false
@@ -1878,7 +1899,7 @@ dev = ["pytest (>=4.6.2)", "black (>=19.3b0)"]
 
 [[package]]
 name = "xxhash"
-version = "3.4.1"
+version = "3.5.0"
 description = "Python binding for xxHash"
 category = "main"
 optional = false
@@ -1898,15 +1919,19 @@ multidict = ">=4.0"
 
 [[package]]
 name = "zipp"
-version = "3.19.2"
+version = "3.20.1"
 description = "Backport of pathlib-compatible object wrapper for zip files"
 category = "main"
 optional = false
 python-versions = ">=3.8"
 
 [package.extras]
+check = ["pytest-checkdocs (>=2.4)", "pytest-ruff (>=0.2.1)"]
+cover = ["pytest-cov"]
 doc = ["sphinx (>=3.5)", "jaraco.packaging (>=9.3)", "rst.linker (>=1.9)", "furo", "sphinx-lint", "jaraco.tidelift (>=1.4)"]
-test = ["pytest (>=6,<8.1.0 || >=8.2.0)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-mypy", "pytest-enabler (>=2.2)", "pytest-ruff (>=0.2.1)", "jaraco.itertools", "jaraco.functools", "more-itertools", "big-o", "pytest-ignore-flaky", "jaraco.test", "importlib-resources"]
+enabler = ["pytest-enabler (>=2.2)"]
+test = ["pytest (>=6,<8.1.0 || >=8.2.0)", "jaraco.itertools", "jaraco.functools", "more-itertools", "big-o", "pytest-ignore-flaky", "jaraco.test", "importlib-resources"]
+type = ["pytest-mypy"]
 
 [metadata]
 lock-version = "1.1"
@@ -1915,6 +1940,7 @@ content-hash = "577619f73d291280c1dac598e8b0a5bbe3e5581ce0f11b42006949898919cd65
 
 [metadata.files]
 accelerate = []
+aiohappyeyeballs = []
 aiohttp = []
 aiosignal = []
 annotated-types = []
@@ -2012,6 +2038,7 @@ pydantic = []
 pydantic-core = []
 pygments = []
 pynacl = []
+pynvml = []
 pyparsing = []
 pytest = []
 python_coreml_stable_diffusion = []
