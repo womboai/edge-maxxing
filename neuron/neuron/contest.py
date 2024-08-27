@@ -29,10 +29,6 @@ class Contest(ABC):
         self.baseline_average = baseline_average
         self.baseline_repository = baseline_repository
 
-    def start(self): pass
-
-    def stop(self): pass
-
     def load_baseline(self):
         return self.load()
 
@@ -75,12 +71,6 @@ class CudaContest(Contest):
 
         self.expected_device_name = expected_device_name
 
-    def start(self):
-        pynvml.nvmlInit()
-
-    def stop(self):
-        pynvml.nvmlShutdown()
-
     def load(self, repository: str | None = None):
         return StableDiffusionXLPipeline.from_pretrained(
             repository or self.baseline_repository,
@@ -97,8 +87,11 @@ class CudaContest(Contest):
         return torch.cuda.memory_allocated(device)
 
     def get_joules(self, device: torch.device):
+        pynvml.nvmlInit()
         handle = pynvml.nvmlDeviceGetHandleByIndex(device.index)
-        return pynvml.nvmlDeviceGetTotalEnergyConsumption(handle) / 1000.0  # convert mJ to J
+        mj = pynvml.nvmlDeviceGetTotalEnergyConsumption(handle)
+        pynvml.nvmlShutdown()
+        return mj / 1000.0  # convert mJ to J
 
     def validate(self):
         device_name = torch.cuda.get_device_name("cuda")

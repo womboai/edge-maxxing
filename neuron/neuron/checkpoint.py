@@ -158,7 +158,6 @@ def generate(contest: Contest, pipeline: DiffusionPipeline, prompt: str, seed: i
 
 
 def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmark:
-    contest.start()
     failed = False
 
     baseline_pipeline = contest.load_baseline()
@@ -263,7 +262,6 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
             f"and watts usage of {watts_used}"
         )
 
-    contest.stop()
     return CheckpointBenchmark(
         baseline_average,
         average_time,
