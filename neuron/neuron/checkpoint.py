@@ -129,7 +129,7 @@ def get_submission(
 
 def generate(contest: Contest, pipeline: DiffusionPipeline, prompt: str, seed: int) -> GenerationOutput:
     start_vram = contest.get_vram_used(pipeline.device)
-    start_watts = contest.get_watts_used(pipeline.device)
+    start_joules = contest.get_joules(pipeline.device)
     start = perf_counter()
 
     output = pipeline(
@@ -141,7 +141,8 @@ def generate(contest: Contest, pipeline: DiffusionPipeline, prompt: str, seed: i
 
     generation_time = perf_counter() - start
     vram_used = contest.get_vram_used(pipeline.device) - start_vram
-    watts_used = max(0, contest.get_watts_used(pipeline.device) - start_watts)
+    joules_used = contest.get_joules(pipeline.device) - start_joules
+    watts_used = joules_used / generation_time
 
     if isinstance(output, ndarray):
         output = torch.from_numpy(output)
@@ -157,6 +158,7 @@ def generate(contest: Contest, pipeline: DiffusionPipeline, prompt: str, seed: i
 
 
 def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmark:
+    contest.start()
     failed = False
 
     baseline_pipeline = contest.load_baseline()
@@ -261,6 +263,7 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
             f"and watts usage of {watts_used}"
         )
 
+    contest.stop()
     return CheckpointBenchmark(
         baseline_average,
         average_time,

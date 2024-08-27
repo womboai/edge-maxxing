@@ -29,6 +29,10 @@ class Contest(ABC):
         self.baseline_average = baseline_average
         self.baseline_repository = baseline_repository
 
+    def start(self): pass
+
+    def stop(self): pass
+
     def load_baseline(self):
         return self.load()
 
@@ -52,7 +56,7 @@ class Contest(ABC):
         ...
 
     @abstractmethod
-    def get_watts_used(self, device: torch.device):
+    def get_joules(self, device: torch.device):
         ...
 
     @abstractmethod
@@ -70,7 +74,12 @@ class CudaContest(Contest):
         super().__init__(contest_id, baseline_average, baseline_repository)
 
         self.expected_device_name = expected_device_name
+
+    def start(self):
         pynvml.nvmlInit()
+
+    def stop(self):
+        pynvml.nvmlShutdown()
 
     def load(self, repository: str | None = None):
         return StableDiffusionXLPipeline.from_pretrained(
@@ -87,9 +96,9 @@ class CudaContest(Contest):
     def get_vram_used(self, device: torch.device):
         return torch.cuda.memory_allocated(device)
 
-    def get_watts_used(self, device: torch.device):
+    def get_joules(self, device: torch.device):
         handle = pynvml.nvmlDeviceGetHandleByIndex(device.index)
-        return pynvml.nvmlDeviceGetPowerUsage(handle) / 1000.0
+        return pynvml.nvmlDeviceGetTotalEnergyConsumption(handle) / 1000.0  # convert mJ to J
 
     def validate(self):
         device_name = torch.cuda.get_device_name("cuda")
@@ -108,13 +117,13 @@ class AppleSiliconContest(Contest):
         return CoreMLStableDiffusionXLPipeline.from_pretrained(repository or self.baseline_repository).to("mps")
 
     def get_baseline_size(self):
-        return 0 # TODO
+        return 0  # TODO
 
     def get_vram_used(self, device: torch.device):
         return torch.mps.current_allocated_memory()
 
-    def get_watts_used(self, device: torch.device):
-        return 0 # TODO
+    def get_joules(self, device: torch.device):
+        return 0  # TODO
 
     def validate(self):
         if not torch.backends.mps.is_available():
