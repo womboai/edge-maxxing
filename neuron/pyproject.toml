@@ -42,6 +42,7 @@ transformers = "4.41.2"
 accelerate = "0.31.0"
 omegaconf = "2.3.0"
 python_coreml_stable_diffusion = { git = "https://github.com/apple/ml-stable-diffusion", tag = "1.1.1" }
+pynvml = "^11.5.3"
 
 [tool.poetry.dev-dependencies]
 pytype = "2024.4.11"

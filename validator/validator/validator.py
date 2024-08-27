@@ -361,6 +361,9 @@ class Validator:
                         "model": cast(CheckpointSubmission, self.contest_state.miner_info[uid]).repository,
                         "generation_time": self.metrics.model_averages[uid],
                         "similarity": self.metrics.similarity_averages[uid],
+                        "size": self.metrics.sizes[uid],
+                        "vram_used": self.metrics.vram_used[uid],
+                        "watts_used": self.metrics.watts_used[uid],
                         "hotkey": self.hotkeys[uid],
                         "multiday_winner": bucket.previous_day_winners,
                     }
@@ -466,7 +469,7 @@ class Validator:
             if comparison.failed:
                 self.metrics.reset(uid)
             else:
-                self.metrics.update(uid, comparison.average_time, comparison.average_similarity)
+                self.metrics.update(uid, comparison)
         except Exception as e:
             self.metrics.reset(uid)
             bt.logging.info(f"Failed to query miner {uid}, {e}")
