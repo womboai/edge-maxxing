@@ -357,6 +357,7 @@ class Validator:
                         "similarity": self.metrics.similarity_averages[uid],
                         "size": self.metrics.sizes[uid],
                         "vram_used": self.metrics.vram_used[uid],
+                        "watts_used": self.metrics.watts_used[uid],
                         "hotkey": self.hotkeys[uid],
                         "multiday_winner": bucket.previous_day_winners,
                     }

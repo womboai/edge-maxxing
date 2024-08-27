@@ -6,6 +6,7 @@ from pathlib import Path
 import torch
 from diffusers import StableDiffusionXLPipeline
 from huggingface_hub import constants
+import pynvml
 
 from .coreml_pipeline import CoreMLStableDiffusionXLPipeline
 
@@ -51,6 +52,10 @@ class Contest(ABC):
         ...
 
     @abstractmethod
+    def get_watts_used(self, device: torch.device):
+        ...
+
+    @abstractmethod
     def validate(self):
         ...
 
@@ -65,6 +70,7 @@ class CudaContest(Contest):
         super().__init__(contest_id, baseline_average, baseline_repository)
 
         self.expected_device_name = expected_device_name
+        pynvml.nvmlInit()
 
     def load(self, repository: str | None = None):
         return StableDiffusionXLPipeline.from_pretrained(
@@ -80,6 +86,10 @@ class CudaContest(Contest):
 
     def get_vram_used(self, device: torch.device):
         return torch.cuda.memory_allocated(device)
+
+    def get_watts_used(self, device: torch.device):
+        handle = pynvml.nvmlDeviceGetHandleByIndex(device.index)
+        return pynvml.nvmlDeviceGetPowerUsage(handle) / 1000.0
 
     def validate(self):
         device_name = torch.cuda.get_device_name("cuda")
@@ -102,6 +112,9 @@ class AppleSiliconContest(Contest):
 
     def get_vram_used(self, device: torch.device):
         return torch.mps.current_allocated_memory()
+
+    def get_watts_used(self, device: torch.device):
+        return 0 # TODO
 
     def validate(self):
         if not torch.backends.mps.is_available():

@@ -11,6 +11,7 @@ class Metrics:
     similarity_averages: list[float]
     sizes: list[int]
     vram_used: list[int]
+    watts_used: list[float]
 
     def __init__(self, metagraph: bt.metagraph):
         self.metagraph = metagraph
@@ -21,7 +22,8 @@ class Metrics:
         self.model_averages = [0.0] * self.metagraph.n.item()
         self.similarity_averages = [0.0] * self.metagraph.n.item()
         self.sizes = [0] * self.metagraph.n.item()
-        self.vram_used = [0.0] * self.metagraph.n.item()
+        self.vram_used = [0] * self.metagraph.n.item()
+        self.watts_used = [0.0] * self.metagraph.n.item()
 
     def reset(self, uid: int):
         self.baseline_averages[uid] = 0.0
@@ -29,6 +31,7 @@ class Metrics:
         self.similarity_averages[uid] = 0.0
         self.sizes[uid] = 0
         self.vram_used[uid] = 0
+        self.watts_used[uid] = 0.0
 
     def update(self, uid: int, benchmark: CheckpointBenchmark):
         self.baseline_averages[uid] = benchmark.baseline_average
@@ -36,6 +39,7 @@ class Metrics:
         self.similarity_averages[uid] = benchmark.average_similarity
         self.sizes[uid] = benchmark.size
         self.vram_used[uid] = benchmark.vram_used
+        self.watts_used[uid] = benchmark.watts_used
 
     def resize(self):
         def resize_data(data: list) -> list:
@@ -49,6 +53,7 @@ class Metrics:
         self.similarity_averages = resize_data(self.similarity_averages)
         self.sizes = resize_data(self.sizes)
         self.vram_used = resize_data(self.vram_used)
+        self.watts_used = resize_data(self.watts_used)
 
     def calculate_score(self, uid: int) -> float:
         return max(
