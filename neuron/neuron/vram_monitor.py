@@ -1,7 +1,6 @@
 import threading
 import time
 
-import pynvml
 import torch
 
 from contest import Contest
@@ -27,13 +26,11 @@ class VRamMonitor:
         self._thread.start()
 
     def monitor(self):
-        pynvml.nvmlInit()
         while not self._stop_flag.is_set():
             vram = self._contest.get_vram_used(self._device)
             with self._lock:
                 self._vram_usage.add(vram)
             time.sleep(POLL_RATE_SECONDS)
-        pynvml.nvmlShutdown()
 
     def complete(self) -> float:
         self._stop_flag.set()
