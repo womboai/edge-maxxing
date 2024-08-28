@@ -4,7 +4,7 @@ from neuron import CheckpointBenchmark
 
 
 class Metrics:
-    metagraph: bt.metagraph | None = None
+    metagraph: bt.metagraph
 
     baseline_averages: list[float]
     model_averages: list[float]
@@ -70,8 +70,17 @@ class Metrics:
         return state
 
     def __setstate__(self, state):
-        if self.metagraph:
-            self.clear()
+
+        # For backwards compatibility
+        if "baseline_averages" not in state:
+            state["baseline_averages"] = [0.0] * len(state["model_averages"])
+        if "sizes" not in state:
+            state["sizes"] = [0] * len(state["model_averages"])
+        if "vram_used" not in state:
+            state["vram_used"] = [0.0] * len(state["model_averages"])
+        if "watts_used" not in state:
+            state["watts_used"] = [0.0] * len(state["model_averages"])
+
         self.__dict__.update(state)
 
     def __repr__(self):
