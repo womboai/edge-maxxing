@@ -141,18 +141,17 @@ def score_similarity(baseline_output: Image, optimized_output: Image) -> float:
 def compare_checkpoints(contest: Contest, image: str) -> CheckpointBenchmark:
     failed = False
 
-    baseline_container = contest.load_baseline()
+    with contest.load_baseline() as baseline_container:
+        bt.logging.info("Generating baseline samples to compare")
 
-    bt.logging.info("Generating baseline samples to compare")
-
-    baseline_outputs: list[GenerationOutput] = [
-        generate(
-            baseline_container,
-            generate_random_prompt(),
-            int.from_bytes(urandom(4), "little"),
-        )
-        for _ in range(SAMPLE_COUNT)
-    ]
+        baseline_outputs: list[GenerationOutput] = [
+            generate(
+                baseline_container,
+                generate_random_prompt(),
+                int.from_bytes(urandom(4), "little"),
+            )
+            for _ in range(SAMPLE_COUNT)
+        ]
 
     baseline_average = sum([output.generation_time for output in baseline_outputs]) / len(baseline_outputs)
 
