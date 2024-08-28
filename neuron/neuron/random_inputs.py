@@ -5,7 +5,7 @@ import nltk
 
 nltk.download('words')
 nltk.download('universal_tagset')
-nltk.download('averaged_perceptron_tagger')
+nltk.download('averaged_perceptron_tagger_eng')
 
 from nltk.corpus import words
 from nltk import pos_tag
