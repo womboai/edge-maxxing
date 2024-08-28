@@ -1,14 +1,14 @@
 [[package]]
 name = "accelerate"
-version = "0.31.0"
+version = "0.33.0"
 description = "Accelerate"
 category = "main"
 optional = false
 python-versions = ">=3.8.0"
 
 [package.dependencies]
-huggingface-hub = "*"
-numpy = ">=1.17"
+huggingface-hub = ">=0.21.0"
+numpy = ">=1.17,<2.0.0"
 packaging = ">=20.0"
 psutil = "*"
 pyyaml = "*"
@@ -400,14 +400,14 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "diffusers"
-version = "0.29.0"
+version = "0.30.1"
 description = "State-of-the-art diffusion in PyTorch and JAX."
 category = "main"
 optional = false
 python-versions = ">=3.8.0"
 
 [package.dependencies]
-accelerate = {version = ">=0.29.3", optional = true, markers = "extra == \"torch\""}
+accelerate = {version = ">=0.31.0", optional = true, markers = "extra == \"torch\""}
 filelock = "*"
 huggingface-hub = ">=0.23.2"
 importlib-metadata = "*"
@@ -419,13 +419,13 @@ safetensors = ">=0.3.1"
 torch = {version = ">=1.4", optional = true, markers = "extra == \"torch\""}
 
 [package.extras]
-dev = ["urllib3 (<=2.0.0)", "isort (>=5.5.4)", "ruff (==0.1.5)", "hf-doc-builder (>=0.3.0)", "compel (==0.1.8)", "GitPython (<3.1.19)", "datasets", "jinja2", "invisible-watermark (>=0.2.0)", "k-diffusion (>=0.0.12)", "librosa", "parameterized", "pytest", "pytest-timeout", "pytest-xdist", "requests-mock (==1.10.0)", "safetensors (>=0.3.1)", "sentencepiece (>=0.1.91,!=0.1.92)", "scipy", "torchvision", "transformers (>=4.25.1)", "accelerate (>=0.29.3)", "protobuf (>=3.20.3,<4)", "tensorboard", "peft (>=0.6.0)", "torch (>=1.4)", "jax (>=0.4.1)", "jaxlib (>=0.4.1)", "flax (>=0.4.1)"]
+dev = ["urllib3 (<=2.0.0)", "isort (>=5.5.4)", "ruff (==0.1.5)", "hf-doc-builder (>=0.3.0)", "compel (==0.1.8)", "GitPython (<3.1.19)", "datasets", "jinja2", "invisible-watermark (>=0.2.0)", "k-diffusion (>=0.0.12)", "librosa", "parameterized", "pytest", "pytest-timeout", "pytest-xdist", "requests-mock (==1.10.0)", "safetensors (>=0.3.1)", "sentencepiece (>=0.1.91,!=0.1.92)", "scipy", "torchvision", "transformers (>=4.41.2)", "accelerate (>=0.31.0)", "protobuf (>=3.20.3,<4)", "tensorboard", "peft (>=0.6.0)", "torch (>=1.4)", "jax (>=0.4.1)", "jaxlib (>=0.4.1)", "flax (>=0.4.1)"]
 docs = ["hf-doc-builder (>=0.3.0)"]
 flax = ["jax (>=0.4.1)", "jaxlib (>=0.4.1)", "flax (>=0.4.1)"]
 quality = ["urllib3 (<=2.0.0)", "isort (>=5.5.4)", "ruff (==0.1.5)", "hf-doc-builder (>=0.3.0)"]
-test = ["compel (==0.1.8)", "GitPython (<3.1.19)", "datasets", "jinja2", "invisible-watermark (>=0.2.0)", "k-diffusion (>=0.0.12)", "librosa", "parameterized", "pytest", "pytest-timeout", "pytest-xdist", "requests-mock (==1.10.0)", "safetensors (>=0.3.1)", "sentencepiece (>=0.1.91,!=0.1.92)", "scipy", "torchvision", "transformers (>=4.25.1)"]
-torch = ["torch (>=1.4)", "accelerate (>=0.29.3)"]
-training = ["accelerate (>=0.29.3)", "datasets", "protobuf (>=3.20.3,<4)", "tensorboard", "jinja2", "peft (>=0.6.0)"]
+test = ["compel (==0.1.8)", "GitPython (<3.1.19)", "datasets", "jinja2", "invisible-watermark (>=0.2.0)", "k-diffusion (>=0.0.12)", "librosa", "parameterized", "pytest", "pytest-timeout", "pytest-xdist", "requests-mock (==1.10.0)", "safetensors (>=0.3.1)", "sentencepiece (>=0.1.91,!=0.1.92)", "scipy", "torchvision", "transformers (>=4.41.2)"]
+torch = ["torch (>=1.4)", "accelerate (>=0.31.0)"]
+training = ["accelerate (>=0.31.0)", "datasets", "protobuf (>=3.20.3,<4)", "tensorboard", "jinja2", "peft (>=0.6.0)"]
 
 [[package]]
 name = "docker-pycreds"
@@ -463,16 +463,17 @@ python-versions = ">=3.10,<3.11"
 develop = true
 
 [package.dependencies]
-accelerate = "0.31.0"
+accelerate = "0.33.0"
 bittensor = "7.3.1"
-diffusers = "0.29.0"
+diffusers = "0.30.1"
 loguru = "0.7.2"
-nltk = "3.8.1"
+nltk = "3.9.1"
 omegaconf = "2.3.0"
-pynvml = "^11.5.3"
+pynvml = "11.5.3"
 python_coreml_stable_diffusion = {git = "https://github.com/apple/ml-stable-diffusion", tag = "1.1.1"}
-torch = "2.2.0"
-transformers = "4.41.2"
+torch = "2.4.0"
+torchvision = "^0.19.0"
+transformers = "4.44.2"
 
 [package.source]
 type = "directory"
@@ -992,11 +993,11 @@ test = ["pytest (>=7.2)", "pytest-cov (>=4.0)"]
 
 [[package]]
 name = "nltk"
-version = "3.8.1"
+version = "3.9.1"
 description = "Natural Language Toolkit"
 category = "main"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 
 [package.dependencies]
 click = "*"
@@ -1005,9 +1006,9 @@ regex = ">=2021.8.3"
 tqdm = "*"
 
 [package.extras]
-all = ["scikit-learn", "python-crfsuite", "requests", "numpy", "pyparsing", "twython", "scipy", "matplotlib"]
+all = ["numpy", "requests", "twython", "python-crfsuite", "pyparsing", "scipy", "matplotlib", "scikit-learn"]
 corenlp = ["requests"]
-machine_learning = ["numpy", "python-crfsuite", "scikit-learn", "scipy"]
+machine-learning = ["numpy", "python-crfsuite", "scikit-learn", "scipy"]
 plot = ["matplotlib"]
 tgrep = ["pyparsing"]
 twitter = ["twython"]
@@ -1054,7 +1055,7 @@ python-versions = ">=3"
 
 [[package]]
 name = "nvidia-cudnn-cu12"
-version = "8.9.2.26"
+version = "9.1.0.70"
 description = "cuDNN runtime libraries"
 category = "main"
 optional = false
@@ -1105,7 +1106,7 @@ nvidia-nvjitlink-cu12 = "*"
 
 [[package]]
 name = "nvidia-nccl-cu12"
-version = "2.19.3"
+version = "2.20.5"
 description = "NVIDIA Collective Communication Library (NCCL) Runtime"
 category = "main"
 optional = false
@@ -1826,7 +1827,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "torch"
-version = "2.2.0"
+version = "2.4.0"
 description = "Tensors and Dynamic neural networks in Python with strong GPU acceleration"
 category = "main"
 optional = false
@@ -1841,20 +1842,37 @@ nvidia-cublas-cu12 = {version = "12.1.3.1", markers = "platform_system == \"Linu
 nvidia-cuda-cupti-cu12 = {version = "12.1.105", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 nvidia-cuda-nvrtc-cu12 = {version = "12.1.105", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 nvidia-cuda-runtime-cu12 = {version = "12.1.105", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
-nvidia-cudnn-cu12 = {version = "8.9.2.26", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
+nvidia-cudnn-cu12 = {version = "9.1.0.70", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 nvidia-cufft-cu12 = {version = "11.0.2.54", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 nvidia-curand-cu12 = {version = "10.3.2.106", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 nvidia-cusolver-cu12 = {version = "11.4.5.107", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 nvidia-cusparse-cu12 = {version = "12.1.0.106", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
-nvidia-nccl-cu12 = {version = "2.19.3", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
+nvidia-nccl-cu12 = {version = "2.20.5", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 nvidia-nvtx-cu12 = {version = "12.1.105", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 sympy = "*"
-triton = {version = "2.2.0", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
+triton = {version = "3.0.0", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and python_version < \"3.13\""}
 typing-extensions = ">=4.8.0"
 
 [package.extras]
 opt-einsum = ["opt-einsum (>=3.3)"]
-optree = ["optree (>=0.9.1)"]
+optree = ["optree (>=0.11.0)"]
+
+[[package]]
+name = "torchvision"
+version = "0.19.0"
+description = "image and video datasets and models for torch deep learning"
+category = "main"
+optional = false
+python-versions = ">=3.8"
+
+[package.dependencies]
+numpy = "*"
+pillow = ">=5.3.0,<8.3.0 || >=8.4.0"
+torch = "2.4.0"
+
+[package.extras]
+gdown = ["gdown (>=4.7.3)"]
+scipy = ["scipy"]
 
 [[package]]
 name = "tqdm"
@@ -1875,7 +1893,7 @@ telegram = ["requests"]
 
 [[package]]
 name = "transformers"
-version = "4.41.2"
+version = "4.44.2"
 description = "State-of-the-art Machine Learning for JAX, PyTorch and TensorFlow"
 category = "main"
 optional = false
@@ -1883,7 +1901,7 @@ python-versions = ">=3.8.0"
 
 [package.dependencies]
 filelock = "*"
-huggingface-hub = ">=0.23.0,<1.0"
+huggingface-hub = ">=0.23.2,<1.0"
 numpy = ">=1.17"
 packaging = ">=20.0"
 pyyaml = ">=5.1"
@@ -1895,50 +1913,52 @@ tqdm = ">=4.27"
 
 [package.extras]
 accelerate = ["accelerate (>=0.21.0)"]
-agents = ["diffusers", "accelerate (>=0.21.0)", "datasets (!=2.5.0)", "torch", "sentencepiece (>=0.1.91,!=0.1.92)", "opencv-python", "Pillow (>=10.0.1,<=15.0)"]
-all = ["tensorflow (>2.9,<2.16)", "onnxconverter-common", "tf2onnx", "tensorflow-text (<2.16)", "keras-nlp (>=0.3.1)", "torch", "accelerate (>=0.21.0)", "jax (>=0.4.1,<=0.4.13)", "jaxlib (>=0.4.1,<=0.4.13)", "flax (>=0.4.1,<=0.7.0)", "optax (>=0.0.8,<=0.1.4)", "scipy (<1.13.0)", "sentencepiece (>=0.1.91,!=0.1.92)", "protobuf", "tokenizers (>=0.19,<0.20)", "torchaudio", "librosa", "pyctcdecode (>=0.4.0)", "phonemizer", "kenlm", "Pillow (>=10.0.1,<=15.0)", "optuna", "ray[tune] (>=2.7.0)", "sigopt", "timm", "torchvision", "codecarbon (==1.2.0)", "decord (==0.6.0)", "av (==9.2.0)"]
-audio = ["librosa", "pyctcdecode (>=0.4.0)", "phonemizer", "kenlm"]
+agents = ["Pillow (>=10.0.1,<=15.0)", "accelerate (>=0.21.0)", "datasets (!=2.5.0)", "diffusers", "opencv-python", "sentencepiece (>=0.1.91,!=0.1.92)", "torch"]
+all = ["Pillow (>=10.0.1,<=15.0)", "accelerate (>=0.21.0)", "av (==9.2.0)", "codecarbon (==1.2.0)", "decord (==0.6.0)", "flax (>=0.4.1,<=0.7.0)", "jax (>=0.4.1,<=0.4.13)", "jaxlib (>=0.4.1,<=0.4.13)", "kenlm", "keras-nlp (>=0.3.1,<0.14.0)", "librosa", "onnxconverter-common", "optax (>=0.0.8,<=0.1.4)", "optuna", "phonemizer", "protobuf", "pyctcdecode (>=0.4.0)", "ray[tune] (>=2.7.0)", "scipy (<1.13.0)", "sentencepiece (>=0.1.91,!=0.1.92)", "sigopt", "tensorflow-text (<2.16)", "tensorflow (>2.9,<2.16)", "tf2onnx", "timm (<=0.9.16)", "tokenizers (>=0.19,<0.20)", "torch", "torchaudio", "torchvision"]
+audio = ["kenlm", "librosa", "phonemizer", "pyctcdecode (>=0.4.0)"]
+benchmark = ["optimum-benchmark (>=0.2.0)"]
 codecarbon = ["codecarbon (==1.2.0)"]
-deepspeed = ["deepspeed (>=0.9.3)", "accelerate (>=0.21.0)"]
-deepspeed-testing = ["deepspeed (>=0.9.3)", "accelerate (>=0.21.0)", "pytest (>=7.2.0,<8.0.0)", "pytest-rich", "pytest-xdist", "timeout-decorator", "parameterized", "psutil", "datasets (!=2.5.0)", "dill (<0.3.5)", "evaluate (>=0.2.0)", "pytest-timeout", "ruff (==0.1.5)", "sacrebleu (>=1.4.12,<2.0.0)", "rouge-score (!=0.0.7,!=0.0.8,!=0.1,!=0.1.1)", "nltk", "GitPython (<3.1.19)", "sacremoses", "rjieba", "beautifulsoup4", "tensorboard", "pydantic", "sentencepiece (>=0.1.91,!=0.1.92)", "faiss-cpu", "cookiecutter (==1.7.3)", "optuna", "protobuf"]
-dev-tensorflow = ["rjieba", "pytest (>=7.2.0,<8.0.0)", "pytest-rich", "pytest-xdist", "timeout-decorator", "parameterized", "psutil", "datasets (!=2.5.0)", "dill (<0.3.5)", "evaluate (>=0.2.0)", "pytest-timeout", "ruff (==0.1.5)", "sacrebleu (>=1.4.12,<2.0.0)", "rouge-score (!=0.0.7,!=0.0.8,!=0.1,!=0.1.1)", "nltk", "GitPython (<3.1.19)", "sacremoses", "beautifulsoup4", "tensorboard", "pydantic", "sentencepiece (>=0.1.91,!=0.1.92)", "faiss-cpu", "cookiecutter (==1.7.3)", "tensorflow (>2.9,<2.16)", "onnxconverter-common", "tf2onnx", "tensorflow-text (<2.16)", "keras-nlp (>=0.3.1)", "protobuf", "tokenizers (>=0.19,<0.20)", "Pillow (>=10.0.1,<=15.0)", "isort (>=5.5.4)", "urllib3 (<2.0.0)", "scikit-learn", "onnxruntime (>=1.4.0)", "onnxruntime-tools (>=1.4.2)", "librosa", "pyctcdecode (>=0.4.0)", "phonemizer", "kenlm"]
-dev = ["tensorflow (>2.9,<2.16)", "onnxconverter-common", "tf2onnx", "tensorflow-text (<2.16)", "keras-nlp (>=0.3.1)", "torch", "accelerate (>=0.21.0)", "jax (>=0.4.1,<=0.4.13)", "jaxlib (>=0.4.1,<=0.4.13)", "flax (>=0.4.1,<=0.7.0)", "optax (>=0.0.8,<=0.1.4)", "scipy (<1.13.0)", "sentencepiece (>=0.1.91,!=0.1.92)", "protobuf", "tokenizers (>=0.19,<0.20)", "torchaudio", "librosa", "pyctcdecode (>=0.4.0)", "phonemizer", "kenlm", "Pillow (>=10.0.1,<=15.0)", "optuna", "ray[tune] (>=2.7.0)", "sigopt", "timm", "torchvision", "codecarbon (==1.2.0)", "decord (==0.6.0)", "av (==9.2.0)", "pytest (>=7.2.0,<8.0.0)", "pytest-rich", "pytest-xdist", "timeout-decorator", "parameterized", "psutil", "datasets (!=2.5.0)", "dill (<0.3.5)", "evaluate (>=0.2.0)", "pytest-timeout", "ruff (==0.1.5)", "sacrebleu (>=1.4.12,<2.0.0)", "rouge-score (!=0.0.7,!=0.0.8,!=0.1,!=0.1.1)", "nltk", "GitPython (<3.1.19)", "sacremoses", "rjieba", "beautifulsoup4", "tensorboard", "pydantic", "faiss-cpu", "cookiecutter (==1.7.3)", "isort (>=5.5.4)", "urllib3 (<2.0.0)", "fugashi (>=1.0)", "ipadic (>=1.0.0,<2.0)", "unidic-lite (>=1.0.7)", "unidic (>=1.0.2)", "sudachipy (>=0.6.6)", "sudachidict-core (>=20220729)", "rhoknp (>=1.1.0,<1.3.1)", "scikit-learn"]
-dev-torch = ["pytest (>=7.2.0,<8.0.0)", "pytest-rich", "pytest-xdist", "timeout-decorator", "parameterized", "psutil", "datasets (!=2.5.0)", "dill (<0.3.5)", "evaluate (>=0.2.0)", "pytest-timeout", "ruff (==0.1.5)", "sacrebleu (>=1.4.12,<2.0.0)", "rouge-score (!=0.0.7,!=0.0.8,!=0.1,!=0.1.1)", "nltk", "GitPython (<3.1.19)", "sacremoses", "rjieba", "beautifulsoup4", "tensorboard", "pydantic", "sentencepiece (>=0.1.91,!=0.1.92)", "faiss-cpu", "cookiecutter (==1.7.3)", "torch", "accelerate (>=0.21.0)", "protobuf", "tokenizers (>=0.19,<0.20)", "torchaudio", "librosa", "pyctcdecode (>=0.4.0)", "phonemizer", "kenlm", "Pillow (>=10.0.1,<=15.0)", "optuna", "ray[tune] (>=2.7.0)", "sigopt", "timm", "torchvision", "codecarbon (==1.2.0)", "isort (>=5.5.4)", "urllib3 (<2.0.0)", "fugashi (>=1.0)", "ipadic (>=1.0.0,<2.0)", "unidic-lite (>=1.0.7)", "unidic (>=1.0.2)", "sudachipy (>=0.6.6)", "sudachidict-core (>=20220729)", "rhoknp (>=1.1.0,<1.3.1)", "scikit-learn", "onnxruntime (>=1.4.0)", "onnxruntime-tools (>=1.4.2)"]
-flax = ["jax (>=0.4.1,<=0.4.13)", "jaxlib (>=0.4.1,<=0.4.13)", "flax (>=0.4.1,<=0.7.0)", "optax (>=0.0.8,<=0.1.4)", "scipy (<1.13.0)"]
-flax-speech = ["librosa", "pyctcdecode (>=0.4.0)", "phonemizer", "kenlm"]
+deepspeed = ["accelerate (>=0.21.0)", "deepspeed (>=0.9.3)"]
+deepspeed-testing = ["GitPython (<3.1.19)", "accelerate (>=0.21.0)", "beautifulsoup4", "cookiecutter (==1.7.3)", "datasets (!=2.5.0)", "deepspeed (>=0.9.3)", "dill (<0.3.5)", "evaluate (>=0.2.0)", "faiss-cpu", "nltk", "optuna", "parameterized", "protobuf", "psutil", "pydantic", "pytest-rich", "pytest-timeout", "pytest-xdist", "pytest (>=7.2.0,<8.0.0)", "rjieba", "rouge-score (!=0.0.7,!=0.0.8,!=0.1,!=0.1.1)", "ruff (==0.5.1)", "sacrebleu (>=1.4.12,<2.0.0)", "sacremoses", "sentencepiece (>=0.1.91,!=0.1.92)", "tensorboard", "timeout-decorator"]
+dev = ["GitPython (<3.1.19)", "Pillow (>=10.0.1,<=15.0)", "accelerate (>=0.21.0)", "av (==9.2.0)", "beautifulsoup4", "codecarbon (==1.2.0)", "cookiecutter (==1.7.3)", "datasets (!=2.5.0)", "decord (==0.6.0)", "dill (<0.3.5)", "evaluate (>=0.2.0)", "faiss-cpu", "flax (>=0.4.1,<=0.7.0)", "fugashi (>=1.0)", "ipadic (>=1.0.0,<2.0)", "isort (>=5.5.4)", "jax (>=0.4.1,<=0.4.13)", "jaxlib (>=0.4.1,<=0.4.13)", "kenlm", "keras-nlp (>=0.3.1,<0.14.0)", "librosa", "nltk", "onnxconverter-common", "optax (>=0.0.8,<=0.1.4)", "optuna", "parameterized", "phonemizer", "protobuf", "psutil", "pyctcdecode (>=0.4.0)", "pydantic", "pytest-rich", "pytest-timeout", "pytest-xdist", "pytest (>=7.2.0,<8.0.0)", "ray[tune] (>=2.7.0)", "rhoknp (>=1.1.0,<1.3.1)", "rjieba", "rouge-score (!=0.0.7,!=0.0.8,!=0.1,!=0.1.1)", "ruff (==0.5.1)", "sacrebleu (>=1.4.12,<2.0.0)", "sacremoses", "scikit-learn", "scipy (<1.13.0)", "sentencepiece (>=0.1.91,!=0.1.92)", "sigopt", "sudachidict-core (>=20220729)", "sudachipy (>=0.6.6)", "tensorboard", "tensorflow-text (<2.16)", "tensorflow (>2.9,<2.16)", "tf2onnx", "timeout-decorator", "timm (<=0.9.16)", "tokenizers (>=0.19,<0.20)", "torch", "torchaudio", "torchvision", "unidic (>=1.0.2)", "unidic-lite (>=1.0.7)", "urllib3 (<2.0.0)"]
+dev-tensorflow = ["GitPython (<3.1.19)", "Pillow (>=10.0.1,<=15.0)", "beautifulsoup4", "cookiecutter (==1.7.3)", "datasets (!=2.5.0)", "dill (<0.3.5)", "evaluate (>=0.2.0)", "faiss-cpu", "isort (>=5.5.4)", "kenlm", "keras-nlp (>=0.3.1,<0.14.0)", "librosa", "nltk", "onnxconverter-common", "onnxruntime-tools (>=1.4.2)", "onnxruntime (>=1.4.0)", "parameterized", "phonemizer", "protobuf", "psutil", "pyctcdecode (>=0.4.0)", "pydantic", "pytest-rich", "pytest-timeout", "pytest-xdist", "pytest (>=7.2.0,<8.0.0)", "rjieba", "rouge-score (!=0.0.7,!=0.0.8,!=0.1,!=0.1.1)", "ruff (==0.5.1)", "sacrebleu (>=1.4.12,<2.0.0)", "sacremoses", "scikit-learn", "sentencepiece (>=0.1.91,!=0.1.92)", "tensorboard", "tensorflow-text (<2.16)", "tensorflow (>2.9,<2.16)", "tf2onnx", "timeout-decorator", "tokenizers (>=0.19,<0.20)", "urllib3 (<2.0.0)"]
+torch-speech = ["kenlm", "librosa", "phonemizer", "pyctcdecode (>=0.4.0)", "torchaudio"]
+dev-torch = ["GitPython (<3.1.19)", "Pillow (>=10.0.1,<=15.0)", "accelerate (>=0.21.0)", "beautifulsoup4", "codecarbon (==1.2.0)", "cookiecutter (==1.7.3)", "datasets (!=2.5.0)", "dill (<0.3.5)", "evaluate (>=0.2.0)", "faiss-cpu", "fugashi (>=1.0)", "ipadic (>=1.0.0,<2.0)", "isort (>=5.5.4)", "kenlm", "librosa", "nltk", "onnxruntime-tools (>=1.4.2)", "onnxruntime (>=1.4.0)", "optuna", "parameterized", "phonemizer", "protobuf", "psutil", "pyctcdecode (>=0.4.0)", "pydantic", "pytest-rich", "pytest-timeout", "pytest-xdist", "pytest (>=7.2.0,<8.0.0)", "ray[tune] (>=2.7.0)", "rhoknp (>=1.1.0,<1.3.1)", "rjieba", "rouge-score (!=0.0.7,!=0.0.8,!=0.1,!=0.1.1)", "ruff (==0.5.1)", "sacrebleu (>=1.4.12,<2.0.0)", "sacremoses", "scikit-learn", "sentencepiece (>=0.1.91,!=0.1.92)", "sigopt", "sudachidict-core (>=20220729)", "sudachipy (>=0.6.6)", "tensorboard", "timeout-decorator", "timm (<=0.9.16)", "tokenizers (>=0.19,<0.20)", "torch", "torchaudio", "torchvision", "unidic (>=1.0.2)", "unidic-lite (>=1.0.7)", "urllib3 (<2.0.0)"]
+flax = ["flax (>=0.4.1,<=0.7.0)", "jax (>=0.4.1,<=0.4.13)", "jaxlib (>=0.4.1,<=0.4.13)", "optax (>=0.0.8,<=0.1.4)", "scipy (<1.13.0)"]
+flax-speech = ["kenlm", "librosa", "phonemizer", "pyctcdecode (>=0.4.0)"]
 ftfy = ["ftfy"]
 integrations = ["optuna", "ray[tune] (>=2.7.0)", "sigopt"]
-ja = ["fugashi (>=1.0)", "ipadic (>=1.0.0,<2.0)", "unidic-lite (>=1.0.7)", "unidic (>=1.0.2)", "sudachipy (>=0.6.6)", "sudachidict-core (>=20220729)", "rhoknp (>=1.1.0,<1.3.1)"]
+ja = ["fugashi (>=1.0)", "ipadic (>=1.0.0,<2.0)", "rhoknp (>=1.1.0,<1.3.1)", "sudachidict-core (>=20220729)", "sudachipy (>=0.6.6)", "unidic (>=1.0.2)", "unidic-lite (>=1.0.7)"]
 modelcreation = ["cookiecutter (==1.7.3)"]
 natten = ["natten (>=0.14.6,<0.15.0)"]
-onnx = ["onnxconverter-common", "tf2onnx", "onnxruntime (>=1.4.0)", "onnxruntime-tools (>=1.4.2)"]
-onnxruntime = ["onnxruntime (>=1.4.0)", "onnxruntime-tools (>=1.4.2)"]
+onnx = ["onnxconverter-common", "onnxruntime-tools (>=1.4.2)", "onnxruntime (>=1.4.0)", "tf2onnx"]
+onnxruntime = ["onnxruntime-tools (>=1.4.2)", "onnxruntime (>=1.4.0)"]
 optuna = ["optuna"]
-quality = ["datasets (!=2.5.0)", "isort (>=5.5.4)", "ruff (==0.1.5)", "GitPython (<3.1.19)", "urllib3 (<2.0.0)"]
+quality = ["GitPython (<3.1.19)", "datasets (!=2.5.0)", "isort (>=5.5.4)", "ruff (==0.5.1)", "urllib3 (<2.0.0)"]
 ray = ["ray[tune] (>=2.7.0)"]
-retrieval = ["faiss-cpu", "datasets (!=2.5.0)"]
+retrieval = ["datasets (!=2.5.0)", "faiss-cpu"]
+ruff = ["ruff (==0.5.1)"]
 sagemaker = ["sagemaker (>=2.31.0)"]
-sentencepiece = ["sentencepiece (>=0.1.91,!=0.1.92)", "protobuf"]
-serving = ["pydantic", "uvicorn", "fastapi", "starlette"]
+sentencepiece = ["protobuf", "sentencepiece (>=0.1.91,!=0.1.92)"]
+serving = ["fastapi", "pydantic", "starlette", "uvicorn"]
 sigopt = ["sigopt"]
 sklearn = ["scikit-learn"]
-speech = ["torchaudio", "librosa", "pyctcdecode (>=0.4.0)", "phonemizer", "kenlm"]
-testing = ["pytest (>=7.2.0,<8.0.0)", "pytest-rich", "pytest-xdist", "timeout-decorator", "parameterized", "psutil", "datasets (!=2.5.0)", "dill (<0.3.5)", "evaluate (>=0.2.0)", "pytest-timeout", "ruff (==0.1.5)", "sacrebleu (>=1.4.12,<2.0.0)", "rouge-score (!=0.0.7,!=0.0.8,!=0.1,!=0.1.1)", "nltk", "GitPython (<3.1.19)", "sacremoses", "rjieba", "beautifulsoup4", "tensorboard", "pydantic", "sentencepiece (>=0.1.91,!=0.1.92)", "faiss-cpu", "cookiecutter (==1.7.3)"]
-tf = ["tensorflow (>2.9,<2.16)", "onnxconverter-common", "tf2onnx", "tensorflow-text (<2.16)", "keras-nlp (>=0.3.1)"]
-tf-cpu = ["keras (>2.9,<2.16)", "tensorflow-cpu (>2.9,<2.16)", "onnxconverter-common", "tf2onnx", "tensorflow-text (<2.16)", "keras-nlp (>=0.3.1)", "tensorflow-probability (<2.16)"]
-tf-speech = ["librosa", "pyctcdecode (>=0.4.0)", "phonemizer", "kenlm"]
-timm = ["timm"]
+speech = ["kenlm", "librosa", "phonemizer", "pyctcdecode (>=0.4.0)", "torchaudio"]
+testing = ["GitPython (<3.1.19)", "beautifulsoup4", "cookiecutter (==1.7.3)", "datasets (!=2.5.0)", "dill (<0.3.5)", "evaluate (>=0.2.0)", "faiss-cpu", "nltk", "parameterized", "psutil", "pydantic", "pytest-rich", "pytest-timeout", "pytest-xdist", "pytest (>=7.2.0,<8.0.0)", "rjieba", "rouge-score (!=0.0.7,!=0.0.8,!=0.1,!=0.1.1)", "ruff (==0.5.1)", "sacrebleu (>=1.4.12,<2.0.0)", "sacremoses", "sentencepiece (>=0.1.91,!=0.1.92)", "tensorboard", "timeout-decorator"]
+tf = ["keras-nlp (>=0.3.1,<0.14.0)", "onnxconverter-common", "tensorflow-text (<2.16)", "tensorflow (>2.9,<2.16)", "tf2onnx"]
+tf-cpu = ["keras-nlp (>=0.3.1,<0.14.0)", "keras (>2.9,<2.16)", "onnxconverter-common", "tensorflow-cpu (>2.9,<2.16)", "tensorflow-probability (<0.24)", "tensorflow-text (<2.16)", "tf2onnx"]
+tf-speech = ["kenlm", "librosa", "phonemizer", "pyctcdecode (>=0.4.0)"]
+timm = ["timm (<=0.9.16)"]
 tokenizers = ["tokenizers (>=0.19,<0.20)"]
-torch = ["torch", "accelerate (>=0.21.0)"]
-torch-speech = ["torchaudio", "librosa", "pyctcdecode (>=0.4.0)", "phonemizer", "kenlm"]
-torch-vision = ["torchvision", "Pillow (>=10.0.1,<=15.0)"]
-torchhub = ["filelock", "huggingface-hub (>=0.23.0,<1.0)", "importlib-metadata", "numpy (>=1.17)", "packaging (>=20.0)", "protobuf", "regex (!=2019.12.17)", "requests", "sentencepiece (>=0.1.91,!=0.1.92)", "torch", "tokenizers (>=0.19,<0.20)", "tqdm (>=4.27)"]
-video = ["decord (==0.6.0)", "av (==9.2.0)"]
+torch = ["accelerate (>=0.21.0)", "torch"]
+torch-vision = ["Pillow (>=10.0.1,<=15.0)", "torchvision"]
+torchhub = ["filelock", "huggingface-hub (>=0.23.2,<1.0)", "importlib-metadata", "numpy (>=1.17)", "packaging (>=20.0)", "protobuf", "regex (!=2019.12.17)", "requests", "sentencepiece (>=0.1.91,!=0.1.92)", "tokenizers (>=0.19,<0.20)", "torch", "tqdm (>=4.27)"]
+video = ["av (==9.2.0)", "decord (==0.6.0)"]
 vision = ["Pillow (>=10.0.1,<=15.0)"]
 
 [[package]]
 name = "triton"
-version = "2.2.0"
+version = "3.0.0"
 description = "A language and compiler for custom Deep Learning operations"
 category = "main"
 optional = false
@@ -1949,8 +1969,8 @@ filelock = "*"
 
 [package.extras]
 build = ["cmake (>=3.20)", "lit"]
-tests = ["autopep8", "flake8", "isort", "numpy", "pytest", "scipy (>=1.7.1)", "torch"]
-tutorials = ["matplotlib", "pandas", "tabulate", "torch"]
+tests = ["autopep8", "flake8", "isort", "numpy", "pytest", "scipy (>=1.7.1)", "llnl-hatchet"]
+tutorials = ["matplotlib", "pandas", "tabulate"]
 
 [[package]]
 name = "typing-extensions"
@@ -2226,6 +2246,7 @@ tokenizers = []
 tomli = []
 toolz = []
 torch = []
+torchvision = []
 tqdm = []
 transformers = []
 triton = []
