@@ -72,10 +72,10 @@ def main():
             if submission:
                 info, _ = submission
 
-                repository = info.repository
+                repository = info.image
                 break
         else:
-            repository = CURRENT_CONTEST.baseline_repository
+            repository = CURRENT_CONTEST.baseline_image
 
     if config.optimize:
         pipeline = optimize(CURRENT_CONTEST.load(repository))
@@ -92,11 +92,11 @@ def main():
 
             return
 
-        upload_folder(repo_id=config.repository, folder_path=MODEL_DIRECTORY, commit_message=config.commit_message)
-        bt.logging.info(f"Pushed to huggingface at {config.repository}")
+        upload_folder(repo_id=config.image, folder_path=MODEL_DIRECTORY, commit_message=config.commit_message)
+        bt.logging.info(f"Pushed to huggingface at {config.image}")
 
     checkpoint_info = CheckpointSubmission(
-        repository=config.repository,
+        repository=config.image,
         average_time=comparison.average_time,
     )
 

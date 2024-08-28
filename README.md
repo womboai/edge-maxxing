@@ -8,7 +8,7 @@
 
 #### *In the annals of the digital age, a grand saga unfolds. In a realm where the forces of artificial intelligence are harnessed by a select few, the question arises: shall this power remain concentrated, or shall it be distributed for the benefit of all humankind?*
 
-[![License](https://img.shields.io/github/license/womboai/edge-optimization-subnet)](https://github.com/womboai/edge-optimization-subnet/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/womboai/edge-maxxing)](https://github.com/womboai/edge-maxxing/blob/main/LICENSE)
 
 </div>
 
@@ -115,8 +115,8 @@ pipx ensurepath
 pipx install poetry
 
 # Repository
-git clone https://github.com/womboai/edge-optimization-subnet
-cd edge-optimization-subnet
+git clone https://github.com/womboai/edge-maxxing
+cd edge-maxxing
 ```
 
 There is no need to manage venvs in any way, as poetry will handle that.
@@ -132,7 +132,7 @@ There is no need to manage venvs in any way, as poetry will handle that.
     git clone https://huggingface.co/stablediffusionapi/newdream-sdxl-20 model
     ```
 3. Make your own repository on huggingface to optimize in
-4. Edit the miner/miner.py file, specifically the [optimize](https://github.com/womboai/edge-optimization-subnet/blob/main/miner/miner/miner.py#L20) function
+4. Edit the miner/miner.py file, specifically the [optimize](https://github.com/womboai/edge-maxxing/blob/main/miner/miner/miner.py#L20) function
 5. If you have methods of optimization that you do not wish to do through the aforementioned python function, optimize directly in the `model` directory
 6. Submit the model, changing the options as necessary
     ```bash

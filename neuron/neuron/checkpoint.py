@@ -1,23 +1,22 @@
 import traceback
-from contextlib import contextmanager
 from dataclasses import dataclass
 from os import urandom
 from time import perf_counter
 from typing import cast, Any
 
 import bittensor as bt
-import torch
+import cv2
+from PIL.Image import Image
 from bittensor.extrinsics.serving import get_metadata, publish_metadata
-from diffusers import DiffusionPipeline
-from numpy import ndarray
+from imagehash import ImageHash
 from pydantic import BaseModel
-from torch import Generator, cosine_similarity, Tensor
 
-from .contest import ContestId, CURRENT_CONTEST, Contest
+from pipelines.pipelines.models import TextToImageRequest
+from .contest import ContestId, CURRENT_CONTEST, Contest, InferenceContainer
 from .network_commitments import Encoder, Decoder
 from .random_inputs import generate_random_prompt
 
-SPEC_VERSION = 2
+SPEC_VERSION = 3
 SAMPLE_COUNT = 5
 
 
@@ -25,25 +24,25 @@ SAMPLE_COUNT = 5
 class GenerationOutput:
     prompt: str
     seed: int
-    output: Tensor
+    output: Image
     generation_time: float
 
 
 class CheckpointSubmission(BaseModel):
-    repository: str = CURRENT_CONTEST.baseline_repository
+    image: str = CURRENT_CONTEST.baseline_image
     contest: ContestId = CURRENT_CONTEST.id
 
     def encode(self, encoder: Encoder):
-        encoder.write_str(self.repository)
+        encoder.write_str(self.image)
         encoder.write_uint16(self.contest.value)
 
     @classmethod
     def decode(cls, decoder: Decoder):
-        repository = decoder.read_str()
+        image = decoder.read_str()
         contest_id = ContestId(decoder.read_uint16())
 
         return cls(
-            repository=repository,
+            repository=image,
             contest=contest_id,
         )
 
@@ -105,7 +104,7 @@ def get_submission(
 
         info = CheckpointSubmission.decode(decoder)
 
-        if info.contest != CURRENT_CONTEST.id or info.repository == CURRENT_CONTEST.baseline_repository:
+        if info.contest != CURRENT_CONTEST.id or info.image == CURRENT_CONTEST.baseline_image:
             return None
 
         return info, block
@@ -115,20 +114,17 @@ def get_submission(
         return None
 
 
-def generate(pipeline: DiffusionPipeline, prompt: str, seed: int) -> GenerationOutput:
+def generate(container: InferenceContainer, prompt: str, seed: int) -> GenerationOutput:
     start = perf_counter()
 
-    output = pipeline(
-        prompt=prompt,
-        generator=Generator(pipeline.device).manual_seed(seed),
-        output_type="latent",
-        num_inference_steps=20,
-    ).images
+    output = container(
+        TextToImageRequest(
+            prompt=prompt,
+            seed=seed,
+        )
+    )
 
     generation_time = perf_counter() - start
-
-    if isinstance(output, ndarray):
-        output = torch.from_numpy(output)
 
     return GenerationOutput(
         prompt=prompt,
@@ -138,35 +134,32 @@ def generate(pipeline: DiffusionPipeline, prompt: str, seed: int) -> GenerationO
     )
 
 
-def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmark:
+def score_similarity(baseline_output: Image, optimized_output: Image) -> float:
+    ...
+
+
+def compare_checkpoints(contest: Contest, image: str) -> CheckpointBenchmark:
     failed = False
 
-    baseline_pipeline = contest.load_baseline()
-
-    baseline_pipeline(prompt="")
+    baseline_container = contest.load_baseline()
 
     bt.logging.info("Generating baseline samples to compare")
 
     baseline_outputs: list[GenerationOutput] = [
         generate(
-            baseline_pipeline,
+            baseline_container,
             generate_random_prompt(),
             int.from_bytes(urandom(4), "little"),
         )
         for _ in range(SAMPLE_COUNT)
     ]
 
-    del baseline_pipeline
-
-    contest.empty_cache()
-
     baseline_average = sum([output.generation_time for output in baseline_outputs]) / len(baseline_outputs)
 
     average_time = float("inf")
     average_similarity = 1.0
 
-    with load_pipeline(contest, repository) as pipeline:
-
+    with contest.load(image) as pipeline:
         i = 0
 
         f"Take {SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been"
@@ -182,12 +175,7 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
                 baseline.seed,
             )
 
-            similarity = (cosine_similarity(
-                baseline.output.flatten(),
-                generation.output.flatten(),
-                eps=1e-3,
-                dim=0,
-            ).item() * 0.5 + 0.5) ** 4
+            similarity = score_similarity(baseline.output, generation.output)
 
             bt.logging.info(
                 f"Sample {i} generated "
@@ -233,12 +221,3 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
         average_similarity,
         failed,
     )
-
-
-@contextmanager
-def load_pipeline(contest: Contest, repository: str):
-    try:
-        pipeline = contest.load(repository)
-        yield pipeline
-    finally:
-        contest.delete_model_cache()

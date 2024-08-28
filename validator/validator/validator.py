@@ -31,8 +31,8 @@ from neuron import (
 from metrics import Metrics
 from wandb_args import add_wandb_args
 
-WEIGHTS_VERSION = 12
-VALIDATOR_VERSION = "1.0.2"
+WEIGHTS_VERSION = 13
+VALIDATOR_VERSION = "2.0.0"
 
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
@@ -352,7 +352,7 @@ class Validator:
                 for uid, score in bucket.scores:
                     log_data[str(uid)] = {
                         "rank": bucket_rank,
-                        "model": cast(CheckpointSubmission, self.contest_state.miner_info[uid]).repository,
+                        "model": cast(CheckpointSubmission, self.contest_state.miner_info[uid]).image,
                         "generation_time": self.metrics.model_averages[uid],
                         "similarity": self.metrics.similarity_averages[uid],
                         "hotkey": self.hotkeys[uid],
@@ -449,11 +449,11 @@ class Validator:
             checkpoint_info = self.contest_state.miner_info[uid]
 
             bt.logging.info(
-                f"Miner {uid} returned {checkpoint_info.repository} as the model, "
+                f"Miner {uid} returned {checkpoint_info.image} as the model, "
                 f"with a reported speed of {checkpoint_info.average_time}"
             )
 
-            comparison = compare_checkpoints(self.contest, checkpoint_info.repository)
+            comparison = compare_checkpoints(self.contest, checkpoint_info.image)
 
             bt.logging.info(f"Benchmark results: {comparison}")
 
@@ -513,7 +513,7 @@ class Validator:
 
             info, block = submission
 
-            existing_submission = visited_repositories.get(info.repository)
+            existing_submission = visited_repositories.get(info.image)
 
             if existing_submission:
                 existing_uid, existing_block = existing_submission
@@ -525,7 +525,7 @@ class Validator:
                 miner_info[existing_uid] = None
 
             miner_info.append(info)
-            visited_repositories[info.repository] = uid, block
+            visited_repositories[info.image] = uid, block
 
         return miner_info
 
@@ -565,10 +565,10 @@ class Validator:
                     if (old_info is None) != (new_info is None):
                         return True
 
-                    return old_info.repository != new_info.repository
-                    
+                    return old_info.image != new_info.image
+
                 self.start_wandb_run()
-                
+
                 updated_uids = set([
                     uid
                     for uid in range(self.metagraph.n.item())

@@ -1,14 +1,27 @@
-import shutil
 from abc import ABC, abstractmethod
 from enum import Enum
-from pathlib import Path
+from io import BytesIO
+from typing import TypeVar, Generic, Callable
 
+import docker
+import requests
 import torch
-from diffusers import StableDiffusionXLPipeline
+from PIL import Image
+from docker.models.containers import Container
+from docker.types import DeviceRequest
+from pydantic import BaseModel
 
-from .coreml_pipeline import CoreMLStableDiffusionXLPipeline
+from pipelines.pipelines.models import TextToImageRequest
 
-MODEL_CACHE_DIR = Path("model-cache")
+docker_client = docker.from_env()
+
+RequestT = TypeVar("RequestT", bound=BaseModel)
+ResponseT = TypeVar("ResponseT")
+
+
+def image_response_deserializer(data: bytes):
+    with BytesIO(data) as fp:
+        return Image.open(fp)
 
 
 class ContestId(Enum):
@@ -16,51 +29,81 @@ class ContestId(Enum):
     NVIDIA_4090 = 1
 
 
-class Contest(ABC):
-    id: ContestId
-    baseline_average: float
-    baseline_repository: str
-    device_name: str | None
+class InferenceContainer(Generic[RequestT, ResponseT]):
+    _container: Container
+    _port: int
+    _deserializer: Callable[[bytes], ResponseT]
 
-    def __init__(self, contest_id: ContestId, baseline_average: float, baseline_repository: str):
+    def __init__(self, image: str, deserializer: Callable[[bytes], ResponseT]):
+        self._container = docker_client.containers.run(
+            image,
+            device_requests=[DeviceRequest(capabilities=[["gpu"]])],
+            detach=True,
+            remove=True,
+            publish_all_ports=True,
+        )
+
+        self._port = docker_client.api.port(self._container.id, 8000)[0]["HostPort"]
+
+        self._deserializer = deserializer
+
+        for log_line in self._container.logs(stream=True):
+            if b"Uvicorn running" in log_line:
+                # Fully loaded, ready to proceed
+                break
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._container.stop()
+
+    def __call__(self, request: RequestT):
+        response = requests.post(f"http://localhost:{self._port}", json=request.model_dump_json())
+
+        response.raise_for_status()
+
+        return self._deserializer(response.content)
+
+
+class Contest(Generic[RequestT, ResponseT], ABC):
+    id: ContestId
+    baseline_image: str
+    device_name: str | None
+    response_deserializer: Callable[[bytes], ResponseT]
+
+    def __init__(
+        self,
+        contest_id: ContestId,
+        baseline_repository: str,
+        response_deserializer: Callable[[bytes], ResponseT],
+    ):
         self.id = contest_id
-        self.baseline_average = baseline_average
-        self.baseline_repository = baseline_repository
+        self.baseline_image = baseline_repository
+        self.response_deserializer = response_deserializer
 
     def load_baseline(self):
-        return self.load()
+        return InferenceContainer[RequestT, ResponseT](self.baseline_image, self.response_deserializer)
 
-    def delete_model_cache(self):
-        models_path = Path(MODEL_CACHE_DIR)
-        if models_path.exists():
-            shutil.rmtree(models_path)
-
-    @abstractmethod
-    def load(self, repository: str | None = None):
-        ...
+    def load(self, image: str):
+        return InferenceContainer[RequestT, ResponseT](image, self.response_deserializer)
 
     @abstractmethod
     def validate(self):
         ...
 
-    @abstractmethod
-    def empty_cache(self):
-        ...
 
-
-class CudaContest(Contest):
-    def __init__(self, contest_id: ContestId, baseline_average: float, baseline_repository: str, expected_device_name: str):
-        super().__init__(contest_id, baseline_average, baseline_repository)
+class CudaContest(Contest[TextToImageRequest, Image.Image]):
+    def __init__(
+        self,
+        contest_id: ContestId,
+        baseline_repository: str,
+        expected_device_name: str,
+        response_deserializer: Callable[[bytes], ResponseT],
+    ):
+        super().__init__(contest_id, baseline_repository, response_deserializer)
 
         self.expected_device_name = expected_device_name
-
-    def load(self, repository: str | None = None):
-        return StableDiffusionXLPipeline.from_pretrained(
-            repository or self.baseline_repository,
-            torch_dtype=torch.float16,
-            use_safetensors=True if repository else None,
-            cache_dir=MODEL_CACHE_DIR if repository else None,
-        ).to("cuda")
 
     def validate(self):
         device_name = torch.cuda.get_device_name("cuda")
@@ -70,20 +113,11 @@ class CudaContest(Contest):
                 f"Incompatible device {device_name} when {self.expected_device_name} is required.",
             )
 
-    def empty_cache(self):
-        torch.cuda.empty_cache()
 
-
-class AppleSiliconContest(Contest):
-    def load(self, repository: str | None = None):
-        return CoreMLStableDiffusionXLPipeline.from_pretrained(repository or self.baseline_repository).to("mps")
-
+class AppleSiliconContest(Contest[TextToImageRequest, Image.Image]):
     def validate(self):
         if not torch.backends.mps.is_available():
-            raise ContestDeviceValidationError("mps is not available but is required.")
-
-    def empty_cache(self):
-        torch.mps.empty_cache()
+            raise ContestDeviceValidationError("MPS is not available but is required.")
 
 
 class ContestDeviceValidationError(Exception):
@@ -94,8 +128,12 @@ class ContestDeviceValidationError(Exception):
 
 
 CONTESTS = [
-    AppleSiliconContest(ContestId.APPLE_SILICON, 2.5, "wombo/coreml-stable-diffusion-xl-base-1.0"),
-    CudaContest(ContestId.NVIDIA_4090, 2.58, "stablediffusionapi/newdream-sdxl-20", "NVIDIA GeForce RTX 4090"),
+    CudaContest(
+        ContestId.NVIDIA_4090,
+        "womboashley/edge-maxxing-miner-models:newdream",
+        "NVIDIA GeForce RTX 4090",
+        image_response_deserializer,
+    ),
 ]
 
 
@@ -109,4 +147,4 @@ def find_contest(contest_id: ContestId):
     raise RuntimeError(f"Unknown contest ID requested {contest_id}")
 
 
-CURRENT_CONTEST = find_contest(ContestId.NVIDIA_4090)
+CURRENT_CONTEST: CudaContest = find_contest(ContestId.NVIDIA_4090)

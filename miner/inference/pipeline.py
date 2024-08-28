@@ -1,25 +1,18 @@
 from PIL.Image import Image
 from diffusers import StableDiffusionXLPipeline
-from pydantic import BaseModel
 from torch import Generator
 
 
-class GenerationRequest(BaseModel):
-    prompt: str
-    negative_prompt: str | None = None
-
-    width: int | None = None
-    height: int | None = None
-
-    seed: int | None = None
-
-
 def load_pipeline() -> StableDiffusionXLPipeline:
-    return StableDiffusionXLPipeline.from_pretrained(
+    pipeline = StableDiffusionXLPipeline.from_pretrained(
         "stablediffusionapi/newdream-sdxl-20",
         cache_dir="./models",
         local_files_only=True,
     ).to("cuda")
+
+    pipeline(prompt="")
+
+    return pipeline
 
 
 def infer(request: GenerationRequest, pipeline: StableDiffusionXLPipeline) -> Image:

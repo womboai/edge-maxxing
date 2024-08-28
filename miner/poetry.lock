@@ -434,7 +434,7 @@ gmpy = ["gmpy"]
 gmpy2 = ["gmpy2"]
 
 [[package]]
-name = "edge-optimization-subnet-neuron"
+name = "edge-maxxing-neuron"
 version = "1.0.0"
 description = "The base neuron which validators & miners inherent from"
 category = "main"
@@ -1943,7 +1943,7 @@ ddt = []
 decorator = []
 diffusers = []
 ecdsa = []
-edge-optimization-subnet-neuron = []
+edge-maxxing-neuron = []
 eth-hash = []
 eth-keys = []
 eth-typing = []

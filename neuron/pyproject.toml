@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "edge-optimization-subnet-neuron"
+name = "edge-maxxing-neuron"
 
 version = "1.0.0"
 
@@ -36,12 +36,9 @@ python = ">=3.10,<3.11"
 torch = "2.2.0"
 bittensor = "7.3.1"
 loguru = "0.7.2"
-diffusers = "0.29.0"
 nltk = "3.8.1"
-transformers = "4.41.2"
-accelerate = "0.31.0"
-omegaconf = "2.3.0"
-python_coreml_stable_diffusion = { git = "https://github.com/apple/ml-stable-diffusion", tag = "1.1.1" }
+ImageHash = "4.3.1"
+edge-maxxing-pipelines = { path = "../pipelines", develop = true }
 
 [tool.poetry.dev-dependencies]
 pytype = "2024.4.11"
