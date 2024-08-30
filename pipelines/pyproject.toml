@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "edge-maxxing-neuron"
+name = "edge-maxxing-pipelines"
 
 version = "1.0.0"
 
