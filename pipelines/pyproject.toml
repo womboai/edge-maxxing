@@ -11,7 +11,7 @@ license = "MIT"
 
 authors = ["WOMBO <hello@w.ai>"]
 
-packages = [{ include = "neuron" }]
+packages = [{ include = "pipelines" }]
 
 classifiers = [
     "Development Status :: 3 - Alpha",
