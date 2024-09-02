@@ -1,6 +1,6 @@
 import bittensor as bt
 
-from neuron import CheckpointBenchmark
+from neuron import CheckpointBenchmark, CURRENT_CONTEST
 
 
 class Metrics:
@@ -58,7 +58,7 @@ class Metrics:
     def calculate_score(self, uid: int) -> float:
         return max(
             0.0,
-            self.baseline_averages[uid] - self.model_averages[uid]
+            (self.baseline_averages[uid] or CURRENT_CONTEST.baseline_average) - self.model_averages[uid]
         ) * self.similarity_averages[uid]
 
     def set_metagraph(self, metagraph: bt.metagraph):

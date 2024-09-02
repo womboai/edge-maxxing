@@ -362,6 +362,7 @@ class Validator:
                     log_data[str(uid)] = {
                         "rank": bucket_rank,
                         "model": cast(CheckpointSubmission, self.contest_state.miner_info[uid]).repository,
+                        "baseline": self.metrics.baseline_averages[uid],
                         "generation_time": self.metrics.model_averages[uid],
                         "similarity": self.metrics.similarity_averages[uid],
                         "size": self.metrics.sizes[uid],
