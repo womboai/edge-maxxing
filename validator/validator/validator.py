@@ -359,15 +359,18 @@ class Validator:
                 bucket_rank = highest_bucket - index
 
                 for uid, score in bucket.scores:
+                    metric = self.metrics.metrics[uid]
                     log_data[str(uid)] = {
                         "rank": bucket_rank,
                         "model": cast(CheckpointSubmission, self.contest_state.miner_info[uid]).repository,
-                        "baseline": self.metrics.baseline_averages[uid],
-                        "generation_time": self.metrics.model_averages[uid],
-                        "similarity": self.metrics.similarity_averages[uid],
-                        "size": self.metrics.sizes[uid],
-                        "vram_used": self.metrics.vram_used[uid],
-                        "watts_used": self.metrics.watts_used[uid],
+                        "baseline_generation_time": metric.baseline_average,
+                        "generation_time": metric.model_average,
+                        "similarity": metric.similarity_average,
+                        "size": metric.size,
+                        "baseline_vram_used": metric.vram_used,
+                        "vram_used": metric.vram_used,
+                        "baseline_watts_used": metric.watts_used,
+                        "watts_used": metric.watts_used,
                         "hotkey": self.hotkeys[uid],
                         "multiday_winner": bucket.previous_day_winners,
                     }
@@ -490,7 +493,7 @@ class Validator:
         sorted_contestants = [
             (uid, score)
             for uid, score in sorted(enumerate(scores), key=lambda score: score[1])
-            if score > 0.0
+            if score is not None
         ]
 
         buckets: list[WinnerList] = [[]]
