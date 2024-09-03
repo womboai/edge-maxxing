@@ -1,19 +1,13 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 from io import BytesIO
-from typing import TypeVar, Generic, Callable
+from typing import Generic, Callable, TypeVar
 
-import docker
-import requests
 import torch
 from PIL import Image
-from docker.models.containers import Container
-from docker.types import DeviceRequest
 from pydantic import BaseModel
 
 from pipelines.pipelines.models import TextToImageRequest
-
-docker_client = docker.from_env()
 
 RequestT = TypeVar("RequestT", bound=BaseModel)
 ResponseT = TypeVar("ResponseT")
@@ -29,44 +23,7 @@ class ContestId(Enum):
     NVIDIA_4090 = 1
 
 
-class InferenceContainer(Generic[RequestT, ResponseT]):
-    _container: Container
-    _port: int
-    _deserializer: Callable[[bytes], ResponseT]
-
-    def __init__(self, image: str, deserializer: Callable[[bytes], ResponseT]):
-        self._container = docker_client.containers.run(
-            image,
-            device_requests=[DeviceRequest(capabilities=[["gpu"]])],
-            detach=True,
-            remove=True,
-            publish_all_ports=True,
-        )
-
-        self._port = docker_client.api.port(self._container.id, 8000)[0]["HostPort"]
-
-        self._deserializer = deserializer
-
-        for log_line in self._container.logs(stream=True):
-            if b"Uvicorn running" in log_line:
-                # Fully loaded, ready to proceed
-                break
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._container.stop()
-
-    def __call__(self, request: RequestT):
-        response = requests.post(f"http://localhost:{self._port}", json=request.model_dump_json())
-
-        response.raise_for_status()
-
-        return self._deserializer(response.content)
-
-
-class Contest(Generic[RequestT, ResponseT], ABC):
+class Contest(Generic[ResponseT], ABC):
     id: ContestId
     baseline_image: str
     device_name: str | None
@@ -81,12 +38,6 @@ class Contest(Generic[RequestT, ResponseT], ABC):
         self.id = contest_id
         self.baseline_image = baseline_repository
         self.response_deserializer = response_deserializer
-
-    def load_baseline(self):
-        return InferenceContainer[RequestT, ResponseT](self.baseline_image, self.response_deserializer)
-
-    def load(self, image: str):
-        return InferenceContainer[RequestT, ResponseT](image, self.response_deserializer)
 
     @abstractmethod
     def validate(self):

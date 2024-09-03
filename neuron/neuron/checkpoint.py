@@ -5,14 +5,12 @@ from time import perf_counter
 from typing import cast, Any
 
 import bittensor as bt
-import cv2
 from PIL.Image import Image
 from bittensor.extrinsics.serving import get_metadata, publish_metadata
-from imagehash import ImageHash
 from pydantic import BaseModel
 
 from pipelines.pipelines.models import TextToImageRequest
-from .contest import ContestId, CURRENT_CONTEST, Contest, InferenceContainer
+from .contest import ContestId, CURRENT_CONTEST, Contest, InferenceSandbox
 from .network_commitments import Encoder, Decoder
 from .random_inputs import generate_random_prompt
 
@@ -114,7 +112,7 @@ def get_submission(
         return None
 
 
-def generate(container: InferenceContainer, prompt: str, seed: int) -> GenerationOutput:
+def generate(container: InferenceSandbox, prompt: str, seed: int) -> GenerationOutput:
     start = perf_counter()
 
     output = container(

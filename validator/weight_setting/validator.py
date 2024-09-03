@@ -3,6 +3,7 @@ import traceback
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from datetime import date, datetime
+from operator import itemgetter
 from os import makedirs
 from os.path import isfile, expanduser, join
 from random import choice
@@ -66,7 +67,7 @@ def _winner_percentage_sequence_ratio(sample_count: int):
 
 class ContestState:
     id: ContestId
-    miner_score_versions: dict[int, int]
+    miner_score_version: int
     miner_info: list[CheckpointSubmission | None]
 
     def __init__(
@@ -75,15 +76,15 @@ class ContestState:
         miner_info: list[CheckpointSubmission | None],
     ):
         self.id = contest_id
-        self.miner_score_versions = {}
+        self.miner_score_versions = WEIGHTS_VERSION
         self.miner_info = miner_info
 
     # Backwards compatibility
     def __setstate__(self, state):
-        if "miners_checked" in state:
-            del state["miners_checked"]
+        if "miner_score_versions" in state:
+            del state["miner_score_versions"]
 
-        self.miner_score_versions = state.get("miner_score_versions", {})
+        self.miner_score_version = state.get("miner_score_version", WEIGHTS_VERSION)
         self.__dict__.update(state)
 
 
@@ -475,7 +476,7 @@ class Validator:
 
         sorted_contestants = [
             (uid, score)
-            for uid, score in sorted(enumerate(scores), key=lambda score: score[1])
+            for uid, score in sorted(enumerate(scores), key=itemgetter(1))
             if score > 0.0
         ]
 

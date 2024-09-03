@@ -1,11 +1,11 @@
-FROM python:3.10
-# pytorch/pytorch:2.2.0-cuda12.1-cudnn8-ru
+# FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-ru
+FROM ubuntu:22.04
 
-RUN adduser sandbox --shell=/bin/false --no-create-home
+RUN useradd --shell=/bin/false --no-create-home sandbox
 RUN mkdir /sandbox
 RUN chown sandbox:sandbox /sandbox
 
-RUN adduser api
+RUN useradd api
 
 COPY . /api
 WORKDIR /api
