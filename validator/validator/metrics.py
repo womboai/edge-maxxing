@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import bittensor as bt
 
 from neuron import CheckpointBenchmark, CURRENT_CONTEST
+from .validator import Uid
 
 
 @dataclass
@@ -14,8 +15,14 @@ class MetricData:
     vram_used: float
     watts_used: float
 
+    def calculate_score(self) -> float:
+        return max(
+            0.0,
+            (self.baseline_average or CURRENT_CONTEST.baseline_average) - self.model_average
+        ) * self.similarity_average
+
     def __repr__(self):
-        return f"Metric(baseline_average={self.baseline_average}, model_average={self.model_average}, similarity_average={self.similarity_average}, size={self.size}, vram_used={self.vram_used}, watts_used={self.watts_used})"
+        return f"MetricData(baseline_average={self.baseline_average}, model_average={self.model_average}, similarity_average={self.similarity_average}, size={self.size}, vram_used={self.vram_used}, watts_used={self.watts_used})"
 
 
 def new_metric_data() -> MetricData:
@@ -53,12 +60,12 @@ class Metrics:
         new_data[:length] = self.metrics[:length]
         self.metrics = new_data
 
-    def calculate_score(self, uid: int) -> float:
-        metric = self.metrics[uid]
-        return max(
-            0.0,
-            (metric.baseline_average or CURRENT_CONTEST.baseline_average) - metric.model_average
-        ) * metric.similarity_average
+    def get_sorted_contestants(self) -> list[tuple[Uid, float]]:
+        contestants = []
+        for uid in range(self.metagraph.n.item()):
+            metric_data = self.metrics[uid]
+            contestants.append((Uid(uid), metric_data.calculate_score()))
+        return sorted(contestants, key=lambda score: score[1])
 
     def set_metagraph(self, metagraph: bt.metagraph):
         self.metagraph = metagraph
