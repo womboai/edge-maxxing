@@ -3,7 +3,6 @@ from dataclasses import dataclass
 import bittensor as bt
 
 from neuron import CheckpointBenchmark, CURRENT_CONTEST
-from .validator import Uid
 
 
 @dataclass
@@ -25,24 +24,20 @@ class MetricData:
         return f"MetricData(baseline_average={self.baseline_average}, model_average={self.model_average}, similarity_average={self.similarity_average}, size={self.size}, vram_used={self.vram_used}, watts_used={self.watts_used})"
 
 
-def new_metric_data() -> MetricData:
-    return MetricData(0.0, 0.0, 0.0, 0, 0.0, 0.0)
-
-
 class Metrics:
     metagraph: bt.metagraph
 
-    metrics: list[MetricData]
+    metrics: list[MetricData | None]
 
     def __init__(self, metagraph: bt.metagraph):
         self.metagraph = metagraph
         self.clear()
 
     def clear(self):
-        self.metrics = [new_metric_data()] * self.metagraph.n.item()
+        self.metrics = [None] * self.metagraph.n.item()
 
     def reset(self, uid: int):
-        self.metrics[uid] = new_metric_data()
+        self.metrics[uid] = None
 
     def update(self, uid: int, benchmark: CheckpointBenchmark):
         self.metrics[uid] = MetricData(
@@ -55,16 +50,17 @@ class Metrics:
         )
 
     def resize(self):
-        new_data = [new_metric_data()] * self.metagraph.n.item()
+        new_data = [None] * self.metagraph.n.item()
         length = len(self.metagraph.hotkeys)
         new_data[:length] = self.metrics[:length]
         self.metrics = new_data
 
-    def get_sorted_contestants(self) -> list[tuple[Uid, float]]:
+    def get_sorted_contestants(self) -> list[tuple[int, float]]:
         contestants = []
         for uid in range(self.metagraph.n.item()):
             metric_data = self.metrics[uid]
-            contestants.append((Uid(uid), metric_data.calculate_score()))
+            if metric_data:
+                contestants.append((uid, metric_data.calculate_score()))
         return sorted(contestants, key=lambda score: score[1])
 
     def set_metagraph(self, metagraph: bt.metagraph):
