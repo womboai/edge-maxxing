@@ -218,10 +218,10 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
 
             bt.logging.info(
                 f"Sample {i} generated "
-                f"with generation time of {generation.generation_time} "
-                f"and similarity {similarity}"
-                f"and VRAM usage of {generation.vram_used}"
-                f"and watts usage of {generation.watts_used}"
+                f"with generation time of {generation.generation_time}, "
+                f"and similarity {similarity}, "
+                f"and VRAM usage of {generation.vram_used}, "
+                f"and watts usage of {generation.watts_used}."
             )
 
             if generated:
@@ -257,10 +257,10 @@ def compare_checkpoints(contest: Contest, repository: str) -> CheckpointBenchmar
         bt.logging.info(
             f"Tested {i + 1} samples, "
             f"average similarity of {average_similarity}, "
-            f"and speed of {average_time}"
-            f"and model size of {size}"
-            f"and VRAM usage of {vram_used}"
-            f"and watts usage of {watts_used}"
+            f"and speed of {average_time}, "
+            f"and model size of {size}, "
+            f"and VRAM usage of {vram_used}, "
+            f"and watts usage of {watts_used}."
         )
 
     return CheckpointBenchmark(
