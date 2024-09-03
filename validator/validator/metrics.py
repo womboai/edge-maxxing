@@ -74,7 +74,7 @@ class Metrics:
     def __setstate__(self, state):
 
         # For backwards compatibility
-        if not state["metrics"]:
+        if "metrics" not in state:
             state["metrics"] = [
                 MetricData(
                     baseline_average=state["baseline_averages"][i],
