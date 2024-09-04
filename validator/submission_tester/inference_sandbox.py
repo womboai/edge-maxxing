@@ -22,7 +22,7 @@ class InferenceSandbox(Generic[RequestT]):
     def __init__(self, repository: str, revision: str):
         repository = Repo.clone_from(
             repository,
-            "/sandbox",
+            SANDBOX_DIRECTORY,
             revision=revision,
             depth=1,
             recursive=True,
