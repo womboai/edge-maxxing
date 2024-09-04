@@ -8,7 +8,15 @@ COPY validator .
 
 WORKDIR /api/validator/
 
-RUN setup.sh
+RUN apt-get update && apt-get install pipx && pipx install poetry
+
+RUN poetry install
+
+WORKDIR /api/validator/submission_tester
+
+RUN ./setup.sh
+
+WORKDIR /api/validator
 
 USER api
 
