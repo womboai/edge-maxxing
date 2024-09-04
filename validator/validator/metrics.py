@@ -1,65 +1,67 @@
+from dataclasses import dataclass
+
 import bittensor as bt
 
-from neuron import CheckpointBenchmark
+from neuron import CheckpointBenchmark, CURRENT_CONTEST
+
+
+@dataclass
+class MetricData:
+    baseline_average: float
+    model_average: float
+    similarity_average: float
+    size: int
+    vram_used: float
+    watts_used: float
+
+    def calculate_score(self) -> float:
+        return max(
+            0.0,
+            (self.baseline_average or CURRENT_CONTEST.baseline_average) - self.model_average
+        ) * self.similarity_average
+
+    def __repr__(self):
+        return f"MetricData(baseline_average={self.baseline_average}, model_average={self.model_average}, similarity_average={self.similarity_average}, size={self.size}, vram_used={self.vram_used}, watts_used={self.watts_used})"
 
 
 class Metrics:
     metagraph: bt.metagraph
 
-    baseline_averages: list[float]
-    model_averages: list[float]
-    similarity_averages: list[float]
-    sizes: list[int]
-    vram_used: list[float]
-    watts_used: list[float]
+    metrics: list[MetricData | None]
 
     def __init__(self, metagraph: bt.metagraph):
         self.metagraph = metagraph
         self.clear()
 
     def clear(self):
-        self.baseline_averages = [0.0] * self.metagraph.n.item()
-        self.model_averages = [0.0] * self.metagraph.n.item()
-        self.similarity_averages = [0.0] * self.metagraph.n.item()
-        self.sizes = [0] * self.metagraph.n.item()
-        self.vram_used = [0.0] * self.metagraph.n.item()
-        self.watts_used = [0.0] * self.metagraph.n.item()
+        self.metrics = [None] * self.metagraph.n.item()
 
     def reset(self, uid: int):
-        self.baseline_averages[uid] = 0.0
-        self.model_averages[uid] = 0.0
-        self.similarity_averages[uid] = 0.0
-        self.sizes[uid] = 0
-        self.vram_used[uid] = 0.0
-        self.watts_used[uid] = 0.0
+        self.metrics[uid] = None
 
     def update(self, uid: int, benchmark: CheckpointBenchmark):
-        self.baseline_averages[uid] = benchmark.baseline_average
-        self.model_averages[uid] = benchmark.average_time
-        self.similarity_averages[uid] = benchmark.average_similarity
-        self.sizes[uid] = benchmark.size
-        self.vram_used[uid] = benchmark.vram_used
-        self.watts_used[uid] = benchmark.watts_used
+        self.metrics[uid] = MetricData(
+            baseline_average=benchmark.baseline_average,
+            model_average=benchmark.average_time,
+            similarity_average=benchmark.average_similarity,
+            size=benchmark.size,
+            vram_used=benchmark.vram_used,
+            watts_used=benchmark.watts_used
+        )
 
     def resize(self):
-        def resize_data(data: list) -> list:
-            new_data = [0.0] * self.metagraph.n.item()
-            length = len(self.metagraph.hotkeys)
-            new_data[:length] = data[:length]
-            return new_data
+        new_data = [None] * self.metagraph.n.item()
+        length = len(self.metagraph.hotkeys)
+        new_data[:length] = self.metrics[:length]
+        self.metrics = new_data
 
-        self.baseline_averages = resize_data(self.baseline_averages)
-        self.model_averages = resize_data(self.model_averages)
-        self.similarity_averages = resize_data(self.similarity_averages)
-        self.sizes = resize_data(self.sizes)
-        self.vram_used = resize_data(self.vram_used)
-        self.watts_used = resize_data(self.watts_used)
-
-    def calculate_score(self, uid: int) -> float:
-        return max(
-            0.0,
-            self.baseline_averages[uid] - self.model_averages[uid]
-        ) * self.similarity_averages[uid]
+    def get_sorted_contestants(self) -> list[tuple[int, float]]:
+        contestants = []
+        for uid in range(self.metagraph.n.item()):
+            metric_data = self.metrics[uid]
+            if metric_data:
+                contestants.append((uid, metric_data.calculate_score()))
+        return sorted(contestants, key=lambda score: score[1])
 
     def set_metagraph(self, metagraph: bt.metagraph):
         self.metagraph = metagraph
@@ -72,16 +74,19 @@ class Metrics:
     def __setstate__(self, state):
 
         # For backwards compatibility
-        if "baseline_averages" not in state:
-            state["baseline_averages"] = [0.0] * len(state["model_averages"])
-        if "sizes" not in state:
-            state["sizes"] = [0] * len(state["model_averages"])
-        if "vram_used" not in state:
-            state["vram_used"] = [0.0] * len(state["model_averages"])
-        if "watts_used" not in state:
-            state["watts_used"] = [0.0] * len(state["model_averages"])
+        if "metrics" not in state:
+            state["metrics"] = [
+                MetricData(
+                    baseline_average=state["baseline_averages"][i],
+                    model_average=state["model_averages"][i],
+                    similarity_average=state["similarity_averages"][i],
+                    size=state["sizes"][i],
+                    vram_used=state["vram_used"][i],
+                    watts_used=state["watts_used"][i]
+                )
+                for i in range(len(state["model_averages"]))]
 
         self.__dict__.update(state)
 
     def __repr__(self):
-        return f"Metrics(baseline_averages={self.baseline_averages}, model_averages={self.model_averages}, similarity_averages={self.similarity_averages}, sizes={self.sizes}, vram_used={self.vram_used}, watts_used={self.watts_used})"
+        return f"Metrics(metrics={self.metrics})"
