@@ -8,7 +8,7 @@ COPY validator .
 
 WORKDIR /api/validator/
 
-RUN apt-get update && apt-get install pipx && pipx install poetry
+RUN apt-get update && apt-get -y install pipx && pipx install poetry
 
 RUN poetry install
 
