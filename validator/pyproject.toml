@@ -10,7 +10,12 @@ readme = "../README.md"
 license = "MIT"
 
 authors = ["WOMBO <hello@w.ai>"]
-packages = [{ include = "validator" }]
+
+packages = [
+    { include = "base_validator" },
+    { include = "submission_tester" },
+    { include = "weight_setting" },
+]
 
 classifiers = [
     "Development Status :: 3 - Alpha",

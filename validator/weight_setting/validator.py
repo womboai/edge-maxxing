@@ -1,3 +1,4 @@
+import json
 import time
 import traceback
 from argparse import ArgumentParser
@@ -10,6 +11,7 @@ from zoneinfo import ZoneInfo
 
 import bittensor as bt
 import numpy
+import requests
 import wandb
 from bittensor.utils.weight_utils import process_weights_for_netuid, convert_weights_and_uids_for_emit
 from numpy import real, isreal
@@ -27,6 +29,8 @@ from neuron import (
     ContestDeviceValidationError,
 )
 from base_validator.metrics import Metrics
+
+from validator.base_validator.metrics import BenchmarkState
 from wandb_args import add_wandb_args
 
 WEIGHTS_VERSION = 13
@@ -202,6 +206,13 @@ class Validator:
             default=100,
         )
 
+        argument_parser.add_argument(
+            "--benchmarker_api",
+            type=str,
+            help="The API route to the validator benchmarking API.",
+            required=True,
+        )
+
         add_wandb_args(argument_parser)
 
     def state_path(self):
@@ -264,12 +275,8 @@ class Validator:
         self.should_set_weights = state["should_set_weights"]
 
         if self.contest_state:
-            # Remove outdated checks
-            self.contest_state.miner_score_versions = {
-                uid: version
-                for uid, version in self.contest_state.miner_score_versions.items()
-                if version == WEIGHTS_VERSION
-            }
+            if self.contest_state.miner_score_version != WEIGHTS_VERSION:
+                pass
 
             if self.last_day:
                 self.start_wandb_run()
@@ -514,6 +521,16 @@ class Validator:
                 self.contest_state = ContestState(self.contest.id, miner_info)
                 self.previous_day_winners = []
                 self.start_wandb_run()
+
+                submissions = {
+                    self.metagraph.hotkeys[uid]: submission
+                    for uid, submission in enumerate(miner_info)
+                    if submission
+                }
+
+                state_response = requests.post(f"{self.config.benchmarker_api}/start", json=json.dumps(submissions))
+
+                state_response.raise_for_status()
             else:
                 def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
                     if old_info is None and new_info is None:
@@ -532,13 +549,20 @@ class Validator:
                     if should_update(self.contest_state.miner_info[uid], miner_info[uid])
                 ])
 
+                submissions = {
+                    self.metagraph.hotkeys[uid]: miner_info[uid]
+                    for uid in updated_uids
+                    if miner_info[uid]
+                }
+
+                state_response = requests.post(f"{self.config.benchmarker_api}/start", json=json.dumps(submissions))
+
+                state_response.raise_for_status()
+
                 bt.logging.info(f"Miners {updated_uids} changed their submissions")
 
                 for uid in updated_uids:
                     self.metrics.reset(uid)
-
-                    if uid in self.contest_state.miner_score_versions:
-                        del self.contest_state.miner_score_versions[uid]
 
                 self.contest_state.miner_info = miner_info
 
@@ -579,7 +603,25 @@ class Validator:
 
             return
 
-        self.test_next_miner()
+        state_response = requests.get(f"{self.config.benchmarker_api}/state")
+
+        state_response.raise_for_status()
+
+        result = BenchmarkState.model_validate(state_response.json())
+
+        if result.results:
+            for hotkey, benchmark in result.results:
+                if hotkey in self.metagraph.hotkeys:
+                    self.metrics.update(self.metagraph.hotkeys.index(hotkey), benchmark)
+
+            bt.logging.info(
+                "Benchmarking API has reported submission testing as done. "
+                "Miner metrics updated"
+            )
+
+            self.should_set_weights = True
+        else:
+            time.sleep(self.config.epoch_length * 60)
 
         self.step += 1
 

@@ -26,6 +26,10 @@ class CheckpointBenchmark(BaseModel):
         return max(0.0, self.baseline.generation_time - self.model.generation_time) * self.model.similarity_score
 
 
+class BenchmarkState(BaseModel):
+    results: dict[str, CheckpointBenchmark] | None
+
+
 class Metrics:
     metagraph: bt.metagraph
 
