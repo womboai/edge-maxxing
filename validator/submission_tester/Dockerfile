@@ -1,5 +1,4 @@
-# FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-ru
-FROM ubuntu:22.04
+FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-ru
 
 RUN useradd --shell=/bin/false --no-create-home sandbox
 RUN mkdir /sandbox
@@ -13,4 +12,6 @@ RUN chown api:api .
 
 USER api
 
-ENTRYPOINT ["/bin/bash"]
+EXPOSE 8000
+
+ENTRYPOINT ["uvicorn", "--host", "0.0.0.0", "--port", "8000", "main:app"]
