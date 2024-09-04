@@ -12,6 +12,9 @@ chown api:api .
 
 apt-get update
 apt-get -y install pipx
+
+export PATH="$HOME/.local/bin:$PATH"
+
 pipx install poetry
 
-/root/.local/bin/poetry install
+poetry install
