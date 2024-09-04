@@ -11,7 +11,7 @@ from pathlib import Path
 import bittensor as bt
 from pickle import load
 
-from .validator import ContestState  # noqa
+from .validator import ContestState  # noqa (Needed for depickling)
 
 DIAGNOSTICS_DIR: Path = Path(".diagnostics")
 DIAGNOSTICS_FILE_PATH: Path = DIAGNOSTICS_DIR / "diagnostics.json"
