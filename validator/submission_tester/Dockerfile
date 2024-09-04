@@ -6,7 +6,7 @@ COPY neuron .
 COPY pipelines .
 COPY validator .
 
-WORKDIR /api/validator/submission_tester/
+WORKDIR /api/validator/
 
 RUN setup.sh
 
@@ -14,4 +14,4 @@ USER api
 
 EXPOSE 8000
 
-ENTRYPOINT ["uvicorn", "--host", "0.0.0.0", "--port", "8000", "main:app"]
+ENTRYPOINT ["poetry", "run", "uvicorn", "--host", "0.0.0.0", "--port", "8000", "submission_tester:app"]
