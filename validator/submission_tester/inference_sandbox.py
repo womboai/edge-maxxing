@@ -9,8 +9,9 @@ from git import Repo
 
 from neuron import RequestT
 
+SANDBOX_DIRECTORY = Path("/sandbox")
 START_INFERENCE_SANDBOX_SCRIPT = Path(__file__).parent / "start_inference_sandbox.sh"
-SOCKET = "/sandbox/inferences.sock"
+SOCKET = SANDBOX_DIRECTORY / "inferences.sock"
 
 
 class InferenceSandbox(Generic[RequestT]):
@@ -18,13 +19,24 @@ class InferenceSandbox(Generic[RequestT]):
     _connection: socket
     _process: ContextManager
 
-    def __init__(self, repository: str):
-        Repo.clone_from(repository, "/sandbox")
+    def __init__(self, repository: str, revision: str):
+        repository = Repo.clone_from(
+            repository,
+            "/sandbox",
+            revision=revision,
+            depth=1,
+            recursive=True,
+            no_checkout=True,
+        )
+
+        repository.git.checkout(revision)
+
+        self._file_size = sum(file.stat().st_size for file in SANDBOX_DIRECTORY.rglob("*"))
 
         self._process = popen(f"su -m sandbox -c {START_INFERENCE_SANDBOX_SCRIPT}")
 
         self._socket = socket(AF_UNIX, SOCK_STREAM)
-        self._socket.bind(SOCKET)
+        self._socket.bind(str(SOCKET))
 
     def __enter__(self):
         self._process.__enter__()
@@ -53,3 +65,7 @@ class InferenceSandbox(Generic[RequestT]):
         size = int.from_bytes(self._connection.recv(4), byteorder)
 
         return self._connection.recv(size)
+
+    @property
+    def model_size(self):
+        return self._file_size
