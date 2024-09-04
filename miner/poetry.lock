@@ -1,6 +1,6 @@
 [[package]]
 name = "accelerate"
-version = "0.33.0"
+version = "0.34.0"
 description = "Accelerate"
 category = "main"
 optional = false
@@ -8,23 +8,23 @@ python-versions = ">=3.8.0"
 
 [package.dependencies]
 huggingface-hub = ">=0.21.0"
-numpy = ">=1.17,<2.0.0"
+numpy = ">=1.17,<3.0.0"
 packaging = ">=20.0"
 psutil = "*"
 pyyaml = "*"
-safetensors = ">=0.3.1"
+safetensors = ">=0.4.3"
 torch = ">=1.10.0"
 
 [package.extras]
-deepspeed = ["deepspeed (<=0.14.0)"]
-dev = ["black (>=23.1,<24.0)", "hf-doc-builder (>=0.3.0)", "ruff (>=0.2.1,<0.3.0)", "pytest (>=7.2.0,<=8.0.0)", "pytest-xdist", "pytest-subtests", "parameterized", "datasets", "diffusers", "evaluate", "torchpippy (>=0.2.0)", "transformers", "scipy", "scikit-learn", "tqdm", "bitsandbytes", "timm", "rich"]
+deepspeed = ["deepspeed"]
+dev = ["black (>=23.1,<24.0)", "hf-doc-builder (>=0.3.0)", "ruff (>=0.2.1,<0.3.0)", "pytest (>=7.2.0,<=8.0.0)", "pytest-xdist", "pytest-subtests", "parameterized", "datasets", "diffusers", "evaluate", "torchdata (>=0.8.0)", "torchpippy (>=0.2.0)", "transformers", "scipy", "scikit-learn", "tqdm", "bitsandbytes", "timm", "rich"]
 quality = ["black (>=23.1,<24.0)", "hf-doc-builder (>=0.3.0)", "ruff (>=0.2.1,<0.3.0)"]
 rich = ["rich"]
 sagemaker = ["sagemaker"]
-test-dev = ["datasets", "diffusers", "evaluate", "torchpippy (>=0.2.0)", "transformers", "scipy", "scikit-learn", "tqdm", "bitsandbytes", "timm"]
+test-dev = ["datasets", "diffusers", "evaluate", "torchdata (>=0.8.0)", "torchpippy (>=0.2.0)", "transformers", "scipy", "scikit-learn", "tqdm", "bitsandbytes", "timm"]
 test-prod = ["pytest (>=7.2.0,<=8.0.0)", "pytest-xdist", "pytest-subtests", "parameterized"]
 test-trackers = ["wandb", "comet-ml", "tensorboard", "dvclive"]
-testing = ["pytest (>=7.2.0,<=8.0.0)", "pytest-xdist", "pytest-subtests", "parameterized", "datasets", "diffusers", "evaluate", "torchpippy (>=0.2.0)", "transformers", "scipy", "scikit-learn", "tqdm", "bitsandbytes", "timm"]
+testing = ["pytest (>=7.2.0,<=8.0.0)", "pytest-xdist", "pytest-subtests", "parameterized", "datasets", "diffusers", "evaluate", "torchdata (>=0.8.0)", "torchpippy (>=0.2.0)", "transformers", "scipy", "scikit-learn", "tqdm", "bitsandbytes", "timm"]
 
 [[package]]
 name = "aiohappyeyeballs"
@@ -233,7 +233,7 @@ torch = ["torch (>=1.13.1)"]
 
 [[package]]
 name = "cattrs"
-version = "23.2.3"
+version = "24.1.0"
 description = "Composable complex class support for attrs and dataclasses."
 category = "main"
 optional = false
@@ -248,6 +248,7 @@ typing-extensions = {version = ">=4.1.0,<4.6.3 || >4.6.3", markers = "python_ver
 bson = ["pymongo (>=4.4.0)"]
 cbor2 = ["cbor2 (>=5.4.6)"]
 msgpack = ["msgpack (>=1.0.5)"]
+msgspec = ["msgspec (>=0.18.5)"]
 orjson = ["orjson (>=3.9.2)"]
 pyyaml = ["pyyaml (>=6.0)"]
 tomlkit = ["tomlkit (>=0.11.8)"]
@@ -400,7 +401,7 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "diffusers"
-version = "0.30.1"
+version = "0.30.2"
 description = "State-of-the-art diffusion in PyTorch and JAX."
 category = "main"
 optional = false
@@ -452,21 +453,38 @@ python-versions = ">=3.10,<3.11"
 develop = true
 
 [package.dependencies]
-accelerate = "0.33.0"
+accelerate = "0.34.0"
 bittensor = "7.3.1"
-diffusers = "0.30.1"
+diffusers = "0.30.2"
+edge-maxxing-pipelines = {path = "../pipelines", develop = true}
 loguru = "0.7.2"
 nltk = "3.9.1"
 omegaconf = "2.3.0"
 pynvml = "11.5.3"
 python_coreml_stable_diffusion = {git = "https://github.com/apple/ml-stable-diffusion", tag = "1.1.1"}
 torch = "2.4.0"
-torchvision = "^0.19.0"
+torchvision = "0.19.0"
 transformers = "4.44.2"
 
 [package.source]
 type = "directory"
 url = "../neuron"
+
+[[package]]
+name = "edge-maxxing-pipelines"
+version = "1.0.0"
+description = "The base neuron which validators & miners inherent from"
+category = "main"
+optional = false
+python-versions = ">=3.10,<3.11"
+develop = true
+
+[package.dependencies]
+pydantic = ">=2"
+
+[package.source]
+type = "directory"
+url = "../pipelines"
 
 [[package]]
 name = "eth-hash"
@@ -609,7 +627,7 @@ python-versions = ">=3.8"
 
 [[package]]
 name = "fsspec"
-version = "2024.6.1"
+version = "2024.9.0"
 description = "File-system specification"
 category = "main"
 optional = false
@@ -764,11 +782,11 @@ python-versions = ">=3.8"
 
 [[package]]
 name = "kiwisolver"
-version = "1.4.5"
+version = "1.4.7"
 description = "A fast implementation of the Cassowary constraint solver"
 category = "main"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 
 [[package]]
 name = "levenshtein"
@@ -1077,7 +1095,7 @@ python-versions = ">=3"
 
 [[package]]
 name = "nvidia-nvjitlink-cu12"
-version = "12.6.20"
+version = "12.6.68"
 description = "Nvidia JIT LTO Library"
 category = "main"
 optional = false
@@ -1169,7 +1187,7 @@ testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
 name = "protobuf"
-version = "5.27.4"
+version = "5.28.0"
 description = ""
 category = "main"
 optional = false
@@ -1422,7 +1440,7 @@ python-versions = ">=3.8"
 
 [[package]]
 name = "rapidfuzz"
-version = "3.9.6"
+version = "3.9.7"
 description = "rapid fuzzy string matching"
 category = "main"
 optional = false
@@ -1927,11 +1945,11 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "yarl"
-version = "1.9.4"
+version = "1.9.8"
 description = "Yet another URL library"
 category = "main"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 
 [package.dependencies]
 idna = ">=2.0"
@@ -1956,7 +1974,7 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.10,<3.11"
-content-hash = "577619f73d291280c1dac598e8b0a5bbe3e5581ce0f11b42006949898919cd65"
+content-hash = "4e38f66b7865692b7aea14b5f464877b1d05bd38ab057c994256738cdea48a88"
 
 [metadata.files]
 accelerate = []
@@ -1990,6 +2008,7 @@ decorator = []
 diffusers = []
 ecdsa = []
 edge-maxxing-neuron = []
+edge-maxxing-pipelines = []
 eth-hash = []
 eth-keys = []
 eth-typing = []
