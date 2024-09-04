@@ -362,23 +362,24 @@ class Validator:
                 bucket_rank = highest_bucket - index
 
                 for uid, score in bucket.scores:
-                    metric = self.metrics.metrics[uid]
-                    submission = cast(CheckpointSubmission, self.contest_state.miner_info[uid])
-                    if submission:
-                        log_data[str(uid)] = {
-                            "rank": bucket_rank,
-                            "model": submission.repository,
-                            "baseline_generation_time": metric.baseline_average,
-                            "generation_time": metric.model_average,
-                            "similarity": metric.similarity_average,
-                            "size": metric.size,
-                            "baseline_vram_used": metric.vram_used,
-                            "vram_used": metric.vram_used,
-                            "baseline_watts_used": metric.watts_used,
-                            "watts_used": metric.watts_used,
-                            "hotkey": self.hotkeys[uid],
-                            "multiday_winner": bucket.previous_day_winners,
-                        }
+                    metric_data = self.metrics.metrics[uid]
+                    if metric_data:
+                        submission = cast(CheckpointSubmission, self.contest_state.miner_info[uid])
+                        if submission:
+                            log_data[str(uid)] = {
+                                "rank": bucket_rank,
+                                "model": submission.repository,
+                                "baseline_generation_time": metric_data.baseline_average,
+                                "generation_time": metric_data.model_average,
+                                "similarity": metric_data.similarity_average,
+                                "size": metric_data.size,
+                                "baseline_vram_used": metric_data.vram_used,
+                                "vram_used": metric_data.vram_used,
+                                "baseline_watts_used": metric_data.watts_used,
+                                "watts_used": metric_data.watts_used,
+                                "hotkey": self.hotkeys[uid],
+                                "multiday_winner": bucket.previous_day_winners,
+                            }
 
             self.wandb_run.log(data=log_data)
 
