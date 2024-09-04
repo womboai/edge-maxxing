@@ -14,4 +14,4 @@ apt-get update
 apt-get -y install pipx
 pipx install poetry
 
-poetry install
+/root/.local/bin/poetry install
