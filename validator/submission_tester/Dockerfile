@@ -2,9 +2,9 @@ FROM pytorch/pytorch:2.4.0-cuda12.4-cudnn9-runtime
 
 WORKDIR /api
 
-COPY neuron .
-COPY pipelines .
-COPY validator .
+COPY neuron neuron
+COPY pipelines pipelines
+COPY validator validator
 
 WORKDIR /api/validator/submission_tester
 
