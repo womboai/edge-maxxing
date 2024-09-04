@@ -361,21 +361,22 @@ class Validator:
                 bucket_rank = highest_bucket - index
 
                 for uid, score in bucket.scores:
-                    metric = self.metrics.metrics[uid]
-                    log_data[str(uid)] = {
-                        "rank": bucket_rank,
-                        "model": cast(CheckpointSubmission, self.contest_state.miner_info[uid]).repository,
-                        "baseline_generation_time": metric.baseline_average,
-                        "generation_time": metric.generation_time,
-                        "similarity": metric.similarity_score,
-                        "size": metric.size,
-                        "baseline_vram_used": metric.vram_used,
-                        "vram_used": metric.vram_used,
-                        "baseline_watts_used": metric.watts_used,
-                        "watts_used": metric.watts_used,
-                        "hotkey": self.hotkeys[uid],
-                        "multiday_winner": bucket.previous_day_winners,
-                    }
+                    metric_data = self.metrics.metrics[uid]
+                    if metric_data:
+                        log_data[str(uid)] = {
+                            "rank": bucket_rank,
+                            "model": cast(CheckpointSubmission, self.contest_state.miner_info[uid]).repository,
+                            "baseline_generation_time": metric_data.baseline_average,
+                            "generation_time": metric_data.generation_time,
+                            "similarity": metric_data.similarity_score,
+                            "size": metric_data.size,
+                            "baseline_vram_used": metric_data.vram_used,
+                            "vram_used": metric_data.vram_used,
+                            "baseline_watts_used": metric_data.watts_used,
+                            "watts_used": metric_data.watts_used,
+                            "hotkey": self.hotkeys[uid],
+                            "multiday_winner": bucket.previous_day_winners,
+                        }
 
             self.wandb_run.log(data=log_data)
 
