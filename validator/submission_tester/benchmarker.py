@@ -3,7 +3,7 @@ from random import choice
 from base_validator.metrics import CheckpointBenchmark
 
 from neuron import CURRENT_CONTEST
-from validator.submission_tester.testing import compare_checkpoints
+from submission_tester.testing import compare_checkpoints
 
 
 class Benchmarker:

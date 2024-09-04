@@ -6,7 +6,7 @@ from typing import TypeVar
 from PIL import Image
 from pydantic import BaseModel
 
-from pipelines.pipelines.models import TextToImageRequest
+from pipelines.models import TextToImageRequest
 
 RequestT = TypeVar("RequestT", bound=BaseModel)
 ResponseT = TypeVar("ResponseT")
