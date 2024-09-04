@@ -28,9 +28,8 @@ from neuron import (
     find_contest,
     ContestDeviceValidationError,
 )
-from base_validator.metrics import Metrics
+from base_validator.metrics import Metrics, BenchmarkState
 
-from validator.base_validator.metrics import BenchmarkState
 from wandb_args import add_wandb_args
 
 WEIGHTS_VERSION = 13
