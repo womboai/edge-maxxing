@@ -293,6 +293,35 @@ class Validator:
         )
 
         if self.contest_state:
+            if len(self.hotkeys) != len(self.metagraph.hotkeys):
+                self.metrics.resize()
+
+                new_miner_info = [None] * self.metagraph.n.item()
+                length = len(self.hotkeys)
+                new_miner_info[:length] = self.contest_state.miner_info[:length]
+
+                self.contest_state.miner_info = new_miner_info
+
+            for uid, hotkey in enumerate(self.hotkeys):
+                if hotkey != self.metagraph.hotkeys[uid]:
+                    # hotkey has been replaced
+                    self.metrics.reset(uid)
+
+                    filtered_winners = [
+                        (winner_uid, score)
+                        for winner_uid, score in self.previous_day_winners
+                        if uid != winner_uid
+                    ]
+
+                    self.previous_day_winners = filtered_winners
+
+                    if uid in self.contest_state.miner_score_versions:
+                        del self.contest_state.miner_score_versions[uid]
+
+                    self.contest_state.miner_info[uid] = None
+
+            self.hotkeys = self.metagraph.hotkeys
+
             try:
                 self.set_weights()
             except Exception as e:
@@ -301,35 +330,6 @@ class Validator:
             bt.logging.info("Will not set weights as the contest state has not been set")
 
     def set_weights(self):
-        if len(self.hotkeys) != len(self.metagraph.hotkeys):
-            self.metrics.resize()
-
-            new_miner_info = [None] * self.metagraph.n.item()
-            length = len(self.hotkeys)
-            new_miner_info[:length] = self.contest_state.miner_info[:length]
-
-            self.contest_state.miner_info = new_miner_info
-
-        for uid, hotkey in enumerate(self.hotkeys):
-            if hotkey != self.metagraph.hotkeys[uid]:
-                # hotkey has been replaced
-                self.metrics.reset(uid)
-
-                filtered_winners = [
-                    (winner_uid, score)
-                    for winner_uid, score in self.previous_day_winners
-                    if uid != winner_uid
-                ]
-
-                self.previous_day_winners = filtered_winners
-
-                if uid in self.contest_state.miner_score_versions:
-                    del self.contest_state.miner_score_versions[uid]
-
-                self.contest_state.miner_info[uid] = None
-
-        self.hotkeys = self.metagraph.hotkeys
-
         if not self.should_set_weights:
             bt.logging.info("Will not set weights as contest is not done")
 
