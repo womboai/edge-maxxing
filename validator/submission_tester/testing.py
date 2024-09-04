@@ -10,17 +10,31 @@ from pipelines.pipelines.models import TextToImageRequest
 from .inference_sandbox import InferenceSandbox
 from .random_inputs import generate_random_prompt
 from .vram_monitor import VRamMonitor
-from ..validator.metrics import MetricData
 
 SAMPLE_COUNT = 5
+
+
+class MetricData(BaseModel):
+    generation_time: float
+    size: int
+    vram_used: float
+    watts_used: float
 
 
 class CheckpointBenchmark(BaseModel):
     baseline: MetricData
     model: MetricData
-    failed: bool
+    similarity_score: float
 
     def calculate_score(self) -> float:
+        if self.baseline.generation_time < self.model.generation_time * 0.75:
+            # Needs %33 faster than current performance to beat the baseline,
+            return 0.0
+
+        if self.similarity_score < 0.85:
+            # Deviating too much from original quality
+            return 0.0
+
         return max(0.0, self.baseline.generation_time - self.model.generation_time) * self.model.similarity_score
 
 
@@ -62,8 +76,6 @@ def generate(contest: Contest, container: InferenceSandbox, prompt: str, seed: i
 
 
 def compare_checkpoints(contest: Contest, repository: str, revision: str) -> CheckpointBenchmark:
-    failed = False
-
     with InferenceSandbox(contest.baseline_repository, contest.baseline_revision) as baseline_sandbox:
         bt.logging.info("Generating baseline samples to compare")
 
@@ -130,21 +142,6 @@ def compare_checkpoints(contest: Contest, repository: str, revision: str) -> Che
                 # So far, the average time is better than the baseline, so we can continue
                 continue
 
-            needed_time = (baseline_average * SAMPLE_COUNT - generated * average_time) / remaining
-
-            if needed_time < average_time * 0.75:
-                # Needs %33 faster than current performance to beat the baseline,
-                # thus we shouldn't waste compute testing farther
-                failed = True
-                bt.logging.info("Current average is 75% of the baseline average")
-                break
-
-            if average_similarity < 0.85:
-                # Deviating too much from original quality
-                bt.logging.info("Too different from baseline, failing")
-                failed = True
-                break
-
         bt.logging.info(
             f"Tested {i + 1} samples, "
             f"average similarity of {average_similarity}, "
@@ -157,17 +154,15 @@ def compare_checkpoints(contest: Contest, repository: str, revision: str) -> Che
     return CheckpointBenchmark(
         baseline=MetricData(
             generation_time=baseline_average,
-            similarity_score=1.0,
             size=baseline_size,
             vram_used=baseline_vram_used,
             watts_used=baseline_watts_used,
         ),
         model=MetricData(
             generation_time=average_time,
-            similarity_score=average_similarity,
             size=size,
             vram_used=vram_used,
             watts_used=watts_used,
         ),
-        failed=failed,
+        similarity_score=average_similarity,
     )

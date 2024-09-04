@@ -361,7 +361,7 @@ class Validator:
                 bucket_rank = highest_bucket - index
 
                 for uid, score in bucket.scores:
-                    metric_data = self.metrics.metrics[uid]
+                    metric_data = self.metrics.benchmarks[uid]
                     if metric_data:
                         log_data[str(uid)] = {
                             "rank": bucket_rank,
@@ -433,58 +433,6 @@ class Validator:
             bt.logging.info(f"set_weights successful, {message}")
         else:
             bt.logging.warning(f"set_weights failed, {message}")
-
-    def get_uids(self) -> set[int]:
-        return set([uid for uid, info in enumerate(self.contest_state.miner_info) if info])
-
-    def get_next_uid(self, remaining_uids: set[int]) -> int | None:
-        return None if not len(remaining_uids) else choice(list(remaining_uids))
-
-    def test_next_miner(self):
-        if not self.contest_state:
-            return
-
-        uids = self.get_uids()
-        tested_uids = self.contest_state.miner_score_versions.keys()
-        remaining_uids = uids - tested_uids
-        uid = self.get_next_uid(remaining_uids)
-        bt.logging.info(f"{len(tested_uids)}/{len(uids)} submissions tested. {len(remaining_uids)} remaining.")
-
-        if uid is None:
-            if not self.should_set_weights:
-                # Finished all submissions
-                bt.logging.info(f"Contest {self.contest_state.id} done for {self.last_day}")
-
-                self.should_set_weights = True
-
-            return
-
-        self.should_set_weights = False
-
-        hotkey = self.metagraph.hotkeys[uid]
-
-        try:
-            bt.logging.info(f"Checking miner {uid}, hotkey: {hotkey}")
-
-            checkpoint_info = self.contest_state.miner_info[uid]
-
-            bt.logging.info(
-                f"Miner {uid} returned {checkpoint_info.image} as the model, "
-                f"with a reported speed of {checkpoint_info.average_time}"
-            )
-
-            comparison = compare_checkpoints(self.contest, checkpoint_info.image)
-
-            bt.logging.info(f"Benchmark results: {comparison}")
-
-            if comparison.failed:
-                self.metrics.reset(uid)
-            else:
-                self.metrics.update(uid, comparison)
-        except Exception as e:
-            self.metrics.reset(uid)
-            bt.logging.info(f"Failed to query miner {uid}, {e}")
-            bt.logging.debug(f"Miner {uid} error, {traceback.format_exception(e)}")
 
     def get_score_buckets(self) -> list[WinnerList]:
         sorted_contestants = self.metrics.get_sorted_contestants()
@@ -575,7 +523,7 @@ class Validator:
                     if (old_info is None) != (new_info is None):
                         return True
 
-                    return old_info.image != new_info.image
+                    return old_info.repository != new_info.repository or old_info.revision != new_info.revision
 
                 self.start_wandb_run()
 

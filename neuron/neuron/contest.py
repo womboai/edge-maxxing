@@ -12,9 +12,6 @@ RequestT = TypeVar("RequestT", bound=BaseModel)
 ResponseT = TypeVar("ResponseT")
 
 
-
-
-
 class ContestId(Enum):
     APPLE_SILICON = 0
     NVIDIA_4090 = 1

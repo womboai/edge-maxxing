@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from .contest import ContestId, CURRENT_CONTEST
 from .network_commitments import Encoder, Decoder
 
-SPEC_VERSION = 3
+SPEC_VERSION = 4
 
 
 class CheckpointSubmission(BaseModel):
