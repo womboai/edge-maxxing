@@ -9,3 +9,9 @@ chown sandbox:sandbox /sandbox
 useradd api
 
 chown api:api .
+
+apt-get update
+apt-get -y install pipx
+pipx install poetry
+
+poetry install
