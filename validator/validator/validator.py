@@ -292,18 +292,18 @@ class Validator:
             block=self.current_block
         )
 
-        self.set_weights()
+        if not self.contest_state:
+            bt.logging.info("Will not set weights as the contest state has not been set")
+            return
 
-    def set_weights(self):
         if len(self.hotkeys) != len(self.metagraph.hotkeys):
             self.metrics.resize()
 
-            if self.contest_state:
-                new_miner_info = [None] * self.metagraph.n.item()
-                length = len(self.hotkeys)
-                new_miner_info[:length] = self.contest_state.miner_info[:length]
+            new_miner_info = [None] * self.metagraph.n.item()
+            length = len(self.hotkeys)
+            new_miner_info[:length] = self.contest_state.miner_info[:length]
 
-                self.contest_state.miner_info = new_miner_info
+            self.contest_state.miner_info = new_miner_info
 
         for uid, hotkey in enumerate(self.hotkeys):
             if hotkey != self.metagraph.hotkeys[uid]:
@@ -318,17 +318,21 @@ class Validator:
 
                 self.previous_day_winners = filtered_winners
 
-                if self.contest_state:
-                    if uid in self.contest_state.miner_score_versions:
-                        del self.contest_state.miner_score_versions[uid]
+                if uid in self.contest_state.miner_score_versions:
+                    del self.contest_state.miner_score_versions[uid]
 
-                    self.contest_state.miner_info[uid] = None
+                self.contest_state.miner_info[uid] = None
 
         self.hotkeys = self.metagraph.hotkeys
 
+        try:
+            self.set_weights()
+        except Exception as e:
+            bt.logging.error(f"Failed to set weights, {e}")
+
+    def set_weights(self):
         if not self.should_set_weights:
             bt.logging.info("Will not set weights as contest is not done")
-
             return
 
         bt.logging.info("Setting weights")
@@ -359,21 +363,24 @@ class Validator:
                 bucket_rank = highest_bucket - index
 
                 for uid, score in bucket.scores:
-                    metric = self.metrics.metrics[uid]
-                    log_data[str(uid)] = {
-                        "rank": bucket_rank,
-                        "model": cast(CheckpointSubmission, self.contest_state.miner_info[uid]).repository,
-                        "baseline_generation_time": metric.baseline_average,
-                        "generation_time": metric.model_average,
-                        "similarity": metric.similarity_average,
-                        "size": metric.size,
-                        "baseline_vram_used": metric.vram_used,
-                        "vram_used": metric.vram_used,
-                        "baseline_watts_used": metric.watts_used,
-                        "watts_used": metric.watts_used,
-                        "hotkey": self.hotkeys[uid],
-                        "multiday_winner": bucket.previous_day_winners,
-                    }
+                    metric_data = self.metrics.metrics[uid]
+                    if metric_data:
+                        submission = cast(CheckpointSubmission, self.contest_state.miner_info[uid])
+                        if submission:
+                            log_data[str(uid)] = {
+                                "rank": bucket_rank,
+                                "model": submission.repository,
+                                "baseline_generation_time": metric_data.baseline_average,
+                                "generation_time": metric_data.model_average,
+                                "similarity": metric_data.similarity_average,
+                                "size": metric_data.size,
+                                "baseline_vram_used": metric_data.vram_used,
+                                "vram_used": metric_data.vram_used,
+                                "baseline_watts_used": metric_data.watts_used,
+                                "watts_used": metric_data.watts_used,
+                                "hotkey": self.hotkeys[uid],
+                                "multiday_winner": bucket.previous_day_winners,
+                            }
 
             self.wandb_run.log(data=log_data)
 
@@ -486,7 +493,7 @@ class Validator:
         self.contest_state.miner_score_versions[uid] = WEIGHTS_VERSION
 
     def get_score_buckets(self) -> list[WinnerList]:
-        sorted_contestants = self.metrics.get_sorted_contestants()
+        sorted_contestants = cast(list[tuple[Uid, float]], self.metrics.get_sorted_contestants())
 
         buckets: list[WinnerList] = [[]]
 
