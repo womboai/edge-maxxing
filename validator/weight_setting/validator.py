@@ -371,22 +371,24 @@ class Validator:
                 bucket_rank = highest_bucket - index
 
                 for uid, score in bucket.scores:
-                    metric_data = self.metrics.benchmarks[uid]
+                    metric_data = self.metrics.metrics[uid]
                     if metric_data:
-                        log_data[str(uid)] = {
-                            "rank": bucket_rank,
-                            "model": cast(CheckpointSubmission, self.contest_state.miner_info[uid]).repository,
-                            "baseline_generation_time": metric_data.baseline_average,
-                            "generation_time": metric_data.generation_time,
-                            "similarity": metric_data.similarity_score,
-                            "size": metric_data.size,
-                            "baseline_vram_used": metric_data.vram_used,
-                            "vram_used": metric_data.vram_used,
-                            "baseline_watts_used": metric_data.watts_used,
-                            "watts_used": metric_data.watts_used,
-                            "hotkey": self.hotkeys[uid],
-                            "multiday_winner": bucket.previous_day_winners,
-                        }
+                        submission = cast(CheckpointSubmission, self.contest_state.miner_info[uid])
+                        if submission:
+                            log_data[str(uid)] = {
+                                "rank": bucket_rank,
+                                "model": submission.repository,
+                                "baseline_generation_time": metric_data.baseline_average,
+                                "generation_time": metric_data.model_average,
+                                "similarity": metric_data.similarity_average,
+                                "size": metric_data.size,
+                                "baseline_vram_used": metric_data.vram_used,
+                                "vram_used": metric_data.vram_used,
+                                "baseline_watts_used": metric_data.watts_used,
+                                "watts_used": metric_data.watts_used,
+                                "hotkey": self.hotkeys[uid],
+                                "multiday_winner": bucket.previous_day_winners,
+                            }
 
             self.wandb_run.log(data=log_data)
 
@@ -445,7 +447,7 @@ class Validator:
             bt.logging.warning(f"set_weights failed, {message}")
 
     def get_score_buckets(self) -> list[WinnerList]:
-        sorted_contestants = self.metrics.get_sorted_contestants()
+        sorted_contestants = cast(list[tuple[Uid, float]], self.metrics.get_sorted_contestants())
 
         buckets: list[WinnerList] = [[]]
 
