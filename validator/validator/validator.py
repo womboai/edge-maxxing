@@ -493,7 +493,7 @@ class Validator:
         self.contest_state.miner_score_versions[uid] = WEIGHTS_VERSION
 
     def get_score_buckets(self) -> list[WinnerList]:
-        sorted_contestants = self.metrics.get_sorted_contestants()
+        sorted_contestants = cast(list[tuple[Uid, float]], self.metrics.get_sorted_contestants())
 
         buckets: list[WinnerList] = [[]]
 
