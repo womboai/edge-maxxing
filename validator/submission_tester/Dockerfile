@@ -1,14 +1,14 @@
 FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-ru
 
-RUN useradd --shell=/bin/false --no-create-home sandbox
-RUN mkdir /sandbox
-RUN chown sandbox:sandbox /sandbox
-
-RUN useradd api
-
-COPY . /api
 WORKDIR /api
-RUN chown api:api .
+
+COPY neuron .
+COPY pipelines .
+COPY validator .
+
+WORKDIR /api/validator/submission_tester/
+
+RUN setup.sh
 
 USER api
 
