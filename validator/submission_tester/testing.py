@@ -5,7 +5,7 @@ from time import perf_counter
 import bittensor as bt
 
 from neuron import Contest
-from pipelines.pipelines.models import TextToImageRequest
+from pipelines.models import TextToImageRequest
 from .inference_sandbox import InferenceSandbox
 from .random_inputs import generate_random_prompt
 from .vram_monitor import VRamMonitor
