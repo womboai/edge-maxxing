@@ -1,4 +1,4 @@
-from validator.submission_tester.testing import CheckpointBenchmark
+from base_validator.metrics import CheckpointBenchmark
 
 
 class Benchmarker:

@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, BackgroundTasks
 from starlette.requests import Request
 
-from validator.submission_tester.benchmarker import Benchmarker
+from submission_tester.benchmarker import Benchmarker
 
 
 @asynccontextmanager

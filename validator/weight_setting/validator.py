@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from os import makedirs
 from os.path import isfile, expanduser, join
-from random import choice
 from typing import cast, NewType, TypeAlias
 from zoneinfo import ZoneInfo
 
@@ -27,7 +26,7 @@ from neuron import (
     find_contest,
     ContestDeviceValidationError,
 )
-from metrics import Metrics
+from base_validator.metrics import Metrics
 from wandb_args import add_wandb_args
 
 WEIGHTS_VERSION = 13
@@ -74,7 +73,7 @@ class ContestState:
         miner_info: list[CheckpointSubmission | None],
     ):
         self.id = contest_id
-        self.miner_score_versions = WEIGHTS_VERSION
+        self.miner_score_version = WEIGHTS_VERSION
         self.miner_info = miner_info
 
     # Backwards compatibility
@@ -86,7 +85,7 @@ class ContestState:
         self.__dict__.update(state)
 
     def __repr__(self):
-        return f"ContestState(id={self.id}, miner_score_versions={self.miner_score_versions}, miner_info={self.miner_info})"
+        return f"ContestState(id={self.id}, miner_score_version={self.miner_score_version}, miner_info={self.miner_info})"
 
 
 class Validator:
