@@ -656,5 +656,9 @@ class Validator:
                 raise
 
 
-if __name__ == '__main__':
+def main():
     Validator().run()
+
+
+if __name__ == '__main__':
+    main()

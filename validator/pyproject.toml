@@ -37,6 +37,9 @@ python = ">=3.10,<3.11"
 wandb = "0.17.8"
 edge-maxxing-neuron = { path = "../neuron", develop = true }
 
+[tool.poetry.scripts]
+start_validator = 'weight_setting.validator:main'
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

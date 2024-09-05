@@ -32,6 +32,9 @@ classifiers = [
 python = ">=3.10,<3.11"
 edge-maxxing-neuron = { path = "../neuron", develop = true }
 
+[tool.poetry.scripts]
+submit_model = 'miner.submit:main'
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
