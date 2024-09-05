@@ -23,7 +23,7 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.post("/start")
-def start_benchmarking(submissions: dict[str, str], background_tasks: BackgroundTasks, request: Request):
+def start_benchmarking(submissions: dict[str, tuple[str, str]], background_tasks: BackgroundTasks, request: Request):
     benchmarker: Benchmarker = request.state.benchmarker
 
     background_tasks.add_task(
