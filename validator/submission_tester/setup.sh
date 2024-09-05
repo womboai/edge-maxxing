@@ -6,11 +6,17 @@ useradd --shell=/bin/false --no-create-home sandbox
 mkdir /sandbox
 chown sandbox:sandbox /sandbox
 
-useradd api
+useradd --create-home --home-dir /home/api api
 
 chown api:api .
+chown api:api /api/validator
 
 apt-get update
 apt-get -y install pipx
 
-su - api -c "pipx install poetry && poetry install"
+su - api -c "
+    pipx install poetry;
+    pipx ensurepath
+"
+
+su - api -c "cd /api/validator && poetry install"
