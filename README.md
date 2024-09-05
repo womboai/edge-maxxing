@@ -152,26 +152,26 @@ The validator setup requires two components, an API container and a scoring vali
 #### Scoring Validator
 To run the scoring validator, clone the repository as per the common instructions, then do as follows
 ```bash
-cd validator
-
-poetry install
-
-pm2 start poetry --name edge-validator --interpreter none -- \
-    run start_validator \
-    --netuid {netuid} \
-    --subtensor.network {network} \
-    --wallet.name {wallet} \
-    --wallet.hotkey {hotkey} \
-    --logging.trace \
-    --logging.debug \
-    --benchmarker_api {API component route}
+    cd validator
+    
+    poetry install
+    
+    pm2 start poetry --name edge-validator --interpreter none -- \
+        run start_validator \
+        --netuid {netuid} \
+        --subtensor.network {network} \
+        --wallet.name {wallet} \
+        --wallet.hotkey {hotkey} \
+        --logging.trace \
+        --logging.debug \
+        --benchmarker_api {API component route}
 ```
 
 Make sure to replace the API component route with the route to the API container(which can be something in the format of `http://ip:port`), refer to the instructions below at [Validator setup - API Container](#api-container)
 
 If you want this to auto-update(which is recommended), start another pm2 process using `auto-update.sh` like the following:
 ```bash
-pm2 start auto-update.sh --name edge-validator-updater --interpreter bash -- edge-validator
+  pm2 start auto-update.sh --name edge-validator-updater --interpreter bash -- edge-validator
 ```
 
 The argument at the end is the name of the main PM2 process. This will keep your PM2 validator instance up to date as long as it is running.
@@ -180,26 +180,26 @@ The argument at the end is the name of the main PM2 process. This will keep your
 ##### RunPod/other container-based providers
 If running on a container-based cloud provider like RunPod, you simply need to create a Pod(or equivalent) and run the following as root:
 ```bash
-git clone https://github.com/womboai/edge-maxxing /api
-cd /api/validator
-./submission_tester/setup.sh
+    git clone https://github.com/womboai/edge-maxxing /api
+    cd /api/validator
+    ./submission_tester/setup.sh
 ```
 
 And then run as follows:
 ```bash
-pm2 start /home/api/.local/bin/poetry --name edge-maxxing-submission-tester --interpreter none -- run uvicorn --host 0.0.0.0 --port 8000 submission_tester:app
+  pm2 start /home/api/.local/bin/poetry --name edge-maxxing-submission-tester --interpreter none -- run uvicorn --host 0.0.0.0 --port 8000 submission_tester:app
 ```
 Make sure port 8000(or whichever you set) is exposed!
 
 Additionally, the auto-updating script can be used here
 ```bash
-pm2 start auto-update.sh --name edge-validator-updater --interpreter bash -- edge-maxxing-submission-tester
+  pm2 start auto-update.sh --name edge-validator-updater --interpreter bash -- edge-maxxing-submission-tester
 ```
 
 ##### Dedicated hardware
 If running on a dedicated machine and not a container, you can simply use docker
 ```bash
-docker run -P --gpus all womboai/edge-maxxing-validator-submission-tester:latest
+  docker run -P --gpus all womboai/edge-maxxing-validator-submission-tester:latest
 ```
 
 And then keep track of the port used.
