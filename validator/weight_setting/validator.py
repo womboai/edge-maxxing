@@ -525,12 +525,12 @@ class Validator:
                 self.start_wandb_run()
 
                 submissions = {
-                    self.metagraph.hotkeys[uid]: submission
+                    self.metagraph.hotkeys[uid]: submission.model_dump()
                     for uid, submission in enumerate(miner_info)
                     if submission
                 }
 
-                state_response = requests.post(f"{self.config.benchmarker_api}/start", json=json.dumps(submissions))
+                state_response = requests.post(f"{self.config.benchmarker_api}/start", json=submissions)
 
                 state_response.raise_for_status()
             else:
@@ -552,12 +552,12 @@ class Validator:
                 ])
 
                 submissions = {
-                    self.metagraph.hotkeys[uid]: miner_info[uid]
+                    self.metagraph.hotkeys[uid]: miner_info[uid].model_dump()
                     for uid in updated_uids
                     if miner_info[uid]
                 }
 
-                state_response = requests.post(f"{self.config.benchmarker_api}/start", json=json.dumps(submissions))
+                state_response = requests.post(f"{self.config.benchmarker_api}/start", json=submissions)
 
                 state_response.raise_for_status()
 
@@ -611,10 +611,19 @@ class Validator:
 
         result = BenchmarkState.model_validate(state_response.json())
 
-        if result.results:
+        if result.results is not None:
+            failing_submission_uids = [
+                uid
+                for uid, submission in enumerate(self.contest_state.miner_info)
+                if submission is not None and self.metagraph.hotkeys[uid] not in result.results
+            ]
+
             for hotkey, benchmark in result.results:
                 if hotkey in self.metagraph.hotkeys:
                     self.metrics.update(self.metagraph.hotkeys.index(hotkey), benchmark)
+
+            for uid in failing_submission_uids:
+                self.metagraph.reset(uid)
 
             bt.logging.info(
                 "Benchmarking API has reported submission testing as done. "
