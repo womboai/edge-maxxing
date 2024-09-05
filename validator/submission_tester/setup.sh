@@ -8,8 +8,7 @@ chown sandbox:sandbox /sandbox
 
 useradd --create-home --home-dir /home/api api
 
-chown api:api .
-chown api:api /api/validator
+chown api:api /api
 
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get -y install pipx git
