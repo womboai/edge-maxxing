@@ -12,7 +12,7 @@ chown api:api .
 chown api:api /api/validator
 
 apt-get update
-apt-get -y install pipx
+DEBIAN_FRONTEND=noninteractive apt-get -y install pipx git
 
 su - api -c "
     pipx install poetry;
