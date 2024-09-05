@@ -13,6 +13,4 @@ chown api:api .
 apt-get update
 apt-get -y install pipx
 
-pipx install poetry
-
-/root/.local/bin/poetry install
+su - api -c "pipx install poetry && poetry install"
