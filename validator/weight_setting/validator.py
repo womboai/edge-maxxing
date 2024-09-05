@@ -30,7 +30,7 @@ from neuron import (
 )
 from base_validator.metrics import Metrics, BenchmarkState
 
-from wandb_args import add_wandb_args
+from .wandb_args import add_wandb_args
 
 WEIGHTS_VERSION = 13
 VALIDATOR_VERSION = "2.0.0"
@@ -106,7 +106,7 @@ class Validator:
     last_day: date | None
     contest_state: ContestState | None
     previous_day_winners: WinnerList
-    should_set_weights: bool
+    benchmarking: bool
 
     wandb_run: Run | None
 
@@ -116,7 +116,10 @@ class Validator:
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
 
-        from diagnostics import save_validator_diagnostics
+        if not self.config.benchmarker_api:
+            raise ValueError("--benchmarker_api required")
+
+        from .diagnostics import save_validator_diagnostics
         save_validator_diagnostics(self.config)
 
         bt.logging.info("Setting up bittensor objects")
@@ -138,15 +141,13 @@ class Validator:
         self.last_day = None
         self.contest_state = None
         self.previous_day_winners = []
-        self.should_set_weights = False
+        self.benchmarking = False
 
         self.wandb_run = None
 
         self.load_state()
 
         self.contest = find_contest(self.contest_state.id) if self.contest_state else CURRENT_CONTEST
-
-        self.contest.validate()
 
     def new_wandb_run(self):
         """Creates a new wandb run to save information to."""
@@ -209,7 +210,6 @@ class Validator:
             "--benchmarker_api",
             type=str,
             help="The API route to the validator benchmarking API.",
-            required=True,
         )
 
         add_wandb_args(argument_parser)
@@ -243,7 +243,7 @@ class Validator:
                     "last_day": self.last_day,
                     "contest_state": self.contest_state,
                     "previous_day_winners": self.previous_day_winners,
-                    "should_set_weights": self.should_set_weights,
+                    "benchmarking": self.benchmarking,
                 },
                 file,
             )
@@ -271,7 +271,7 @@ class Validator:
             state.get("previous_day_winners", self.previous_day_winners) or
             self.previous_day_winners
         )
-        self.should_set_weights = state["should_set_weights"]
+        self.benchmarking = state.get("benchmarking", self.benchmarking)
 
         if self.contest_state:
             if self.contest_state.miner_score_version != WEIGHTS_VERSION:
@@ -337,7 +337,7 @@ class Validator:
             bt.logging.error(f"Failed to set weights, {e}")
 
     def set_weights(self):
-        if not self.should_set_weights:
+        if self.benchmarking:
             bt.logging.info("Will not set weights as contest is not done")
             return
 
@@ -510,15 +510,13 @@ class Validator:
 
             bt.logging.info(f"Got {miner_info} submissions")
 
-            self.should_set_weights = False
+            self.benchmarking = True
 
             if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
                 # New contest, restart
                 self.contest = CURRENT_CONTEST
 
                 bt.logging.info(f"Working on contest {self.contest.id.name} today's submissions")
-
-                self.contest.validate()
 
                 self.metrics.clear()
 
@@ -599,7 +597,7 @@ class Validator:
                 f"{self.config.epoch_length - blocks_elapsed} blocks remaining until metagraph sync"
             )
 
-        if self.should_set_weights:
+        if not self.benchmarking:
             self.step += 1
 
             bt.logging.info(f"Nothing to do in this step, sleeping for {self.config.epoch_length} blocks")
@@ -623,7 +621,7 @@ class Validator:
                 "Miner metrics updated"
             )
 
-            self.should_set_weights = True
+            self.benchmarking = False
         else:
             time.sleep(self.config.epoch_length * 60)
 

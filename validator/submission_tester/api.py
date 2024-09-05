@@ -7,9 +7,13 @@ from submission_tester.benchmarker import Benchmarker
 
 from base_validator.metrics import BenchmarkState
 
+from neuron import CURRENT_CONTEST
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    CURRENT_CONTEST.validate()
+
     yield {
         "benchmarker": Benchmarker(),
     }

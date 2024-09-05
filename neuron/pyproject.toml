@@ -44,6 +44,7 @@ omegaconf = "2.3.0"
 python_coreml_stable_diffusion = { git = "https://github.com/apple/ml-stable-diffusion", tag = "1.1.1" }
 pynvml = "11.5.3"
 torchvision = "0.19.0"
+GitPython = "3.1.43"
 edge-maxxing-pipelines = { path = "../pipelines", develop = true }
 
 [tool.poetry.dev-dependencies]
