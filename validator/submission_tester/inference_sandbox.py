@@ -5,8 +5,6 @@ from socket import socket, AF_UNIX, SOCK_STREAM
 from sys import byteorder
 from typing import Generic, ContextManager
 
-from git import Repo
-
 from neuron import RequestT
 
 SANDBOX_DIRECTORY = Path("/sandbox")
@@ -20,20 +18,9 @@ class InferenceSandbox(Generic[RequestT]):
     _process: ContextManager
 
     def __init__(self, repository: str, revision: str):
-        repository = Repo.clone_from(
-            repository,
-            SANDBOX_DIRECTORY,
-            revision=revision,
-            depth=1,
-            recursive=True,
-            no_checkout=True,
-        )
-
-        repository.git.checkout(revision)
-
         self._file_size = sum(file.stat().st_size for file in SANDBOX_DIRECTORY.rglob("*"))
 
-        self._process = popen(f"su -m sandbox -c {START_INFERENCE_SANDBOX_SCRIPT}")
+        self._process = popen(f"sudo -u sandbox su - sandbox -c '{START_INFERENCE_SANDBOX_SCRIPT} {repository} {revision}'")
 
         self._socket = socket(AF_UNIX, SOCK_STREAM)
         self._socket.bind(str(SOCKET))
