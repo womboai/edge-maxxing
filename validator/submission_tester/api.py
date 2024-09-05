@@ -7,7 +7,7 @@ from submission_tester.benchmarker import Benchmarker
 
 from base_validator.metrics import BenchmarkState
 
-from neuron import CURRENT_CONTEST
+from neuron import CURRENT_CONTEST, CheckpointSubmission
 
 
 @asynccontextmanager
@@ -23,7 +23,7 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.post("/start")
-def start_benchmarking(submissions: dict[str, tuple[str, str]], background_tasks: BackgroundTasks, request: Request):
+def start_benchmarking(submissions: dict[str, CheckpointSubmission], background_tasks: BackgroundTasks, request: Request):
     benchmarker: Benchmarker = request.state.benchmarker
 
     background_tasks.add_task(
