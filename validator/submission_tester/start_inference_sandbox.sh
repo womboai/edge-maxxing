@@ -4,7 +4,7 @@ set -e
 
 REPOSITORY_URL=$1
 REVISION=$2
-SANDBOX_DIRECTORY="/sandbox/repo"
+SANDBOX_DIRECTORY="/sandbox"
 
 git clone --depth 1 --recursive --no-checkout "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
 

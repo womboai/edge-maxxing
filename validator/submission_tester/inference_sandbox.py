@@ -1,4 +1,4 @@
-from os import popen
+from os import popen, chmod
 from pathlib import Path
 from shutil import rmtree
 from socket import socket, AF_UNIX, SOCK_STREAM
@@ -9,7 +9,7 @@ from neuron import RequestT
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 START_INFERENCE_SANDBOX_SCRIPT = Path(__file__).parent / "start_inference_sandbox.sh"
-SOCKET = SANDBOX_DIRECTORY / "inferences.sock"
+SOCKET = "/api/inferences.sock"
 
 
 class InferenceSandbox(Generic[RequestT]):
@@ -20,10 +20,11 @@ class InferenceSandbox(Generic[RequestT]):
     def __init__(self, repository: str, revision: str):
         self._file_size = sum(file.stat().st_size for file in SANDBOX_DIRECTORY.rglob("*"))
 
-        self._process = popen(f"sudo -u sandbox su - sandbox -c '{START_INFERENCE_SANDBOX_SCRIPT} {repository} {revision}'")
+        self._process = popen(f"sudo su - sandbox -c '{START_INFERENCE_SANDBOX_SCRIPT} {repository} {revision}'")
 
         self._socket = socket(AF_UNIX, SOCK_STREAM)
         self._socket.bind(str(SOCKET))
+        chmod(SOCKET, 0o777)
 
     def __enter__(self):
         self._process.__enter__()
