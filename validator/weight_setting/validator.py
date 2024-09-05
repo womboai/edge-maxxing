@@ -1,4 +1,3 @@
-import json
 import time
 import traceback
 from argparse import ArgumentParser
@@ -227,7 +226,7 @@ class Validator:
 
         makedirs(full_path, exist_ok=True)
 
-        return join(full_path, "state.pt")
+        return join(full_path, "state.bin")
 
     def save_state(self):
         """Saves the state of the validator to a file."""

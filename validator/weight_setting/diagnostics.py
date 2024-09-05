@@ -39,7 +39,7 @@ def state_path(data: DiagnosticsData) -> str:
 
     makedirs(full_path, exist_ok=True)
 
-    return join(full_path, "state.pt")
+    return join(full_path, "state.bin")
 
 
 def load_state(diagnostics: DiagnosticsData) -> dict:
