@@ -83,7 +83,11 @@ def get_submission(
 
         info = CheckpointSubmission.decode(decoder)
 
-        if info.contest != CURRENT_CONTEST.id or info.image == CURRENT_CONTEST.baseline_repository:
+        if (
+            info.contest != CURRENT_CONTEST.id or
+            info.repository == CURRENT_CONTEST.baseline_repository or
+            info.revision == CURRENT_CONTEST.baseline_revision
+        ):
             return None
 
         return info, block
