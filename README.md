@@ -127,17 +127,16 @@ There is no need to manage venvs in any way, as poetry will handle that.
     cd miner
     poetry install
     ```
-2. Clone the base model into a directory `model`
+2. Clone the base inference repository into a directory `model`
     ```bash
-    git clone https://huggingface.co/stablediffusionapi/newdream-sdxl-20 model
+    git clone --recursive --depth 1 https://github.com/womboai/sdxl-newdream-20-inference model
     ```
-3. Make your own repository on huggingface to optimize in
-4. Edit the miner/miner.py file, specifically the [optimize](https://github.com/womboai/edge-maxxing/blob/main/miner/miner/miner.py#L20) function
-5. If you have methods of optimization that you do not wish to do through the aforementioned python function, optimize directly in the `model` directory
-6. Submit the model, changing the options as necessary
+3. Make your own repository on a git provider to optimize in
+4. Edit the src/pipeline.py file to include any loading or inference optimizations, and save any changed models in `models`(use git submodules for referencing huggingface models or other git provider repositories) and commit
+5. Submit the model, changing the options as necessary
     ```bash
-    poetry run python miner/miner.py \
-        --repository {huggingface-repository} \
+    poetry run submit_model \
+        --repository {repository} \
         --netuid {netuid} \
         --subtensor.network finney \
         --wallet.name {wallet} \
@@ -145,28 +144,30 @@ There is no need to manage venvs in any way, as poetry will handle that.
         --logging.trace \
         --logging.debug
     ```
-    Add `--no_optimizations` if you have not changed the `optimize` function, and `no_commit` if the optimizations are already in the repository, and you just want to make the submission.<br>
-    Additionally, you can pass `--commit_message` to add a commit message to the commit made if `no_commit` is not passed.
-7. Validators will collect your submission on 12PM New York time and tested in the remainder of the day
+6. Validators will collect your submission on 12PM New York time and test it in the remainder of the day
 
 ### Validator setup
-All that is needed for a validator is running on the current contest's GPU with a registered hotkey;<br>
+The validator setup requires two components, an API container and a scoring validator
 
-This assumes using PM2, feel free to adjust for anything else
+#### Scoring Validator
+To run the scoring validator, clone the repository as per the common instructions, then do as follows
 ```bash
 cd validator
 
 poetry install
 
 pm2 start poetry --name edge-validator --interpreter none -- \
-    run python validator/validator.py \
+    run start_validator \
     --netuid {netuid} \
     --subtensor.network {network} \
     --wallet.name {wallet} \
     --wallet.hotkey {hotkey} \
     --logging.trace \
-    --logging.debug
+    --logging.debug \
+    --benchmarker_api {API component route}
 ```
+
+Make sure to replace the API component route with the route to the API container(which can be something in the format of `http://ip:port`), refer to the instructions below at [Validator setup - API Container](#api-container)
 
 If you want this to auto-update(which is recommended), start another pm2 process using `auto-update.sh` like the following:
 ```bash
@@ -174,6 +175,35 @@ pm2 start auto-update.sh --name edge-validator-updater --interpreter bash -- edg
 ```
 
 The argument at the end is the name of the main PM2 process. This will keep your PM2 validator instance up to date as long as it is running.
+
+#### API Container
+##### RunPod/other container-based providers
+If running on a container-based cloud provider like RunPod, you simply need to create a Pod(or equivalent) and run the following as root:
+```bash
+git clone https://github.com/womboai/edge-maxxing /api
+cd /api/validator
+./submission_tester/setup.sh
+```
+
+And then run as follows:
+```bash
+pm2 start /home/api/.local/bin/poetry --name edge-maxxing-submission-tester --interpreter none -- run uvicorn --host 0.0.0.0 --port 8000 submission_tester:app
+```
+Make sure port 8000(or whichever you set) is exposed!
+
+Additionally, the auto-updating script can be used here
+```bash
+pm2 start auto-update.sh --name edge-validator-updater --interpreter bash -- edge-maxxing-submission-tester
+```
+
+##### Dedicated hardware
+If running on a dedicated machine and not a container, you can simply use docker
+```bash
+docker run -P --gpus all womboai/edge-maxxing-validator-submission-tester:latest
+```
+
+And then keep track of the port used.
+Keep in mind that this does not auto-update, so be sure to periodically re-run
 
 ## Proposals for Optimizations
 
