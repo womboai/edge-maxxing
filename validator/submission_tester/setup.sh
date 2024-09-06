@@ -2,7 +2,7 @@
 
 set -e
 
-useradd --shell=/bin/false sandbox
+useradd --shell=/bin/false  --create-home --home-dir /home/sandbox sandbox
 mkdir /sandbox
 chown sandbox:sandbox /sandbox
 
