@@ -11,7 +11,7 @@ useradd --create-home --home-dir /home/api api
 chown -R api:api /api
 
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get -y install sudo pipx git
+DEBIAN_FRONTEND=noninteractive apt-get -y install sudo pipx git git-lfs
 
 su - api -c "
     pipx install poetry;
