@@ -1,9 +1,12 @@
+import sys
+import time
 from os import popen, chmod
 from pathlib import Path
 from shutil import rmtree
 from socket import socket, AF_UNIX, SOCK_STREAM
+from subprocess import Popen
 from sys import byteorder
-from typing import Generic, ContextManager
+from typing import Generic, ContextManager, cast
 
 from neuron import RequestT
 
@@ -15,14 +18,24 @@ SOCKET = "/api/inferences.sock"
 
 
 class InferenceSandbox(Generic[RequestT]):
+    _repository: str
     _socket: socket
     _connection: socket
-    _process: ContextManager
+    _process: Popen
 
     def __init__(self, repository: str, revision: str):
         bt.logging.info(f"Downloading {repository} with revision {revision}")
 
-        self._process = popen(f"sudo -i -u sandbox {START_INFERENCE_SANDBOX_SCRIPT} {repository} {revision}")
+        self._repository = repository
+
+        self._process = cast(
+            Popen,
+            popen(f"sudo -i -u sandbox {START_INFERENCE_SANDBOX_SCRIPT} {repository} {revision}"),
+        )
+
+        time.sleep(10.0)
+
+        self._check_exit()
 
         self._socket = socket(AF_UNIX, SOCK_STREAM)
         self._socket.bind(str(SOCKET))
@@ -34,6 +47,8 @@ class InferenceSandbox(Generic[RequestT]):
         self._connection.settimeout(60.0)
         marker = self._connection.recv(1)
 
+        self._check_exit()
+
         if marker == b'\xFF':
             # Ready
             self._file_size = sum(file.stat().st_size for file in SANDBOX_DIRECTORY.rglob("*"))
@@ -41,6 +56,10 @@ class InferenceSandbox(Generic[RequestT]):
             bt.logging.info(f"Repository {repository} had size {self._file_size}")
         else:
             raise RuntimeError(f"Repository {repository} is invalid, did not receive proper READY marker, got {marker} instead")
+
+    def _check_exit(self):
+        if self._process.returncode:
+            raise RuntimeError(f"Failed to setup {self._repository}, got exit code {self._process.returncode}")
 
     def __enter__(self):
         self._process.__enter__()
@@ -52,6 +71,8 @@ class InferenceSandbox(Generic[RequestT]):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._connection.__exit__(exc_type, exc_val, exc_tb)
         self._socket.__exit__(exc_type, exc_val, exc_tb)
+
+        self._process.terminate()
         self._process.__exit__(exc_type, exc_val, exc_tb)
 
         rmtree("/sandbox")
