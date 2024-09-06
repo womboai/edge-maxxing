@@ -1,6 +1,7 @@
 import sys
 import time
 from os import chmod
+from os.path import abspath
 from pathlib import Path
 from shutil import rmtree
 from socket import socket, AF_UNIX, SOCK_STREAM
@@ -13,7 +14,7 @@ import bittensor as bt
 from neuron import RequestT
 
 SANDBOX_DIRECTORY = Path("/sandbox")
-START_INFERENCE_SANDBOX_SCRIPT = Path(__file__).parent / "start_inference_sandbox.sh"
+START_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "start_inference_sandbox.sh")
 SOCKET = "/api/inferences.sock"
 
 
