@@ -5,7 +5,7 @@ from os.path import abspath
 from pathlib import Path
 from shutil import rmtree
 from socket import socket, AF_UNIX, SOCK_STREAM
-from subprocess import Popen, STDOUT
+from subprocess import Popen
 from sys import byteorder
 from typing import Generic
 
@@ -44,10 +44,12 @@ class InferenceSandbox(Generic[RequestT]):
             stderr=sys.stderr,
         )
 
+        bt.logging.info(f"Inference process starting")
         time.sleep(10.0)
 
         self._check_exit()
 
+        bt.logging.info(f"Binding to inference socket")
         self._socket = socket(AF_UNIX, SOCK_STREAM)
         self._socket.bind(str(SOCKET))
         chmod(SOCKET, 0o777)
@@ -55,6 +57,7 @@ class InferenceSandbox(Generic[RequestT]):
         self._socket.listen(1)
         self._connection, _ = self._socket.accept()
 
+        bt.logging.info(f"Waiting for inference container to be ready")
         self._connection.settimeout(60.0)
         marker = self._connection.recv(1)
 

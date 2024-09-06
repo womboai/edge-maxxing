@@ -13,8 +13,9 @@ ResponseT = TypeVar("ResponseT")
 
 
 class ContestId(Enum):
-    APPLE_SILICON = 0
-    NVIDIA_4090 = 1
+    SDXL_APPLE_SILICON = 0
+    SDXL_NEWDREAM_NVIDIA_4090 = 1
+    FLUX_NVIDIA_4090 = 2
 
 
 class Contest(ABC):
@@ -151,7 +152,7 @@ class ContestDeviceValidationError(Exception):
 
 CONTESTS = [
     CudaContest(
-        ContestId.NVIDIA_4090,
+        ContestId.SDXL_NEWDREAM_NVIDIA_4090,
         "https://github.com/womboai/sdxl-newdream-20-inference",
         "d79d4af18f9f5dac7fcb310bb8009815ecc63d57",
         "NVIDIA GeForce RTX 4090",
@@ -169,4 +170,4 @@ def find_contest(contest_id: ContestId):
     raise RuntimeError(f"Unknown contest ID requested {contest_id}")
 
 
-CURRENT_CONTEST: CudaContest = find_contest(ContestId.NVIDIA_4090)
+CURRENT_CONTEST: CudaContest = find_contest(ContestId.SDXL_NEWDREAM_NVIDIA_4090)
