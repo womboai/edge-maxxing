@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, BackgroundTasks
 from starlette.requests import Request
 
-from submission_tester.benchmarker import Benchmarker
+from .benchmarker import Benchmarker
 
 from base_validator.metrics import BenchmarkState
 
@@ -23,7 +23,11 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.post("/start")
-def start_benchmarking(submissions: dict[str, CheckpointSubmission], background_tasks: BackgroundTasks, request: Request):
+def start_benchmarking(
+    submissions: dict[str, CheckpointSubmission],
+    background_tasks: BackgroundTasks,
+    request: Request,
+):
     benchmarker: Benchmarker = request.state.benchmarker
 
     background_tasks.add_task(
@@ -39,4 +43,10 @@ def state(request: Request) -> BenchmarkState:
     if not benchmarker.done:
         return BenchmarkState(results=None)
 
-    return BenchmarkState(results=benchmarker.metrics)
+    return BenchmarkState(
+        results={
+            hotkey: submission
+            for hotkey, submission in benchmarker.benchmarks.items()
+            if submission
+        }
+    )
