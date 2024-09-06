@@ -33,6 +33,7 @@ class InferenceSandbox(Generic[RequestT]):
                 "/bin/sudo",
                 "-u",
                 "sandbox",
+                "/bin/sh",
                 SETUP_INFERENCE_SANDBOX_SCRIPT,
                 repository,
                 revision,
@@ -52,7 +53,6 @@ class InferenceSandbox(Generic[RequestT]):
                 "/bin/sudo",
                 "-u",
                 "sandbox",
-                "/bin/sh",
                 START_INFERENCE
             ]
         )
