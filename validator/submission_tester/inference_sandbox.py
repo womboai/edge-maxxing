@@ -51,7 +51,6 @@ class InferenceSandbox(Generic[RequestT]):
         self._process = Popen(
             [
                 "/bin/sudo",
-                "-i",
                 "-u",
                 "sandbox",
                 "/bin/sh",
