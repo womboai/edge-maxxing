@@ -14,7 +14,7 @@ from neuron import RequestT
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "setup_inference_sandbox.sh")
-START_INFERENCE = abspath(Path(__file__).parent / ".venv" / "bin" / "start_inference")
+START_INFERENCE = abspath(SANDBOX_DIRECTORY / ".venv" / "bin" / "start_inference")
 SOCKET = "/api/inferences.sock"
 
 
