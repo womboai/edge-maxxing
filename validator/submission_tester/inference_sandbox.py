@@ -7,6 +7,8 @@ from typing import Generic, ContextManager
 
 from neuron import RequestT
 
+import bittensor as bt
+
 SANDBOX_DIRECTORY = Path("/sandbox")
 START_INFERENCE_SANDBOX_SCRIPT = Path(__file__).parent / "start_inference_sandbox.sh"
 SOCKET = "/api/inferences.sock"
@@ -18,7 +20,7 @@ class InferenceSandbox(Generic[RequestT]):
     _process: ContextManager
 
     def __init__(self, repository: str, revision: str):
-        self._file_size = sum(file.stat().st_size for file in SANDBOX_DIRECTORY.rglob("*"))
+        bt.logging.info(f"Downloading {repository} with revision {revision}")
 
         self._process = popen(f"sudo -i -u sandbox {START_INFERENCE_SANDBOX_SCRIPT} {repository} {revision}")
 
@@ -26,13 +28,23 @@ class InferenceSandbox(Generic[RequestT]):
         self._socket.bind(str(SOCKET))
         chmod(SOCKET, 0o777)
 
+        self._socket.listen(1)
+        self._connection, _ = self._socket.accept()
+
+        self._connection.settimeout(60.0)
+        marker = self._connection.recv(1)
+
+        if marker == b'\xFF':
+            # Ready
+            self._file_size = sum(file.stat().st_size for file in SANDBOX_DIRECTORY.rglob("*"))
+
+            bt.logging.info(f"Repository {repository} had size {self._file_size}")
+        else:
+            raise RuntimeError(f"Repository {repository} is invalid, did not receive proper READY marker, got {marker} instead")
+
     def __enter__(self):
         self._process.__enter__()
-        inference_socket = self._socket.__enter__()
-
-        inference_socket.listen(1)
-        self._connection, _ = inference_socket.accept()
-
+        self._socket.__enter__()
         self._connection.__enter__()
 
         return self

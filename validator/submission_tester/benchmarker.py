@@ -1,3 +1,4 @@
+import traceback
 from random import choice
 
 from base_validator.metrics import CheckpointBenchmark
@@ -26,6 +27,12 @@ class Benchmarker:
 
             submission = self.submissions[hotkey]
 
-            self.metrics[hotkey] = compare_checkpoints(CURRENT_CONTEST, submission.repository, submission.revision)
+            try:
+                benchmark = compare_checkpoints(CURRENT_CONTEST, submission.repository, submission.revision)
+            except:
+                traceback.print_exc()
+                continue
+
+            self.metrics[hotkey] = benchmark
 
         self.done = True

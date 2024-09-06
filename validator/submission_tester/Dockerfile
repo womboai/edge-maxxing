@@ -7,9 +7,7 @@ COPY neuron neuron
 COPY pipelines pipelines
 COPY validator validator
 
-WORKDIR /api/validator/submission_tester
-
-RUN ./setup.sh
+RUN ./validator/submission_tester/setup.sh
 
 WORKDIR /api/validator
 
