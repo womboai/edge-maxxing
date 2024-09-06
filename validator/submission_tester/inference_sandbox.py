@@ -3,7 +3,7 @@ from os import chmod
 from pathlib import Path
 from shutil import rmtree
 from socket import socket, AF_UNIX, SOCK_STREAM
-from subprocess import Popen, PIPE
+from subprocess import Popen, STDOUT
 from sys import byteorder
 from typing import Generic
 
@@ -38,8 +38,8 @@ class InferenceSandbox(Generic[RequestT]):
                 repository,
                 revision,
             ],
-            stdout=PIPE,
-            stderr=PIPE,
+            stdout=STDOUT,
+            stderr=STDOUT,
         )
 
         time.sleep(10.0)
