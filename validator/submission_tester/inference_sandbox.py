@@ -20,7 +20,7 @@ class InferenceSandbox(Generic[RequestT]):
     def __init__(self, repository: str, revision: str):
         self._file_size = sum(file.stat().st_size for file in SANDBOX_DIRECTORY.rglob("*"))
 
-        self._process = popen(f"sudo su - sandbox -c '{START_INFERENCE_SANDBOX_SCRIPT} {repository} {revision}'")
+        self._process = popen(f"sudo -i -u sandbox {START_INFERENCE_SANDBOX_SCRIPT} {repository} {revision}")
 
         self._socket = socket(AF_UNIX, SOCK_STREAM)
         self._socket.bind(str(SOCKET))

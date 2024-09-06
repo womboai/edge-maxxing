@@ -2,7 +2,7 @@
 
 set -e
 
-useradd --shell=/bin/false --no-create-home sandbox
+useradd --shell=/bin/false sandbox
 mkdir /sandbox
 chown sandbox:sandbox /sandbox
 
@@ -20,4 +20,4 @@ su - api -c "
 
 su - api -c "cd /api/validator && poetry install"
 
-echo "api ALL=NOPASSWD: /bin/su - sandbox -c *" >> /etc/sudoers
+echo "api ALL(sandbox)=NOPASSWD: ALL" >> /etc/sudoers
