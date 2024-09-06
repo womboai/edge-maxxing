@@ -13,4 +13,4 @@ git checkout "$REVISION"
 
 python3.10 -m venv /sandbox/.venv
 
-/sandbox/.venv/bin/pip install -e $(cat /sandbox/install_args.txt) /sandbox
+/sandbox/.venv/bin/pip install $(cat /sandbox/install_args.txt) -e /sandbox
