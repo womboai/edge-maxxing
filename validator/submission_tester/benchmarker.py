@@ -28,7 +28,7 @@ class Benchmarker:
             submission = self.submissions[hotkey]
 
             try:
-                benchmark = compare_checkpoints(CURRENT_CONTEST, submission.repository, submission.revision)
+                benchmark = compare_checkpoints(CURRENT_CONTEST, submission)
             except:
                 traceback.print_exc()
                 self.benchmarks[hotkey] = None

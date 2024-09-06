@@ -1,6 +1,5 @@
 import sys
 import time
-from os import chmod
 from os.path import abspath
 from pathlib import Path
 from shutil import rmtree

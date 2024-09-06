@@ -4,7 +4,7 @@ from time import perf_counter
 
 import bittensor as bt
 
-from neuron import Contest
+from neuron import Contest, CheckpointSubmission
 from pipelines.models import TextToImageRequest
 from .inference_sandbox import InferenceSandbox
 from .random_inputs import generate_random_prompt
@@ -51,7 +51,7 @@ def generate(contest: Contest, container: InferenceSandbox, prompt: str, seed: i
     )
 
 
-def compare_checkpoints(contest: Contest, repository: str, revision: str) -> CheckpointBenchmark:
+def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> CheckpointBenchmark:
     bt.logging.info("Generating baseline samples to compare")
 
     with InferenceSandbox(contest.baseline_repository, contest.baseline_revision) as baseline_sandbox:
@@ -76,7 +76,7 @@ def compare_checkpoints(contest: Contest, repository: str, revision: str) -> Che
 
     bt.logging.info("Generating model samples")
 
-    with InferenceSandbox(repository, revision) as sandbox:
+    with InferenceSandbox(submission.repository, submission.revision) as sandbox:
         size = sandbox.model_size
 
         i = 0

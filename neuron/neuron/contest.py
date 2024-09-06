@@ -6,8 +6,6 @@ from typing import TypeVar
 from PIL import Image
 from pydantic import BaseModel
 
-from pipelines.models import TextToImageRequest
-
 RequestT = TypeVar("RequestT", bound=BaseModel)
 ResponseT = TypeVar("ResponseT")
 
@@ -154,7 +152,7 @@ CONTESTS = [
     CudaContest(
         ContestId.SDXL_NEWDREAM_NVIDIA_4090,
         "https://github.com/womboai/sdxl-newdream-20-inference",
-        "9cf457d535fadb99dc5c1d9c4cc3fd053336fdb6",
+        "352bf3a28163d155b7fddd204f1c59e933309808",
         "NVIDIA GeForce RTX 4090",
     ),
 ]
