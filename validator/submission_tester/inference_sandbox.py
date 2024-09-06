@@ -1,16 +1,15 @@
-import sys
 import time
-from os import popen, chmod
+from os import chmod
 from pathlib import Path
 from shutil import rmtree
 from socket import socket, AF_UNIX, SOCK_STREAM
-from subprocess import Popen
+from subprocess import Popen, PIPE
 from sys import byteorder
-from typing import Generic, ContextManager, cast
-
-from neuron import RequestT
+from typing import Generic
 
 import bittensor as bt
+
+from neuron import RequestT
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 START_INFERENCE_SANDBOX_SCRIPT = Path(__file__).parent / "start_inference_sandbox.sh"
@@ -28,9 +27,17 @@ class InferenceSandbox(Generic[RequestT]):
 
         self._repository = repository
 
-        self._process = cast(
-            Popen,
-            popen(f"sudo -i -u sandbox {START_INFERENCE_SANDBOX_SCRIPT} {repository} {revision}"),
+        self._process = Popen(
+            f"/bin/sudo"
+            f" -i"
+            f" -u"
+            f" sandbox"
+            f" /bin/sh"
+            f" {START_INFERENCE_SANDBOX_SCRIPT}"
+            f" {repository}"
+            f" {revision}",
+            stdout=PIPE,
+            stderr=PIPE,
         )
 
         time.sleep(10.0)
