@@ -1,3 +1,4 @@
+import sys
 import time
 from os import chmod
 from pathlib import Path
@@ -38,8 +39,8 @@ class InferenceSandbox(Generic[RequestT]):
                 repository,
                 revision,
             ],
-            stdout=STDOUT,
-            stderr=STDOUT,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
         )
 
         time.sleep(10.0)
