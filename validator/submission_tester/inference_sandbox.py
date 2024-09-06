@@ -5,7 +5,7 @@ from os.path import abspath
 from pathlib import Path
 from shutil import rmtree
 from socket import socket, AF_UNIX, SOCK_STREAM
-from subprocess import Popen
+from subprocess import Popen, run
 from sys import byteorder
 from typing import Generic
 
@@ -14,7 +14,8 @@ import bittensor as bt
 from neuron import RequestT
 
 SANDBOX_DIRECTORY = Path("/sandbox")
-START_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "start_inference_sandbox.sh")
+SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "setup_inference_sandbox.sh")
+START_INFERENCE = abspath(Path(__file__).parent / ".venv" / "bin" / "start_inference")
 SOCKET = "/api/inferences.sock"
 
 
@@ -28,14 +29,14 @@ class InferenceSandbox(Generic[RequestT]):
 
         self._repository = repository
 
-        self._process = Popen(
+        setup_result = run(
             [
                 "/bin/sudo",
                 "-i",
                 "-u",
                 "sandbox",
                 "/bin/sh",
-                START_INFERENCE_SANDBOX_SCRIPT,
+                SETUP_INFERENCE_SANDBOX_SCRIPT,
                 repository,
                 revision,
             ],
@@ -43,22 +44,32 @@ class InferenceSandbox(Generic[RequestT]):
             stderr=sys.stderr,
         )
 
+        setup_result.check_returncode()
+
+        self._file_size = sum(file.stat().st_size for file in SANDBOX_DIRECTORY.rglob("*"))
+
+        bt.logging.info(f"Repository {repository} had size {self._file_size}")
+
+        self._process = Popen(
+            [
+                "/bin/sudo",
+                "-i",
+                "-u",
+                "sandbox",
+                "/bin/sh",
+                START_INFERENCE
+            ]
+        )
+
         bt.logging.info(f"Inference process starting")
-        time.sleep(10.0)
+        time.sleep(5.0)
 
         self._check_exit()
 
         self._socket = socket(AF_UNIX, SOCK_STREAM)
 
-        bt.logging.info(f"Waiting for inference container to be ready")
-        self._socket.settimeout(60.0)
+        bt.logging.info(f"Connecting to socket")
         self._socket.connect(SOCKET)
-
-        self._check_exit()
-
-        self._file_size = sum(file.stat().st_size for file in SANDBOX_DIRECTORY.rglob("*"))
-
-        bt.logging.info(f"Repository {repository} had size {self._file_size}")
 
     def _check_exit(self):
         if self._process.returncode:
