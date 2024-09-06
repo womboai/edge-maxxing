@@ -20,4 +20,4 @@ su - api -c "
 
 su - api -c "cd /api/validator && poetry install"
 
-echo "api ALL=NOPASSWD: /bin/su - sandbox" >> /etc/sudoers
+echo "api ALL=NOPASSWD: /bin/su - sandbox -c *" >> /etc/sudoers
