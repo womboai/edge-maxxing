@@ -10,6 +10,7 @@ git clone --recursive --no-checkout "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
 
 cd "$SANDBOX_DIRECTORY"
 git checkout "$REVISION"
+git submodule update --init
 
 python3.10 -m venv /sandbox/.venv
 
