@@ -28,14 +28,16 @@ class InferenceSandbox(Generic[RequestT]):
         self._repository = repository
 
         self._process = Popen(
-            f"/bin/sudo"
-            f" -i"
-            f" -u"
-            f" sandbox"
-            f" /bin/sh"
-            f" {START_INFERENCE_SANDBOX_SCRIPT}"
-            f" {repository}"
-            f" {revision}",
+            [
+                "/bin/sudo",
+                "-i",
+                "-u",
+                "sandbox",
+                "/bin/sh",
+                START_INFERENCE_SANDBOX_SCRIPT,
+                repository,
+                revision,
+            ],
             stdout=PIPE,
             stderr=PIPE,
         )
@@ -62,7 +64,9 @@ class InferenceSandbox(Generic[RequestT]):
 
             bt.logging.info(f"Repository {repository} had size {self._file_size}")
         else:
-            raise RuntimeError(f"Repository {repository} is invalid, did not receive proper READY marker, got {marker} instead")
+            raise RuntimeError(
+                f"Repository {repository} is invalid, did not receive proper READY marker, got {marker} instead"
+            )
 
     def _check_exit(self):
         if self._process.returncode:
