@@ -32,7 +32,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.11"
+python = ">=3.10,<3.13"
 pydantic = ">=2"
 
 [tool.poetry.dev-dependencies]
