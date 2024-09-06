@@ -31,7 +31,6 @@ class InferenceSandbox(Generic[RequestT]):
         setup_result = run(
             [
                 "/bin/sudo",
-                "-i",
                 "-u",
                 "sandbox",
                 "/bin/sh",

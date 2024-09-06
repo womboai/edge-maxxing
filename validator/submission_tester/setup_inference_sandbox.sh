@@ -6,7 +6,7 @@ REPOSITORY_URL=$1
 REVISION=$2
 SANDBOX_DIRECTORY="/sandbox"
 
-git clone --depth 1 --recursive --no-checkout "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
+git clone --recursive --no-checkout "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
 
 cd "$SANDBOX_DIRECTORY"
 git checkout "$REVISION"
