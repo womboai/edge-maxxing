@@ -26,8 +26,9 @@ from neuron import (
     CURRENT_CONTEST,
     find_contest,
     ContestDeviceValidationError,
+    Contest,
 )
-from base_validator.metrics import Metrics, BenchmarkState
+from base_validator.metrics import Metrics, BenchmarkState, CheckpointBenchmark
 
 from .wandb_args import add_wandb_args
 
@@ -97,8 +98,6 @@ class Validator:
     wallet: bt.wallet
     uid: int
 
-    metrics: Metrics
-
     hotkeys: list[str]
     step: int
 
@@ -111,6 +110,9 @@ class Validator:
 
     current_block: int
     last_block_fetch: datetime | None = None
+
+    benchmarks: list[CheckpointBenchmark | None]
+    contest: Contest
 
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
@@ -143,6 +145,8 @@ class Validator:
         self.benchmarking = False
 
         self.wandb_run = None
+
+        self.benchmarks = [None] * self.metagraph.n.item()
 
         self.load_state()
 
@@ -238,7 +242,7 @@ class Validator:
                 {
                     "step": self.step,
                     "hotkeys": self.hotkeys,
-                    "metrics": self.metrics,
+                    "benchmarks": self.benchmarks,
                     "last_day": self.last_day,
                     "contest_state": self.contest_state,
                     "previous_day_winners": self.previous_day_winners,
@@ -262,8 +266,7 @@ class Validator:
 
         self.step = state["step"]
         self.hotkeys = state["hotkeys"]
-        self.metrics = state.get("metrics", self.metrics)
-        self.metrics.set_metagraph(self.metagraph)
+        self.benchmarks = state.get("benchmarks", self.benchmarks)
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
         self.previous_day_winners = (
@@ -278,6 +281,26 @@ class Validator:
 
             if self.last_day:
                 self.start_wandb_run()
+
+    def reset_validator(self, uid: int):
+        self.benchmarks[uid] = None
+
+    def set_miner_benchmarks(self, uid: int, benchmark: CheckpointBenchmark):
+        self.benchmarks[uid] = benchmark
+
+    def resize(self):
+        new_data = [None] * self.metagraph.n.item()
+        length = len(self.metagraph.hotkeys)
+        new_data[:length] = self.benchmarks[:length]
+        self.benchmarks = new_data
+
+    def get_sorted_contestants(self) -> list[tuple[int, float]]:
+        contestants = []
+        for uid in range(self.metagraph.n.item()):
+            metric_data = self.benchmarks[uid]
+            if metric_data:
+                contestants.append((uid, metric_data.calculate_score()))
+        return sorted(contestants, key=lambda score: score[1])
 
     def sync(self):
         # --- Check for registration.
@@ -299,7 +322,7 @@ class Validator:
         )
 
         if len(self.hotkeys) != len(self.metagraph.hotkeys):
-            self.metrics.resize()
+            self.resize()
 
             if self.contest_state:
                 new_miner_info = [None] * self.metagraph.n.item()
@@ -311,7 +334,7 @@ class Validator:
         for uid, hotkey in enumerate(self.hotkeys):
             if hotkey != self.metagraph.hotkeys[uid]:
                 # hotkey has been replaced
-                self.metrics.reset(uid)
+                self.reset_validator(uid)
 
                 filtered_winners = [
                     (winner_uid, score)
@@ -563,7 +586,7 @@ class Validator:
                 bt.logging.info(f"Miners {updated_uids} changed their submissions")
 
                 for uid in updated_uids:
-                    self.metrics.reset(uid)
+                    self.reset_validator(uid)
 
                 self.contest_state.miner_info = miner_info
 
@@ -619,10 +642,10 @@ class Validator:
 
             for hotkey, benchmark in result.results:
                 if hotkey in self.metagraph.hotkeys:
-                    self.metrics.update(self.metagraph.hotkeys.index(hotkey), benchmark)
+                    self.set_miner_benchmarks(self.metagraph.hotkeys.index(hotkey), benchmark)
 
             for uid in failing_submission_uids:
-                self.metagraph.reset(uid)
+                self.reset_validator(uid)
 
             bt.logging.info(
                 "Benchmarking API has reported submission testing as done. "
