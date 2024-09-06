@@ -54,7 +54,10 @@ class InferenceSandbox(Generic[RequestT]):
                 "-u",
                 "sandbox",
                 START_INFERENCE
-            ]
+            ],
+            cwd=SANDBOX_DIRECTORY,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
         )
 
         bt.logging.info(f"Inference process starting")
