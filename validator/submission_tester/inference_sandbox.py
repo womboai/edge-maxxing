@@ -48,10 +48,7 @@ class InferenceSandbox(Generic[RequestT]):
 
         self._check_exit()
 
-        bt.logging.info(f"Binding to inference socket")
         self._socket = socket(AF_UNIX, SOCK_STREAM)
-        self._socket.bind(str(SOCKET))
-        chmod(SOCKET, 0o777)
 
         bt.logging.info(f"Waiting for inference container to be ready")
         self._socket.settimeout(60.0)
