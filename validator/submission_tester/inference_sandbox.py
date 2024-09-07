@@ -28,7 +28,7 @@ class InferenceSandbox(Generic[RequestT]):
 
         self._repository = repository
 
-        setup_result = run(
+        run(
             [
                 "/bin/sudo",
                 "-u",
@@ -40,9 +40,7 @@ class InferenceSandbox(Generic[RequestT]):
             ],
             stdout=sys.stdout,
             stderr=sys.stderr,
-        )
-
-        setup_result.check_returncode()
+        ).check_returncode()
 
         self._file_size = sum(file.stat().st_size for file in SANDBOX_DIRECTORY.rglob("*"))
 
@@ -95,7 +93,7 @@ class InferenceSandbox(Generic[RequestT]):
             ],
             stdout=sys.stdout,
             stderr=sys.stderr,
-        )
+        ).check_returncode()
 
         self._check_exit()
 
