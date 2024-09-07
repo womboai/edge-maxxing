@@ -5,6 +5,7 @@ set -e
 useradd --shell=/bin/false  --create-home --home-dir /home/sandbox sandbox
 mkdir /sandbox
 chown sandbox:sandbox /sandbox
+chmod o+w /sandbox
 
 useradd --create-home --home-dir /home/api api
 
