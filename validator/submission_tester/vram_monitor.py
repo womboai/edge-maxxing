@@ -9,7 +9,7 @@ POLL_RATE_SECONDS = 0.1
 class VRamMonitor:
     _thread: threading.Thread
     _contest: Contest
-    _vram_usage: int
+    _vram_usage: int = 0
     _stop_flag: threading.Event
 
     def __init__(self, contest: Contest):
