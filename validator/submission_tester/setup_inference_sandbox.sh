@@ -15,3 +15,5 @@ git submodule update --init
 python3.10 -m venv /sandbox/.venv
 
 /sandbox/.venv/bin/pip install $(cat /sandbox/install_args.txt) -e /sandbox
+
+chmod -R o+w /sandbox
