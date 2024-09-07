@@ -2,7 +2,6 @@ import sys
 import time
 from os.path import abspath
 from pathlib import Path
-from shutil import rmtree
 from socket import socket, AF_UNIX, SOCK_STREAM
 from subprocess import Popen, run
 from sys import byteorder
@@ -17,6 +16,12 @@ SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "setup_inferenc
 START_INFERENCE = abspath(SANDBOX_DIRECTORY / ".venv" / "bin" / "start_inference")
 SOCKET = abspath(SANDBOX_DIRECTORY / "inferences.sock")
 
+SANDBOX_ARGS = [
+    "/bin/sudo",
+    "-u",
+    "sandbox",
+]
+
 
 class InferenceSandbox(Generic[RequestT]):
     _repository: str
@@ -30,10 +35,7 @@ class InferenceSandbox(Generic[RequestT]):
 
         run(
             [
-                "/bin/sudo",
-                "-u",
-                "sandbox",
-                "/bin/sh",
+                *SANDBOX_ARGS,
                 SETUP_INFERENCE_SANDBOX_SCRIPT,
                 repository,
                 revision,
@@ -48,9 +50,7 @@ class InferenceSandbox(Generic[RequestT]):
 
         self._process = Popen(
             [
-                "/bin/sudo",
-                "-u",
-                "sandbox",
+                *SANDBOX_ARGS,
                 START_INFERENCE
             ],
             cwd=SANDBOX_DIRECTORY,
@@ -86,10 +86,10 @@ class InferenceSandbox(Generic[RequestT]):
 
         run(
             [
-                "/bin/sudo",
-                "-u",
-                "sandbox",
-                "rm -rf /sandbox/*",
+                *SANDBOX_ARGS,
+                "rm",
+                "-rf",
+                str(SANDBOX_DIRECTORY / "*")
             ],
             stdout=sys.stdout,
             stderr=sys.stderr,
