@@ -1,10 +1,9 @@
 import sys
 import time
+from multiprocessing.connection import Client
 from os.path import abspath
 from pathlib import Path
-from socket import socket, AF_UNIX, SOCK_STREAM
 from subprocess import Popen, run
-from sys import byteorder
 from typing import Generic
 
 import bittensor as bt
@@ -25,7 +24,7 @@ SANDBOX_ARGS = [
 
 class InferenceSandbox(Generic[RequestT]):
     _repository: str
-    _socket: socket
+    _client: Client
     _process: Popen
 
     def __init__(self, repository: str, revision: str):
@@ -63,10 +62,8 @@ class InferenceSandbox(Generic[RequestT]):
 
         self._check_exit()
 
-        self._socket = socket(AF_UNIX, SOCK_STREAM)
-
         bt.logging.info(f"Connecting to socket")
-        self._socket.connect(SOCKET)
+        self._client = Client(SOCKET)
 
     def _check_exit(self):
         if self._process.returncode:
@@ -74,12 +71,12 @@ class InferenceSandbox(Generic[RequestT]):
 
     def __enter__(self):
         self._process.__enter__()
-        self._socket.__enter__()
+        self._client.__enter__()
 
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._socket.__exit__(exc_type, exc_val, exc_tb)
+        self._client.__exit__(exc_type, exc_val, exc_tb)
 
         self._process.terminate()
         self._process.__exit__(exc_type, exc_val, exc_tb)
@@ -102,12 +99,9 @@ class InferenceSandbox(Generic[RequestT]):
 
         data = request.model_dump_json().encode("utf-8")
 
-        self._socket.send(len(data).to_bytes(2, byteorder))
-        self._socket.send(data)
+        self._client.send_bytes(data)
 
-        size = int.from_bytes(self._socket.recv(4), byteorder)
-
-        return self._socket.recv(size)
+        return self._client.recv_bytes()
 
     @property
     def model_size(self):

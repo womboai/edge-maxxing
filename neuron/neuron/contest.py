@@ -152,7 +152,7 @@ CONTESTS = [
     CudaContest(
         ContestId.SDXL_NEWDREAM_NVIDIA_4090,
         "https://github.com/womboai/sdxl-newdream-20-inference",
-        "7ac68ef76b197e38bb02d8299b2c11994a255964",
+        "584b6a4d37573e72c319cc0215511db1c640d7f9",
         "NVIDIA GeForce RTX 4090",
     ),
 ]
