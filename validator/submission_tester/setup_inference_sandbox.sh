@@ -2,16 +2,29 @@
 
 set -e
 
-REPOSITORY_URL=$1
-REVISION=$2
-SANDBOX_DIRECTORY="/sandbox"
+SANDBOX_DIRECTORY=$1
+REPOSITORY_URL=$2
+REVISION=$3
+BASELINE=$4
 
-git clone --recursive --no-checkout "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
+READY_MARKER="$SANDBOX_DIRECTORY/ready"
+VENV="$SANDBOX_DIRECTORY/.venv"
 
 cd "$SANDBOX_DIRECTORY"
-git checkout "$REVISION"
-git submodule update --init
 
-python3.10 -m venv /sandbox/.venv
+if ! $($BASELINE) || ! [ -f "$READY_MARKER" ]; then
+  rm -rf "$SANDBOX_DIRECTORY/*"
 
-/sandbox/.venv/bin/pip install $(cat /sandbox/install_args.txt) -e /sandbox
+  git clone --recursive --no-checkout "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
+
+  git checkout "$REVISION"
+  git submodule update --init
+
+  python3.10 -m venv "$VENV"
+
+  "$VENV/bin/pip" install $(cat "$SANDBOX_DIRECTORY/install_args.txt") -e /sandbox
+
+  if $($BASELINE); then
+    touch "$READY_MARKER"
+  fi
+fi

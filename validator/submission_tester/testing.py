@@ -54,7 +54,7 @@ def generate(contest: Contest, container: InferenceSandbox, prompt: str, seed: i
 def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> CheckpointBenchmark:
     bt.logging.info("Generating baseline samples to compare")
 
-    with InferenceSandbox(contest.baseline_repository, contest.baseline_revision) as baseline_sandbox:
+    with InferenceSandbox(contest.baseline_repository, contest.baseline_revision, True) as baseline_sandbox:
         baseline_size = baseline_sandbox.model_size
 
         baseline_outputs: list[GenerationOutput] = [
@@ -76,7 +76,7 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
 
     bt.logging.info("Generating model samples")
 
-    with InferenceSandbox(submission.repository, submission.revision) as sandbox:
+    with InferenceSandbox(submission.repository, submission.revision, False) as sandbox:
         size = sandbox.model_size
 
         i = 0

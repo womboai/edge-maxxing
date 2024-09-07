@@ -10,49 +10,60 @@ import bittensor as bt
 
 from neuron import RequestT
 
-SANDBOX_DIRECTORY = Path("/sandbox")
 SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "setup_inference_sandbox.sh")
-START_INFERENCE = abspath(SANDBOX_DIRECTORY / ".venv" / "bin" / "start_inference")
-SOCKET = abspath(SANDBOX_DIRECTORY / "inferences.sock")
 
-SANDBOX_ARGS = [
-    "/bin/sudo",
-    "-u",
-    "sandbox",
-]
+SANDBOX_DIRECTORY = Path("/sandbox")
+BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
+
+
+def sandbox_args(user: str):
+    return [
+        "/bin/sudo",
+        "-u",
+        user,
+    ]
 
 
 class InferenceSandbox(Generic[RequestT]):
     _repository: str
+
+    _user: str
+    _sandbox_directory: Path
+
     _client: Client
     _process: Popen
 
-    def __init__(self, repository: str, revision: str):
+    def __init__(self, repository: str, revision: str, baseline: bool):
         bt.logging.info(f"Downloading {repository} with revision {revision}")
 
         self._repository = repository
 
+        self._user = "baseline-sandbox" if baseline else "sandbox"
+        self._sandbox_directory = BASELINE_SANDBOX_DIRECTORY if baseline else SANDBOX_DIRECTORY
+
         run(
             [
-                *SANDBOX_ARGS,
+                *sandbox_args(self._user),
                 SETUP_INFERENCE_SANDBOX_SCRIPT,
+                self._sandbox_directory,
                 repository,
                 revision,
+                str(baseline).lower(),
             ],
             stdout=sys.stdout,
             stderr=sys.stderr,
         ).check_returncode()
 
-        self._file_size = sum(file.stat().st_size for file in SANDBOX_DIRECTORY.rglob("*"))
+        self._file_size = sum(file.stat().st_size for file in self._sandbox_directory.rglob("*"))
 
         bt.logging.info(f"Repository {repository} had size {self._file_size}")
 
         self._process = Popen(
             [
-                *SANDBOX_ARGS,
-                START_INFERENCE
+                *sandbox_args(self._user),
+                abspath(self._sandbox_directory / ".venv" / "bin" / "start_inference")
             ],
-            cwd=SANDBOX_DIRECTORY,
+            cwd=self._sandbox_directory,
             stdout=sys.stdout,
             stderr=sys.stderr,
         )
@@ -63,7 +74,7 @@ class InferenceSandbox(Generic[RequestT]):
         self._check_exit()
 
         bt.logging.info(f"Connecting to socket")
-        self._client = Client(SOCKET)
+        self._client = Client(abspath(self._sandbox_directory / "inferences.sock"))
 
     def _check_exit(self):
         if self._process.returncode:
@@ -83,10 +94,10 @@ class InferenceSandbox(Generic[RequestT]):
 
         run(
             [
-                *SANDBOX_ARGS,
+                *sandbox_args(self._user),
                 "rm",
                 "-rf",
-                str(SANDBOX_DIRECTORY / "*")
+                str(self._sandbox_directory / "*")
             ],
             stdout=sys.stdout,
             stderr=sys.stderr,
