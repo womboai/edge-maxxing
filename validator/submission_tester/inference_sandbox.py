@@ -86,7 +86,16 @@ class InferenceSandbox(Generic[RequestT]):
         self._process.terminate()
         self._process.__exit__(exc_type, exc_val, exc_tb)
 
-        rmtree("/sandbox")
+        run(
+            [
+                "/bin/sudo",
+                "-u",
+                "sandbox",
+                "rm -rf /sandbox/*",
+            ],
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+        )
 
         self._check_exit()
 
