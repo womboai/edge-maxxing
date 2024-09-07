@@ -72,7 +72,7 @@ class InferenceSandbox(Generic[RequestT]):
 
     def _check_exit(self):
         if self._process.returncode:
-            raise RuntimeError(f"Failed to setup {self._repository}, got exit code {self._process.returncode}")
+            raise RuntimeError(f"'{self._repository}'s inference crashed, got exit code {self._process.returncode}")
 
     def __enter__(self):
         self._process.__enter__()
@@ -88,7 +88,11 @@ class InferenceSandbox(Generic[RequestT]):
 
         rmtree("/sandbox")
 
+        self._check_exit()
+
     def __call__(self, request: RequestT):
+        self._check_exit()
+
         data = request.model_dump_json().encode("utf-8")
 
         self._socket.send(len(data).to_bytes(2, byteorder))
