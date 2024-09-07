@@ -61,7 +61,7 @@ class InferenceSandbox(Generic[RequestT]):
         )
 
         bt.logging.info(f"Inference process starting")
-        time.sleep(30.0)
+        time.sleep(60.0)
 
         self._check_exit()
 
