@@ -21,8 +21,8 @@ ENV PATH="/home/validator/.local/bin:$PATH"
 
 RUN poetry install
 
-ENTRYPOINT [
-    "poetry",
-    "run",
-    "start_validator"
+ENTRYPOINT [ \
+    "poetry", \
+    "run", \
+    "start_validator" \
 ]
