@@ -19,6 +19,10 @@ COPY validator/poetry.toml validator/
 COPY validator/poetry.lock validator/
 COPY validator/submission_tester/setup.sh validator/submission_tester/
 
+USER root
+RUN chown -R validator:validator /app
+USER validator
+
 WORKDIR /app/validator
 ENV PATH="/home/validator/.local/bin:$PATH"
 
