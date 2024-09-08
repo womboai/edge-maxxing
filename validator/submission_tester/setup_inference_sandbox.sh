@@ -17,6 +17,7 @@ if $($BASELINE) && [ -f "$READY_MARKER" ]; then
 else
   rm -rf "$SANDBOX_DIRECTORY/*"
 
+  git config --global advice.detachedHead false
   git clone --recursive --no-checkout "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
 
   if $($BASELINE); then
