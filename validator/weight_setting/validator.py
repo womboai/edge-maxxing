@@ -28,7 +28,7 @@ from neuron import (
     ContestDeviceValidationError,
     Contest,
 )
-from base_validator.metrics import Metrics, BenchmarkState, CheckpointBenchmark
+from base_validator.metrics import BenchmarkState, CheckpointBenchmark
 
 from .wandb_args import add_wandb_args
 
@@ -128,8 +128,6 @@ class Validator:
         self.subtensor = bt.subtensor(config=self.config)
         self.metagraph = self.subtensor.metagraph(netuid=self.config.netuid)
         self.wallet = bt.wallet(config=self.config)
-
-        self.metrics = Metrics(self.metagraph)
 
         self.hotkeys = self.metagraph.hotkeys
         hotkey = self.wallet.hotkey.ss58_address
@@ -391,7 +389,7 @@ class Validator:
                 bucket_rank = highest_bucket - index
 
                 for uid, score in bucket.scores:
-                    metric_data = self.metrics.metrics[uid]
+                    metric_data = self.benchmarks[uid]
                     if metric_data:
                         submission = cast(CheckpointSubmission, self.contest_state.miner_info[uid])
                         if submission:
@@ -467,7 +465,7 @@ class Validator:
             bt.logging.warning(f"set_weights failed, {message}")
 
     def get_score_buckets(self) -> list[WinnerList]:
-        sorted_contestants = cast(list[tuple[Uid, float]], self.metrics.get_sorted_contestants())
+        sorted_contestants = cast(list[tuple[Uid, float]], self.get_sorted_contestants())
 
         buckets: list[WinnerList] = [[]]
 
@@ -540,7 +538,7 @@ class Validator:
 
                 bt.logging.info(f"Working on contest {self.contest.id.name} today's submissions")
 
-                self.metrics.clear()
+                self.benchmarks = [None] * self.metagraph.n.item()
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
                 self.previous_day_winners = []
