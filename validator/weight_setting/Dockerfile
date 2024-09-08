@@ -8,6 +8,8 @@ WORKDIR /app
 
 USER validator
 
+RUN pipx install poetry
+
 COPY README.md .
 COPY neuron neuron
 COPY pipelines pipelines
@@ -18,15 +20,12 @@ COPY validator/poetry.lock validator/
 COPY validator/submission_tester/setup.sh validator/submission_tester/
 
 WORKDIR /app/validator
-
-RUN pipx install poetry
-
-COPY submission_tester submission_tester
-COPY base_validator base_validator
-
 ENV PATH="/home/validator/.local/bin:$PATH"
 
 RUN poetry install
+
+COPY submission_tester submission_tester
+COPY base_validator base_validator
 
 ENTRYPOINT [ \
     "poetry", \
