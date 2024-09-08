@@ -1,6 +1,6 @@
 FROM python:3.10
 
-RUN apt-get update && apt-get install pipx
+RUN apt-get update && apt-get install -y pipx
 
 RUN useradd --create-home --home-dir /home/validator validator
 
