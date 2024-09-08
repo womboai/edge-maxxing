@@ -77,7 +77,7 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
     bt.logging.info("Generating model samples")
 
     with InferenceSandbox(submission.repository, submission.revision, False) as sandbox:
-        size = sandbox.model_size
+        average_size = sandbox.model_size
 
         i = 0
 
@@ -97,21 +97,21 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
             similarity = contest.compare_outputs(baseline.output, generation.output)
 
             bt.logging.info(
-                f"Sample {i} generated "
-                f"with generation time of {generation.generation_time}, "
-                f"and similarity {similarity}, "
-                f"and VRAM usage of {generation.vram_used}, "
-                f"and watts usage of {generation.watts_used}."
+                f"Sample {i} Generated\n"
+                f"Generation Time: {generation.generation_time}s\n"
+                f"Model Size: {similarity}b\n"
+                f"VRAM Usage: {generation.vram_used}b\n"
+                f"Power Usage: {generation.watts_used}W"
             )
 
             if generated:
                 average_time = (average_time * generated + generation.generation_time) / (generated + 1)
-                vram_used = (baseline.vram_used * generated + generation.vram_used) / (generated + 1)
-                watts_used = (baseline.watts_used * generated + generation.watts_used) / (generated + 1)
+                average_vram_used = (baseline.vram_used * generated + generation.vram_used) / (generated + 1)
+                average_watts_used = (baseline.watts_used * generated + generation.watts_used) / (generated + 1)
             else:
                 average_time = generation.generation_time
-                vram_used = generation.vram_used
-                watts_used = generation.watts_used
+                average_vram_used = generation.vram_used
+                average_watts_used = generation.watts_used
 
             average_similarity = (average_similarity * generated + similarity) / (generated + 1)
 
@@ -120,12 +120,12 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
                 continue
 
         bt.logging.info(
-            f"Tested {i + 1} samples, "
-            f"average similarity of {average_similarity}, "
-            f"and speed of {average_time}, "
-            f"and model size of {size}, "
-            f"and VRAM usage of {vram_used}, "
-            f"and watts usage of {watts_used}."
+            f"Tested {i + 1} Samples\n"
+            f"Average Similarity: {average_similarity}\n"
+            f"Average Generation Time: {average_time}s\n"
+            f"Average Model Size: {average_size}b\n"
+            f"Average VRAM Usage: {average_vram_used}b\n"
+            f"Average Power Usage: {average_watts_used}W"
         )
 
     return CheckpointBenchmark(
@@ -137,9 +137,9 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
         ),
         model=MetricData(
             generation_time=average_time,
-            size=size,
-            vram_used=vram_used,
-            watts_used=watts_used,
+            size=average_size,
+            vram_used=average_vram_used,
+            watts_used=average_watts_used,
         ),
         similarity_score=average_similarity,
     )
