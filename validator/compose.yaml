@@ -1,0 +1,29 @@
+services:
+  api:
+    build:
+      context: ../
+      dockerfile: ./validator/submission_tester/Dockerfile
+
+    volumes:
+      - ~/.bittensor:/home/api/.bittensor
+      - ~/edge-maxxing/baseline-sandbox:/baseline-sandbox
+
+    networks:
+      - api
+
+    ports:
+      - localhost:8000:8000
+
+  validator:
+    build:
+      context: ../
+      dockerfile: ./validator/weight_setting/Dockerfile
+
+    command: --benchmarker_api http://localhost:8000 $${3:}
+
+    networks:
+      - validator
+
+networks:
+  api:
+  validator:

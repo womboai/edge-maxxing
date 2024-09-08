@@ -2,8 +2,8 @@
 
 set -e
 
-useradd --shell=/bin/false  --create-home --home-dir /home/sandbox sandbox
-useradd --shell=/bin/false  --create-home --home-dir /home/baseline-sandbox baseline-sandbox
+useradd --shell=/bin/false --create-home --home-dir /home/sandbox sandbox
+useradd --shell=/bin/false --create-home --home-dir /home/baseline-sandbox baseline-sandbox
 
 mkdir /sandbox
 mkdir /baseline-sandbox
