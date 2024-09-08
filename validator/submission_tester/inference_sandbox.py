@@ -97,7 +97,7 @@ class InferenceSandbox(Generic[RequestT]):
                 *sandbox_args(self._user),
                 "rm",
                 "-rf",
-                str(self._sandbox_directory / "*")
+                str(self._sandbox_directory / ".[!.]*")
             ],
             stdout=sys.stdout,
             stderr=sys.stderr,
