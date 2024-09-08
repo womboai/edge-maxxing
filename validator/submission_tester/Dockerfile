@@ -18,8 +18,8 @@ COPY validator/submission_tester/setup.sh validator/submission_tester/
 
 RUN ./validator/submission_tester/setup.sh
 
-COPY validator/submission_tester validator/submission_tester
 COPY validator/base_validator validator/base_validator
+COPY validator/submission_tester validator/submission_tester
 
 WORKDIR /api/validator
 

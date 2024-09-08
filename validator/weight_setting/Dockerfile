@@ -31,8 +31,8 @@ ENV PATH="/home/validator/.local/bin:$PATH"
 
 RUN poetry install
 
-COPY validator/submission_tester submission_tester
 COPY validator/base_validator base_validator
+COPY validator/weight_setting weight_setting
 
 ENTRYPOINT [ \
     "poetry", \
