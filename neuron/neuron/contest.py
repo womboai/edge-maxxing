@@ -57,7 +57,7 @@ class ImageContestMixIn(Contest, ABC):
         from torch.nn.functional import cosine_similarity
 
         from torchvision.models import resnet50, ResNet50_Weights
-        from torchvision.nn.functional import pil_to_tensor
+        from torchvision.transforms.functional import pil_to_tensor
 
         resnet_embed = Sequential(*list(resnet50().eval().children())[:-1])
 
