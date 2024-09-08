@@ -26,6 +26,9 @@ USER validator
 WORKDIR /app/validator
 ENV PATH="/home/validator/.local/bin:$PATH"
 
+RUN mkdir submission_tester
+RUN mkdir base_validator
+
 RUN poetry install
 
 COPY validator/submission_tester submission_tester
