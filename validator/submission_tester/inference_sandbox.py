@@ -95,9 +95,11 @@ class InferenceSandbox(Generic[RequestT]):
         run(
             [
                 *sandbox_args(self._user),
-                "rm",
-                "-rf",
-                str(self._sandbox_directory / ".[!.]*")
+                "find",
+                str(self._sandbox_directory),
+                "-mindepth",
+                "1",
+                "-delete",
             ],
             stdout=sys.stdout,
             stderr=sys.stderr,
