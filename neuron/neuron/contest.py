@@ -51,21 +51,24 @@ class Contest(ABC):
 
 @abstractmethod
 class ImageContestMixIn(Contest, ABC):
+    device: str
+
     def compare_outputs(self, baseline: bytes, optimized: bytes) -> float:
         from torch import Tensor
-        from torch.nn import Sequential
+        from torch.nn import Module, Sequential
         from torch.nn.functional import cosine_similarity
 
         from torchvision.models import resnet50, ResNet50_Weights
         from torchvision.transforms.functional import pil_to_tensor
 
-        resnet_embed = Sequential(*list(resnet50().eval().children())[:-1])
+        resnet_embed = Sequential(*list(resnet50().eval().children())[:-1]).to(self.device)
 
-        transform = ResNet50_Weights.DEFAULT.transforms()
+        transform: Module = ResNet50_Weights.DEFAULT.transforms()
+        transform = transform.to(self.device)
 
         def load_image(data: bytes):
             with BytesIO(data) as fp:
-                return pil_to_tensor(Image.open(fp))
+                return pil_to_tensor(Image.open(fp)).to(self.device)
 
         def resnet_embed_image(tensor: Tensor):
             return resnet_embed(transform(tensor).unsqueeze(0))
@@ -88,6 +91,8 @@ class ImageContestMixIn(Contest, ABC):
 
 
 class CudaContest(ImageContestMixIn, Contest):
+    device = "cuda"
+
     def __init__(
         self,
         contest_id: ContestId,
@@ -117,7 +122,7 @@ class CudaContest(ImageContestMixIn, Contest):
     def validate(self):
         import torch
 
-        device_name = torch.cuda.get_device_name("cuda")
+        device_name = torch.cuda.get_device_name(self.device)
 
         if device_name != self.expected_device_name:
             raise ContestDeviceValidationError(
@@ -126,6 +131,8 @@ class CudaContest(ImageContestMixIn, Contest):
 
 
 class AppleSiliconContest(ImageContestMixIn, Contest):
+    device = "mps"
+
     def get_vram_used(self):
         import torch
 
