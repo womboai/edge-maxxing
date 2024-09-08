@@ -12,7 +12,10 @@ VENV="$SANDBOX_DIRECTORY/.venv"
 
 cd "$SANDBOX_DIRECTORY"
 
-if ! $($BASELINE) || ! [ -f "$READY_MARKER" ]; then
+if $($BASELINE) && [ -f "$READY_MARKER" ]; then
+  git fetch
+  git checkout "$REVISION"
+else
   rm -rf "$SANDBOX_DIRECTORY/*"
 
   git clone --recursive --no-checkout "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
