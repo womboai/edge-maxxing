@@ -28,7 +28,7 @@ services:
     volumes:
       - ~/.bittensor:/home/validator/.bittensor
 
-    command: --benchmarker_api http://localhost:8000 $${3:}
+    command: --benchmarker_api http://localhost:8000 $VALIDATOR_ARGS
 
     networks:
       - validator
