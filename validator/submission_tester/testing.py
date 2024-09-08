@@ -99,7 +99,7 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
             bt.logging.info(
                 f"Sample {i} Generated\n"
                 f"Generation Time: {generation.generation_time}s\n"
-                f"Similarity: {similarity}b\n"
+                f"Similarity: {similarity}\n"
                 f"VRAM Usage: {generation.vram_used}b\n"
                 f"Power Usage: {generation.watts_used}W"
             )
