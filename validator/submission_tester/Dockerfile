@@ -5,9 +5,16 @@ WORKDIR /api
 COPY README.md .
 COPY neuron neuron
 COPY pipelines pipelines
-COPY validator validator
+
+COPY validator/pyproject.toml validator/
+COPY validator/poetry.toml validator/
+COPY validator/poetry.lock validator/
+COPY validator/submission_tester/setup.sh validator/submission_tester/
 
 RUN ./validator/submission_tester/setup.sh
+
+COPY validator/submission_tester validator/submission_tester
+COPY validator/base_validator validator/base_validator
 
 WORKDIR /api/validator
 
