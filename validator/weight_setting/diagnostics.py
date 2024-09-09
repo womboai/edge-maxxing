@@ -9,9 +9,9 @@ from os.path import expanduser, join, isfile
 from pathlib import Path
 
 import bittensor as bt
-from torch import load
+from pickle import load
 
-from validator import ContestState  # noqa (Needed for depickling)
+from .validator import ContestState  # noqa (Needed for depickling)
 
 DIAGNOSTICS_DIR: Path = Path(".diagnostics")
 DIAGNOSTICS_FILE_PATH: Path = DIAGNOSTICS_DIR / "diagnostics.json"
@@ -39,7 +39,7 @@ def state_path(data: DiagnosticsData) -> str:
 
     makedirs(full_path, exist_ok=True)
 
-    return join(full_path, "state.pt")
+    return join(full_path, "state.bin")
 
 
 def load_state(diagnostics: DiagnosticsData) -> dict:
@@ -48,7 +48,8 @@ def load_state(diagnostics: DiagnosticsData) -> dict:
     if not isfile(path):
         return {}
 
-    return load(path)
+    with open(path, "rb") as file:
+        return load(file)
 
 
 def save_validator_diagnostics(config: bt.config):

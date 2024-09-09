@@ -1,9 +1,9 @@
 [tool.poetry]
-name = "edge-maxxing-miner"
+name = "edge-maxxing-pipelines"
 
 version = "1.0.0"
 
-description = "The miner which provides optimized models and checkpoints"
+description = "The base neuron which validators & miners inherent from"
 
 readme = "../README.md"
 
@@ -11,7 +11,7 @@ license = "MIT"
 
 authors = ["WOMBO <hello@w.ai>"]
 
-packages = [{ include = "miner" }]
+packages = [{ include = "pipelines" }]
 
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -26,14 +26,17 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Mathematics",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
-edge-maxxing-neuron = { path = "../neuron", develop = true }
+pydantic = ">=2"
 
-[tool.poetry.scripts]
-submit_model = 'miner.submit:main'
+[tool.poetry.dev-dependencies]
+pytype = "2024.4.11"
 
 [build-system]
 requires = ["poetry-core"]
@@ -42,4 +45,4 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry-monorepo.deps]
 
 [tool.pytype]
-inputs = ["miner"]
+inputs = ["pipelines"]

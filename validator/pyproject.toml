@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "edge-optimization-subnet-validator"
+name = "edge-maxxing-validator"
 
 version = "1.0.0"
 
@@ -10,7 +10,12 @@ readme = "../README.md"
 license = "MIT"
 
 authors = ["WOMBO <hello@w.ai>"]
-packages = [{ include = "validator" }]
+
+packages = [
+    { include = "base_validator" },
+    { include = "submission_tester" },
+    { include = "weight_setting" },
+]
 
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -28,9 +33,21 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.11"
-wandb = "0.17.5"
-edge-optimization-subnet-neuron = { path = "../neuron", develop = true }
+python = ">=3.10,<3.13"
+wandb = "0.17.8"
+torch = "2.4.0"
+diffusers = "0.30.2"
+nltk = "3.9.1"
+transformers = "4.44.2"
+accelerate = "0.34.0"
+omegaconf = "2.3.0"
+pynvml = "11.5.3"
+torchvision = "0.19.0"
+edge-maxxing-pipelines = { path = "../pipelines", develop = true }
+edge-maxxing-neuron = { path = "../neuron", develop = true }
+
+[tool.poetry.scripts]
+start_validator = 'weight_setting.validator:main'
 
 [build-system]
 requires = ["poetry-core"]

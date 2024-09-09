@@ -1,6 +1,6 @@
 [[package]]
 name = "accelerate"
-version = "0.33.0"
+version = "0.34.0"
 description = "Accelerate"
 category = "main"
 optional = false
@@ -8,23 +8,23 @@ python-versions = ">=3.8.0"
 
 [package.dependencies]
 huggingface-hub = ">=0.21.0"
-numpy = ">=1.17,<2.0.0"
+numpy = ">=1.17,<3.0.0"
 packaging = ">=20.0"
 psutil = "*"
 pyyaml = "*"
-safetensors = ">=0.3.1"
+safetensors = ">=0.4.3"
 torch = ">=1.10.0"
 
 [package.extras]
-deepspeed = ["deepspeed (<=0.14.0)"]
-dev = ["black (>=23.1,<24.0)", "hf-doc-builder (>=0.3.0)", "ruff (>=0.2.1,<0.3.0)", "pytest (>=7.2.0,<=8.0.0)", "pytest-xdist", "pytest-subtests", "parameterized", "datasets", "diffusers", "evaluate", "torchpippy (>=0.2.0)", "transformers", "scipy", "scikit-learn", "tqdm", "bitsandbytes", "timm", "rich"]
+deepspeed = ["deepspeed"]
+dev = ["black (>=23.1,<24.0)", "hf-doc-builder (>=0.3.0)", "ruff (>=0.2.1,<0.3.0)", "pytest (>=7.2.0,<=8.0.0)", "pytest-xdist", "pytest-subtests", "parameterized", "datasets", "diffusers", "evaluate", "torchdata (>=0.8.0)", "torchpippy (>=0.2.0)", "transformers", "scipy", "scikit-learn", "tqdm", "bitsandbytes", "timm", "rich"]
 quality = ["black (>=23.1,<24.0)", "hf-doc-builder (>=0.3.0)", "ruff (>=0.2.1,<0.3.0)"]
 rich = ["rich"]
 sagemaker = ["sagemaker"]
-test-dev = ["datasets", "diffusers", "evaluate", "torchpippy (>=0.2.0)", "transformers", "scipy", "scikit-learn", "tqdm", "bitsandbytes", "timm"]
+test-dev = ["datasets", "diffusers", "evaluate", "torchdata (>=0.8.0)", "torchpippy (>=0.2.0)", "transformers", "scipy", "scikit-learn", "tqdm", "bitsandbytes", "timm"]
 test-prod = ["pytest (>=7.2.0,<=8.0.0)", "pytest-xdist", "pytest-subtests", "parameterized"]
 test-trackers = ["wandb", "comet-ml", "tensorboard", "dvclive"]
-testing = ["pytest (>=7.2.0,<=8.0.0)", "pytest-xdist", "pytest-subtests", "parameterized", "datasets", "diffusers", "evaluate", "torchpippy (>=0.2.0)", "transformers", "scipy", "scikit-learn", "tqdm", "bitsandbytes", "timm"]
+testing = ["pytest (>=7.2.0,<=8.0.0)", "pytest-xdist", "pytest-subtests", "parameterized", "datasets", "diffusers", "evaluate", "torchdata (>=0.8.0)", "torchpippy (>=0.2.0)", "transformers", "scipy", "scikit-learn", "tqdm", "bitsandbytes", "timm"]
 
 [[package]]
 name = "aiohappyeyeballs"
@@ -232,28 +232,6 @@ dev = ["black (==23.7.0)", "pytest (==7.2.0)", "pytest-asyncio (==0.23.7)", "pyt
 torch = ["torch (>=1.13.1)"]
 
 [[package]]
-name = "cattrs"
-version = "23.2.3"
-description = "Composable complex class support for attrs and dataclasses."
-category = "main"
-optional = false
-python-versions = ">=3.8"
-
-[package.dependencies]
-attrs = ">=23.1.0"
-exceptiongroup = {version = ">=1.1.1", markers = "python_version < \"3.11\""}
-typing-extensions = {version = ">=4.1.0,<4.6.3 || >4.6.3", markers = "python_version < \"3.11\""}
-
-[package.extras]
-bson = ["pymongo (>=4.4.0)"]
-cbor2 = ["cbor2 (>=5.4.6)"]
-msgpack = ["msgpack (>=1.0.5)"]
-orjson = ["orjson (>=3.9.2)"]
-pyyaml = ["pyyaml (>=6.0)"]
-tomlkit = ["tomlkit (>=0.11.8)"]
-ujson = ["ujson (>=5.7.0)"]
-
-[[package]]
 name = "certifi"
 version = "2024.2.2"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -263,7 +241,7 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "cffi"
-version = "1.17.0"
+version = "1.17.1"
 description = "Foreign Function Interface for Python calling C code."
 category = "main"
 optional = false
@@ -300,42 +278,6 @@ optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
 
 [[package]]
-name = "contourpy"
-version = "1.3.0"
-description = "Python library for calculating contours of 2D quadrilateral grids"
-category = "main"
-optional = false
-python-versions = ">=3.9"
-
-[package.dependencies]
-numpy = ">=1.23"
-
-[package.extras]
-docs = ["furo", "sphinx (>=7.2)", "sphinx-copybutton"]
-bokeh = ["bokeh", "selenium"]
-mypy = ["contourpy", "docutils-stubs", "mypy (==1.11.1)", "types-pillow"]
-test = ["contourpy", "matplotlib", "pillow"]
-test-no-images = ["pytest", "pytest-cov", "pytest-rerunfailures", "pytest-xdist", "wurlitzer"]
-
-[[package]]
-name = "coremltools"
-version = "8.0b2"
-description = "Community Tools for Core ML"
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-attrs = ">=21.3.0"
-cattrs = "*"
-numpy = ">=1.14.5"
-packaging = "*"
-protobuf = ">=3.1.0"
-pyaml = "*"
-sympy = "*"
-tqdm = "*"
-
-[[package]]
 name = "cryptography"
 version = "42.0.8"
 description = "cryptography is a package which provides cryptographic recipes and primitives to Python developers."
@@ -355,18 +297,6 @@ sdist = ["build"]
 ssh = ["bcrypt (>=3.1.5)"]
 test = ["pytest (>=6.2.0)", "pytest-benchmark", "pytest-cov", "pytest-xdist", "pretend", "certifi"]
 test-randomorder = ["pytest-randomly"]
-
-[[package]]
-name = "cycler"
-version = "0.12.1"
-description = "Composable style cycles"
-category = "main"
-optional = false
-python-versions = ">=3.8"
-
-[package.extras]
-docs = ["ipython", "matplotlib", "numpydoc", "sphinx"]
-tests = ["pytest", "pytest-cov", "pytest-xdist"]
 
 [[package]]
 name = "cytoolz"
@@ -400,14 +330,13 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "diffusers"
-version = "0.30.1"
+version = "0.30.2"
 description = "State-of-the-art diffusion in PyTorch and JAX."
 category = "main"
 optional = false
 python-versions = ">=3.8.0"
 
 [package.dependencies]
-accelerate = {version = ">=0.31.0", optional = true, markers = "extra == \"torch\""}
 filelock = "*"
 huggingface-hub = ">=0.23.2"
 importlib-metadata = "*"
@@ -416,7 +345,6 @@ Pillow = "*"
 regex = "!=2019.12.17"
 requests = "*"
 safetensors = ">=0.3.1"
-torch = {version = ">=1.4", optional = true, markers = "extra == \"torch\""}
 
 [package.extras]
 dev = ["urllib3 (<=2.0.0)", "isort (>=5.5.4)", "ruff (==0.1.5)", "hf-doc-builder (>=0.3.0)", "compel (==0.1.8)", "GitPython (<3.1.19)", "datasets", "jinja2", "invisible-watermark (>=0.2.0)", "k-diffusion (>=0.0.12)", "librosa", "parameterized", "pytest", "pytest-timeout", "pytest-xdist", "requests-mock (==1.10.0)", "safetensors (>=0.3.1)", "sentencepiece (>=0.1.91,!=0.1.92)", "scipy", "torchvision", "transformers (>=4.41.2)", "accelerate (>=0.31.0)", "protobuf (>=3.20.3,<4)", "tensorboard", "peft (>=0.6.0)", "torch (>=1.4)", "jax (>=0.4.1)", "jaxlib (>=0.4.1)", "flax (>=0.4.1)"]
@@ -454,30 +382,38 @@ gmpy = ["gmpy"]
 gmpy2 = ["gmpy2"]
 
 [[package]]
-name = "edge-optimization-subnet-neuron"
+name = "edge-maxxing-neuron"
 version = "1.0.0"
 description = "The base neuron which validators & miners inherent from"
 category = "main"
 optional = false
-python-versions = ">=3.10,<3.11"
+python-versions = ">=3.10,<3.13"
 develop = true
 
 [package.dependencies]
-accelerate = "0.33.0"
 bittensor = "7.3.1"
-diffusers = "0.30.1"
+GitPython = "3.1.43"
 loguru = "0.7.2"
-nltk = "3.9.1"
-omegaconf = "2.3.0"
-pynvml = "11.5.3"
-python_coreml_stable_diffusion = {git = "https://github.com/apple/ml-stable-diffusion", tag = "1.1.1"}
-torch = "2.4.0"
-torchvision = "^0.19.0"
-transformers = "4.44.2"
 
 [package.source]
 type = "directory"
 url = "../neuron"
+
+[[package]]
+name = "edge-maxxing-pipelines"
+version = "1.0.0"
+description = "The base neuron which validators & miners inherent from"
+category = "main"
+optional = false
+python-versions = ">=3.10,<3.13"
+develop = true
+
+[package.dependencies]
+pydantic = ">=2"
+
+[package.source]
+type = "directory"
+url = "../pipelines"
 
 [[package]]
 name = "eth-hash"
@@ -589,28 +525,6 @@ testing = ["covdefaults (>=2.3)", "coverage (>=7.3.2)", "diff-cover (>=8.0.1)", 
 typing = ["typing-extensions (>=4.8)"]
 
 [[package]]
-name = "fonttools"
-version = "4.53.1"
-description = "Tools to manipulate font files"
-category = "main"
-optional = false
-python-versions = ">=3.8"
-
-[package.extras]
-all = ["fs (>=2.2.0,<3)", "lxml (>=4.0)", "zopfli (>=0.1.4)", "lz4 (>=1.7.4.2)", "pycairo", "matplotlib", "sympy", "skia-pathops (>=0.5.0)", "uharfbuzz (>=0.23.0)", "brotlicffi (>=0.8.0)", "scipy", "brotli (>=1.0.1)", "munkres", "unicodedata2 (>=15.1.0)", "xattr"]
-graphite = ["lz4 (>=1.7.4.2)"]
-interpolatable = ["pycairo", "scipy", "munkres"]
-lxml = ["lxml (>=4.0)"]
-pathops = ["skia-pathops (>=0.5.0)"]
-plot = ["matplotlib"]
-repacker = ["uharfbuzz (>=0.23.0)"]
-symfont = ["sympy"]
-type1 = ["xattr"]
-ufo = ["fs (>=2.2.0,<3)"]
-unicode = ["unicodedata2 (>=15.1.0)"]
-woff = ["zopfli (>=0.1.4)", "brotlicffi (>=0.8.0)", "brotli (>=1.0.1)"]
-
-[[package]]
 name = "frozenlist"
 version = "1.4.1"
 description = "A list-like structure which implements collections.abc.MutableSequence"
@@ -620,7 +534,7 @@ python-versions = ">=3.8"
 
 [[package]]
 name = "fsspec"
-version = "2024.6.1"
+version = "2024.9.0"
 description = "File-system specification"
 category = "main"
 optional = false
@@ -755,29 +669,6 @@ perf = ["ipython"]
 test = ["pytest (>=6,<8.1.0 || >=8.2.0)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-mypy", "pytest-enabler (>=2.2)", "packaging", "pyfakefs", "flufl.flake8", "pytest-perf (>=0.9.2)", "jaraco.test (>=5.4)", "importlib-resources (>=1.3)", "pytest-ruff (>=0.2.1)"]
 
 [[package]]
-name = "iniconfig"
-version = "2.0.0"
-description = "brain-dead simple config-ini parsing"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[[package]]
-name = "invisible-watermark"
-version = "0.2.0"
-description = "The library for creating and decoding invisible image watermarks"
-category = "main"
-optional = false
-python-versions = ">=3.6"
-
-[package.dependencies]
-numpy = ">=1.17.0"
-opencv-python = ">=4.1.0.25"
-Pillow = ">=6.0.0"
-PyWavelets = ">=1.1.1"
-torch = "*"
-
-[[package]]
 name = "jinja2"
 version = "3.1.4"
 description = "A very fast and expressive template engine."
@@ -798,14 +689,6 @@ description = "Lightweight pipelining with Python functions"
 category = "main"
 optional = false
 python-versions = ">=3.8"
-
-[[package]]
-name = "kiwisolver"
-version = "1.4.5"
-description = "A fast implementation of the Cassowary constraint solver"
-category = "main"
-optional = false
-python-versions = ">=3.7"
 
 [[package]]
 name = "levenshtein"
@@ -863,28 +746,6 @@ optional = false
 python-versions = ">=3.7"
 
 [[package]]
-name = "matplotlib"
-version = "3.9.2"
-description = "Python plotting package"
-category = "main"
-optional = false
-python-versions = ">=3.9"
-
-[package.dependencies]
-contourpy = ">=1.0.1"
-cycler = ">=0.10"
-fonttools = ">=4.22.0"
-kiwisolver = ">=1.3.1"
-numpy = ">=1.23"
-packaging = ">=20.0"
-pillow = ">=8"
-pyparsing = ">=2.3.1"
-python-dateutil = ">=2.7"
-
-[package.extras]
-dev = ["meson-python (>=0.13.1)", "numpy (>=1.25)", "pybind11 (>=2.6)", "setuptools_scm (>=7)", "setuptools (>=64)"]
-
-[[package]]
 name = "mdurl"
 version = "0.1.2"
 description = "Markdown URL utilities"
@@ -894,7 +755,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "more-itertools"
-version = "10.4.0"
+version = "10.5.0"
 description = "More routines for operating on iterables, beyond itertools"
 category = "main"
 optional = false
@@ -1015,11 +876,11 @@ twitter = ["twython"]
 
 [[package]]
 name = "numpy"
-version = "1.23.5"
-description = "NumPy is the fundamental package for array computing with Python."
+version = "2.1.1"
+description = "Fundamental package for array computing in Python"
 category = "main"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.10"
 
 [[package]]
 name = "nvidia-cublas-cu12"
@@ -1114,7 +975,7 @@ python-versions = ">=3"
 
 [[package]]
 name = "nvidia-nvjitlink-cu12"
-version = "12.6.20"
+version = "12.6.68"
 description = "Nvidia JIT LTO Library"
 category = "main"
 optional = false
@@ -1139,23 +1000,6 @@ python-versions = ">=3.6"
 [package.dependencies]
 antlr4-python3-runtime = ">=4.9.0,<4.10.0"
 PyYAML = ">=5.1.0"
-
-[[package]]
-name = "opencv-python"
-version = "4.10.0.84"
-description = "Wrapper package for OpenCV python bindings."
-category = "main"
-optional = false
-python-versions = ">=3.6"
-
-[package.dependencies]
-numpy = [
-    {version = ">=1.21.2", markers = "python_version >= \"3.10\""},
-    {version = ">=1.21.4", markers = "python_version >= \"3.10\" and platform_system == \"Darwin\""},
-    {version = ">=1.19.3", markers = "python_version >= \"3.6\" and platform_system == \"Linux\" and platform_machine == \"aarch64\" or python_version >= \"3.9\""},
-    {version = ">=1.17.0", markers = "python_version >= \"3.7\""},
-    {version = ">=1.17.3", markers = "python_version >= \"3.8\""},
-]
 
 [[package]]
 name = "packaging"
@@ -1206,20 +1050,8 @@ test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest-cov (>=4.1)", "pytes
 type = ["mypy (>=1.8)"]
 
 [[package]]
-name = "pluggy"
-version = "1.5.0"
-description = "plugin and hook calling mechanisms for python"
-category = "main"
-optional = false
-python-versions = ">=3.8"
-
-[package.extras]
-dev = ["pre-commit", "tox"]
-testing = ["pytest", "pytest-benchmark"]
-
-[[package]]
 name = "protobuf"
-version = "5.27.4"
+version = "5.28.0"
 description = ""
 category = "main"
 optional = false
@@ -1269,20 +1101,6 @@ optional = false
 python-versions = "*"
 
 [[package]]
-name = "pyaml"
-version = "24.7.0"
-description = "PyYAML-based module to produce a bit more pretty and readable YAML-serialized data"
-category = "main"
-optional = false
-python-versions = ">=3.8"
-
-[package.dependencies]
-PyYAML = "*"
-
-[package.extras]
-anchors = ["unidecode"]
-
-[[package]]
 name = "pycparser"
 version = "2.22"
 description = "C parser in Python"
@@ -1300,7 +1118,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
 name = "pydantic"
-version = "2.8.2"
+version = "2.9.0"
 description = "Data validation using Python type hints"
 category = "main"
 optional = false
@@ -1308,15 +1126,16 @@ python-versions = ">=3.8"
 
 [package.dependencies]
 annotated-types = ">=0.4.0"
-pydantic-core = "2.20.1"
+pydantic-core = "2.23.2"
 typing-extensions = {version = ">=4.6.1", markers = "python_version < \"3.13\""}
+tzdata = {version = "*", markers = "python_version >= \"3.9\""}
 
 [package.extras]
 email = ["email-validator (>=2.0.0)"]
 
 [[package]]
 name = "pydantic-core"
-version = "2.20.1"
+version = "2.23.2"
 description = "Core functionality for Pydantic validation and serialization"
 category = "main"
 optional = false
@@ -1360,76 +1179,6 @@ optional = false
 python-versions = ">=3.6"
 
 [[package]]
-name = "pyparsing"
-version = "3.1.4"
-description = "pyparsing module - Classes and methods to define and execute parsing grammars"
-category = "main"
-optional = false
-python-versions = ">=3.6.8"
-
-[package.extras]
-diagrams = ["railroad-diagrams", "jinja2"]
-
-[[package]]
-name = "pytest"
-version = "8.3.2"
-description = "pytest: simple powerful testing with Python"
-category = "main"
-optional = false
-python-versions = ">=3.8"
-
-[package.dependencies]
-colorama = {version = "*", markers = "sys_platform == \"win32\""}
-exceptiongroup = {version = ">=1.0.0rc8", markers = "python_version < \"3.11\""}
-iniconfig = "*"
-packaging = "*"
-pluggy = ">=1.5,<2"
-tomli = {version = ">=1", markers = "python_version < \"3.11\""}
-
-[package.extras]
-dev = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "pygments (>=2.7.2)", "requests", "setuptools", "xmlschema"]
-
-[[package]]
-name = "python_coreml_stable_diffusion"
-version = "1.1.0"
-description = "Run Stable Diffusion on Apple Silicon with Core ML (Python and Swift)"
-category = "main"
-optional = false
-python-versions = "*"
-develop = false
-
-[package.dependencies]
-coremltools = ">=7.0b2"
-diffusers = {version = "*", extras = ["torch"]}
-huggingface-hub = "*"
-invisible-watermark = "*"
-matplotlib = "*"
-numpy = "<1.24"
-pytest = "*"
-safetensors = "*"
-scikit-learn = "*"
-scipy = "*"
-torch = "*"
-transformers = ">=4.30.0"
-
-[package.source]
-type = "git"
-url = "https://github.com/apple/ml-stable-diffusion"
-reference = "1.1.1"
-resolved_reference = "5a170d29cf38e674b80541d7ce22929c6a11cdde"
-
-[[package]]
-name = "python-dateutil"
-version = "2.9.0.post0"
-description = "Extensions to the standard Python datetime module"
-category = "main"
-optional = false
-python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
-
-[package.dependencies]
-six = ">=1.5"
-
-[[package]]
 name = "python-levenshtein"
 version = "0.25.1"
 description = "Python extension for computing string edit distances and similarities."
@@ -1449,20 +1198,6 @@ optional = false
 python-versions = ">=3.7,<3.13"
 
 [[package]]
-name = "pywavelets"
-version = "1.7.0"
-description = "PyWavelets, wavelet transform module"
-category = "main"
-optional = false
-python-versions = ">=3.10"
-
-[package.dependencies]
-numpy = ">=1.23,<3"
-
-[package.extras]
-optional = ["scipy (>=1.9)"]
-
-[[package]]
 name = "pyyaml"
 version = "6.0.2"
 description = "YAML parser and emitter for Python"
@@ -1472,7 +1207,7 @@ python-versions = ">=3.8"
 
 [[package]]
 name = "rapidfuzz"
-version = "3.9.6"
+version = "3.9.7"
 description = "rapid fuzzy string matching"
 category = "main"
 optional = false
@@ -1550,7 +1285,7 @@ jupyter = ["ipywidgets (>=7.5.1,<9)"]
 
 [[package]]
 name = "safetensors"
-version = "0.4.4"
+version = "0.4.5"
 description = ""
 category = "main"
 optional = false
@@ -1584,45 +1319,6 @@ requests = ">=2.24.0"
 
 [package.extras]
 test = ["coverage", "pytest"]
-
-[[package]]
-name = "scikit-learn"
-version = "1.5.1"
-description = "A set of python modules for machine learning and data mining"
-category = "main"
-optional = false
-python-versions = ">=3.9"
-
-[package.dependencies]
-joblib = ">=1.2.0"
-numpy = ">=1.19.5"
-scipy = ">=1.6.0"
-threadpoolctl = ">=3.1.0"
-
-[package.extras]
-build = ["numpy (>=1.19.5)", "scipy (>=1.6.0)", "cython (>=3.0.10)", "meson-python (>=0.16.0)"]
-install = ["numpy (>=1.19.5)", "scipy (>=1.6.0)", "joblib (>=1.2.0)", "threadpoolctl (>=3.1.0)"]
-benchmark = ["matplotlib (>=3.3.4)", "pandas (>=1.1.5)", "memory_profiler (>=0.57.0)"]
-docs = ["matplotlib (>=3.3.4)", "scikit-image (>=0.17.2)", "pandas (>=1.1.5)", "seaborn (>=0.9.0)", "memory_profiler (>=0.57.0)", "sphinx (>=7.3.7)", "sphinx-copybutton (>=0.5.2)", "sphinx-gallery (>=0.16.0)", "numpydoc (>=1.2.0)", "Pillow (>=7.1.2)", "pooch (>=1.6.0)", "sphinx-prompt (>=1.4.0)", "sphinxext-opengraph (>=0.9.1)", "plotly (>=5.14.0)", "polars (>=0.20.23)", "sphinx-design (>=0.5.0)", "sphinxcontrib-sass (>=0.3.4)", "pydata-sphinx-theme (>=0.15.3)", "sphinx-remove-toctrees (>=1.0.0.post1)"]
-examples = ["matplotlib (>=3.3.4)", "scikit-image (>=0.17.2)", "pandas (>=1.1.5)", "seaborn (>=0.9.0)", "pooch (>=1.6.0)", "plotly (>=5.14.0)"]
-tests = ["matplotlib (>=3.3.4)", "scikit-image (>=0.17.2)", "pandas (>=1.1.5)", "pytest (>=7.1.2)", "pytest-cov (>=2.9.0)", "ruff (>=0.2.1)", "black (>=24.3.0)", "mypy (>=1.9)", "pyamg (>=4.0.0)", "polars (>=0.20.23)", "pyarrow (>=12.0.0)", "numpydoc (>=1.2.0)", "pooch (>=1.6.0)"]
-maintenance = ["conda-lock (==2.5.6)"]
-
-[[package]]
-name = "scipy"
-version = "1.14.1"
-description = "Fundamental algorithms for scientific computing in Python"
-category = "main"
-optional = false
-python-versions = ">=3.10"
-
-[package.dependencies]
-numpy = ">=1.23.5,<2.3"
-
-[package.extras]
-test = ["pytest", "pytest-cov", "pytest-timeout", "pytest-xdist", "asv", "mpmath", "gmpy2", "threadpoolctl", "scikit-umfpack", "pooch", "hypothesis (>=6.30)", "array-api-strict (>=2.0)", "cython", "meson", "ninja"]
-doc = ["sphinx (>=5.0.0,<=7.3.7)", "pydata-sphinx-theme (>=0.15.2)", "sphinx-design (>=0.4.0)", "matplotlib (>=3.5)", "numpydoc", "jupytext", "myst-nb", "pooch", "jupyterlite-sphinx (>=0.13.1)", "jupyterlite-pyodide-kernel"]
-dev = ["mypy (==1.10.0)", "typing-extensions", "types-psutil", "pycodestyle", "ruff (>=0.0.292)", "cython-lint (>=0.12.2)", "rich-click", "doit (>=0.36.0)", "pydevtool"]
 
 [[package]]
 name = "sentry-sdk"
@@ -1786,14 +1482,6 @@ python-versions = ">=3.8"
 tests = ["pytest", "pytest-cov"]
 
 [[package]]
-name = "threadpoolctl"
-version = "3.5.0"
-description = "threadpoolctl"
-category = "main"
-optional = false
-python-versions = ">=3.8"
-
-[[package]]
 name = "tokenizers"
 version = "0.19.1"
 description = ""
@@ -1808,14 +1496,6 @@ huggingface-hub = ">=0.16.4,<1.0"
 testing = ["pytest", "requests", "numpy", "datasets", "black (==22.3)", "ruff"]
 docs = ["sphinx", "sphinx-rtd-theme", "setuptools-rust"]
 dev = ["tokenizers"]
-
-[[package]]
-name = "tomli"
-version = "2.0.1"
-description = "A lil' TOML parser"
-category = "main"
-optional = false
-python-versions = ">=3.7"
 
 [[package]]
 name = "toolz"
@@ -1981,6 +1661,14 @@ optional = false
 python-versions = ">=3.8"
 
 [[package]]
+name = "tzdata"
+version = "2024.1"
+description = "Provider of IANA time zone data"
+category = "main"
+optional = false
+python-versions = ">=2"
+
+[[package]]
 name = "urllib3"
 version = "2.2.2"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
@@ -2012,7 +1700,7 @@ standard = ["colorama (>=0.4)", "httptools (>=0.5.0)", "python-dotenv (>=0.13)",
 
 [[package]]
 name = "wandb"
-version = "0.17.5"
+version = "0.17.8"
 description = "A CLI and library for interacting with the Weights & Biases API."
 category = "main"
 optional = false
@@ -2034,9 +1722,9 @@ setproctitle = "*"
 aws = ["boto3"]
 azure = ["azure-identity", "azure-storage-blob"]
 gcp = ["google-cloud-storage"]
-importers = ["filelock", "mlflow", "polars", "rich", "tenacity"]
+importers = ["filelock", "mlflow", "polars (<=1.2.1)", "rich", "tenacity"]
 kubeflow = ["google-cloud-storage", "kubernetes", "minio", "sh"]
-launch = ["awscli", "azure-containerregistry", "azure-identity", "azure-storage-blob", "boto3", "botocore", "chardet", "google-auth", "google-cloud-aiplatform", "google-cloud-artifact-registry", "google-cloud-compute", "google-cloud-storage", "iso8601", "kubernetes", "kubernetes-asyncio", "nbconvert", "nbformat", "optuna", "pydantic", "pyyaml (>=6.0.0)", "tomli", "typing-extensions"]
+launch = ["awscli", "azure-containerregistry", "azure-identity", "azure-storage-blob", "boto3", "botocore", "chardet", "google-auth", "google-cloud-aiplatform", "google-cloud-artifact-registry", "google-cloud-compute", "google-cloud-storage", "iso8601", "jsonschema", "kubernetes", "kubernetes-asyncio", "nbconvert", "nbformat", "optuna", "pydantic", "pyyaml (>=6.0.0)", "tomli", "typing-extensions"]
 media = ["bokeh", "moviepy", "numpy", "pillow", "plotly (>=5.18.0)", "rdkit-pypi", "soundfile"]
 models = ["cloudpickle"]
 perf = ["orjson"]
@@ -2077,11 +1765,11 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "yarl"
-version = "1.9.4"
+version = "1.9.11"
 description = "Yet another URL library"
 category = "main"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 
 [package.dependencies]
 idna = ">=2.0"
@@ -2105,8 +1793,8 @@ type = ["pytest-mypy"]
 
 [metadata]
 lock-version = "1.1"
-python-versions = ">=3.10,<3.11"
-content-hash = "2a93a5adcb495394696c93179682481453b34388a5aaa9eb0959dd9b1e56e5b1"
+python-versions = ">=3.10,<3.13"
+content-hash = "487fdf127f9994cbbac834482e61db0f7eff62afd11c642540d7792051bd3cbb"
 
 [metadata.files]
 accelerate = []
@@ -2124,23 +1812,20 @@ attrs = []
 backoff = []
 base58 = []
 bittensor = []
-cattrs = []
 certifi = []
 cffi = []
 charset-normalizer = []
 click = []
 colorama = []
-contourpy = []
-coremltools = []
 cryptography = []
-cycler = []
 cytoolz = []
 ddt = []
 decorator = []
 diffusers = []
 docker-pycreds = []
 ecdsa = []
-edge-optimization-subnet-neuron = []
+edge-maxxing-neuron = []
+edge-maxxing-pipelines = []
 eth-hash = []
 eth-keys = []
 eth-typing = []
@@ -2148,7 +1833,6 @@ eth-utils = []
 exceptiongroup = []
 fastapi = []
 filelock = []
-fonttools = []
 frozenlist = []
 fsspec = []
 fuzzywuzzy = []
@@ -2158,16 +1842,12 @@ h11 = []
 huggingface-hub = []
 idna = []
 importlib-metadata = []
-iniconfig = []
-invisible-watermark = []
 jinja2 = []
 joblib = []
-kiwisolver = []
 levenshtein = []
 loguru = []
 markdown-it-py = []
 markupsafe = []
-matplotlib = []
 mdurl = []
 more-itertools = []
 mpmath = []
@@ -2193,19 +1873,16 @@ nvidia-nccl-cu12 = []
 nvidia-nvjitlink-cu12 = []
 nvidia-nvtx-cu12 = []
 omegaconf = []
-opencv-python = []
 packaging = []
 password-strength = []
 pillow = []
 platformdirs = []
-pluggy = []
 protobuf = []
 psutil = []
 py = []
 py-bip39-bindings = []
 py-ed25519-zebra-bindings = []
 py-sr25519-bindings = []
-pyaml = []
 pycparser = []
 pycryptodome = []
 pydantic = []
@@ -2213,13 +1890,8 @@ pydantic-core = []
 pygments = []
 pynacl = []
 pynvml = []
-pyparsing = []
-pytest = []
-python_coreml_stable_diffusion = []
-python-dateutil = []
 python-levenshtein = []
 python-statemachine = []
-pywavelets = []
 pyyaml = []
 rapidfuzz = []
 regex = []
@@ -2229,8 +1901,6 @@ retry = []
 rich = []
 safetensors = []
 scalecodec = []
-scikit-learn = []
-scipy = []
 sentry-sdk = []
 setproctitle = []
 shtab = []
@@ -2241,9 +1911,7 @@ starlette = []
 substrate-interface = []
 sympy = []
 termcolor = []
-threadpoolctl = []
 tokenizers = []
-tomli = []
 toolz = []
 torch = []
 torchvision = []
@@ -2251,6 +1919,7 @@ tqdm = []
 transformers = []
 triton = []
 typing-extensions = []
+tzdata = []
 urllib3 = []
 uvicorn = []
 wandb = []

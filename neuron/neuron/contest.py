@@ -1,129 +1,156 @@
-import shutil
 from abc import ABC, abstractmethod
 from enum import Enum
-from pathlib import Path
+from io import BytesIO
+from typing import TypeVar
 
-import pynvml
-import torch
-from diffusers import StableDiffusionXLPipeline
-from huggingface_hub import constants
+from PIL import Image
+from pydantic import BaseModel
 
-from .coreml_pipeline import CoreMLStableDiffusionXLPipeline
-
-MODEL_CACHE_DIR = Path("model-cache")
+RequestT = TypeVar("RequestT", bound=BaseModel)
+ResponseT = TypeVar("ResponseT")
 
 
 class ContestId(Enum):
-    APPLE_SILICON = 0
-    NVIDIA_4090 = 1
+    SDXL_APPLE_SILICON = 0
+    SDXL_NEWDREAM_NVIDIA_4090 = 1
+    FLUX_NVIDIA_4090 = 2
 
 
 class Contest(ABC):
     id: ContestId
-    baseline_average: float
     baseline_repository: str
+    baseline_revision: str
     device_name: str | None
 
-    def __init__(self, contest_id: ContestId, baseline_average: float, baseline_repository: str):
+    def __init__(
+        self,
+        contest_id: ContestId,
+        baseline_repository: str,
+        baseline_revision: str,
+    ):
         self.id = contest_id
-        self.baseline_average = baseline_average
         self.baseline_repository = baseline_repository
-
-    def load_baseline(self):
-        return self.load()
-
-    def delete_model_cache(self):
-        if MODEL_CACHE_DIR.exists():
-            shutil.rmtree(MODEL_CACHE_DIR)
-
-    def get_model_size(self):
-        return sum(file.stat().st_size for file in MODEL_CACHE_DIR.rglob("*"))
+        self.baseline_revision = baseline_revision
 
     @abstractmethod
-    def load(self, repository: str | None = None):
+    def get_vram_used(self) -> int:
         ...
 
     @abstractmethod
-    def get_baseline_size(self):
+    def get_joules(self) -> float:
         ...
 
     @abstractmethod
-    def get_vram_used(self, device: torch.device):
+    def validate(self) -> None:
         ...
 
     @abstractmethod
-    def get_joules(self, device: torch.device):
-        ...
-
-    @abstractmethod
-    def validate(self):
-        ...
-
-    @abstractmethod
-    def empty_cache(self):
+    def compare_outputs(self, baseline: bytes, optimized: bytes) -> float:
         ...
 
 
-class CudaContest(Contest):
-    def __init__(self, contest_id: ContestId, baseline_average: float, baseline_repository: str,
-                 expected_device_name: str):
-        super().__init__(contest_id, baseline_average, baseline_repository)
+@abstractmethod
+class ImageContestMixIn(Contest, ABC):
+    device: str
+
+    def compare_outputs(self, baseline: bytes, optimized: bytes) -> float:
+        from torch import Tensor
+        from torch.nn import Module, Sequential
+        from torch.nn.functional import cosine_similarity
+
+        from torchvision.models import resnet50, ResNet50_Weights
+        from torchvision.transforms.functional import pil_to_tensor
+
+        resnet_embed = Sequential(*list(resnet50().eval().children())[:-1]).to(self.device)
+
+        transform: Module = ResNet50_Weights.DEFAULT.transforms()
+        transform = transform.to(self.device)
+
+        def load_image(data: bytes):
+            with BytesIO(data) as fp:
+                return pil_to_tensor(Image.open(fp)).to(self.device)
+
+        def resnet_embed_image(tensor: Tensor):
+            return resnet_embed(transform(tensor).unsqueeze(0))
+
+        baseline_tensor = load_image(baseline)
+        optimized_tensor = load_image(optimized)
+
+        resnet_similarity = cosine_similarity(
+            resnet_embed_image(baseline_tensor),
+            resnet_embed_image(optimized_tensor),
+        ).flatten().item()
+
+        flat_similarity = (cosine_similarity(
+            (baseline_tensor / 255.0).flatten(),
+            (optimized_tensor / 255.0).flatten(),
+            dim=0,
+        )).item()
+
+        return (resnet_similarity ** 1024 * 0.9) + (flat_similarity ** 16 * 0.1)
+
+
+class CudaContest(ImageContestMixIn, Contest):
+    device = "cuda"
+
+    def __init__(
+        self,
+        contest_id: ContestId,
+        baseline_repository: str,
+        baseline_revision: str,
+        expected_device_name: str,
+    ):
+        super().__init__(contest_id, baseline_repository, baseline_revision)
 
         self.expected_device_name = expected_device_name
 
-    def load(self, repository: str | None = None):
-        return StableDiffusionXLPipeline.from_pretrained(
-            repository or self.baseline_repository,
-            torch_dtype=torch.float16,
-            use_safetensors=True if repository else None,
-            cache_dir=MODEL_CACHE_DIR if repository else None,
-        ).to("cuda")
+    def get_vram_used(self):
+        import pynvml
+        import torch
 
-    def get_baseline_size(self):
-        baseline_dir = Path(constants.HF_HUB_CACHE) / f"models--{self.baseline_repository.replace('/', '--')}"
-        return sum(file.stat().st_size for file in baseline_dir.rglob("*"))
-
-    def get_vram_used(self, device: torch.device):
-        return torch.cuda.memory_allocated(device)
-
-    def get_joules(self, device: torch.device):
         pynvml.nvmlInit()
-        handle = pynvml.nvmlDeviceGetHandleByIndex(device.index)
+        handle = pynvml.nvmlDeviceGetHandleByIndex(torch.cuda.current_device())
+        vram = pynvml.nvmlDeviceGetMemoryInfo(handle).used
+        pynvml.nvmlShutdown()
+        return vram
+
+    def get_joules(self):
+        import pynvml
+        import torch
+
+        pynvml.nvmlInit()
+        handle = pynvml.nvmlDeviceGetHandleByIndex(torch.cuda.current_device())
         mj = pynvml.nvmlDeviceGetTotalEnergyConsumption(handle)
         pynvml.nvmlShutdown()
         return mj / 1000.0  # convert mJ to J
 
     def validate(self):
-        device_name = torch.cuda.get_device_name("cuda")
+        import torch
+
+        device_name = torch.cuda.get_device_name(self.device)
 
         if device_name != self.expected_device_name:
             raise ContestDeviceValidationError(
                 f"Incompatible device {device_name} when {self.expected_device_name} is required.",
             )
 
-    def empty_cache(self):
-        torch.cuda.empty_cache()
 
+class AppleSiliconContest(ImageContestMixIn, Contest):
+    device = "mps"
 
-class AppleSiliconContest(Contest):
-    def load(self, repository: str | None = None):
-        return CoreMLStableDiffusionXLPipeline.from_pretrained(repository or self.baseline_repository).to("mps")
+    def get_vram_used(self):
+        import torch
 
-    def get_baseline_size(self):
-        return 0  # TODO
-
-    def get_vram_used(self, device: torch.device):
         return torch.mps.current_allocated_memory()
 
-    def get_joules(self, device: torch.device):
+    def get_joules(self):
         return 0  # TODO
 
     def validate(self):
-        if not torch.backends.mps.is_available():
-            raise ContestDeviceValidationError("mps is not available but is required.")
+        import torch
 
-    def empty_cache(self):
-        torch.mps.empty_cache()
+        if not torch.backends.mps.is_available():
+            raise ContestDeviceValidationError("MPS is not available but is required.")
 
 
 class ContestDeviceValidationError(Exception):
@@ -134,8 +161,12 @@ class ContestDeviceValidationError(Exception):
 
 
 CONTESTS = [
-    AppleSiliconContest(ContestId.APPLE_SILICON, 2.5, "wombo/coreml-stable-diffusion-xl-base-1.0"),
-    CudaContest(ContestId.NVIDIA_4090, 2.58, "stablediffusionapi/newdream-sdxl-20", "NVIDIA GeForce RTX 4090"),
+    CudaContest(
+        ContestId.SDXL_NEWDREAM_NVIDIA_4090,
+        "https://github.com/womboai/sdxl-newdream-20-inference",
+        "7d605878d0bbcefacc6a8885da8420bea6a0de59",
+        "NVIDIA GeForce RTX 4090",
+    ),
 ]
 
 
@@ -149,4 +180,4 @@ def find_contest(contest_id: ContestId):
     raise RuntimeError(f"Unknown contest ID requested {contest_id}")
 
 
-CURRENT_CONTEST = find_contest(ContestId.NVIDIA_4090)
+CURRENT_CONTEST: CudaContest = find_contest(ContestId.SDXL_NEWDREAM_NVIDIA_4090)
