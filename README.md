@@ -165,7 +165,7 @@ Keep in mind that auto-updating is not supported with this configuration yet.
 If running in a containerized environment like RunPod(which does not support Docker), then you need to run 2 pods/containers. The following setup assumes using PM2.
 
 ##### API Component
-In one pod/container, we'll set up the API component, start as follows:
+In one pod/container with a GPU, we'll set up the API component, start as follows:
 
 ```bash
     git clone https://github.com/womboai/edge-maxxing /api
@@ -191,7 +191,7 @@ If you want this to auto-update(which is recommended), start another pm2 process
 The argument at the end is the name of the main PM2 process. This will keep your PM2 validator instance up to date as long as it is running.
 
 #### Scoring Validator
-In the another pod/container, to run the scoring validator, clone the repository as per the common instructions, then do as follows
+In the another pod/container without a GPU, to run the scoring validator, clone the repository as per the common instructions, then do as follows
 ```bash
     cd validator
 
