@@ -16,6 +16,8 @@ from bittensor.utils.weight_utils import process_weights_for_netuid, convert_wei
 from numpy import real, isreal
 from numpy.polynomial import Polynomial
 from pickle import dump, load
+
+from pydantic import RootModel
 from wandb.sdk.wandb_run import Run
 
 from neuron import (
@@ -517,6 +519,17 @@ class Validator:
 
         return miner_info
 
+    def start_benchmarking(self, submissions: dict[str, CheckpointSubmission]):
+        submissions_json = RootModel[dict[str, CheckpointSubmission]](submissions).model_dump_json()
+
+        state_response = requests.post(
+            f"{self.config.benchmarker_api}/start",
+            headers={"Content-Type": "application/json"},
+            data=submissions_json,
+        )
+
+        state_response.raise_for_status()
+
     def do_step(self, block: int):
         now = datetime.now(tz=ZoneInfo("America/New_York"))
 
@@ -545,14 +558,12 @@ class Validator:
                 self.start_wandb_run()
 
                 submissions = {
-                    self.metagraph.hotkeys[uid]: submission.model_dump()
+                    self.metagraph.hotkeys[uid]: submission
                     for uid, submission in enumerate(miner_info)
                     if submission
                 }
 
-                state_response = requests.post(f"{self.config.benchmarker_api}/start", json=submissions)
-
-                state_response.raise_for_status()
+                self.start_benchmarking(submissions)
             else:
                 def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
                     if old_info is None and new_info is None:
@@ -572,14 +583,12 @@ class Validator:
                 ])
 
                 submissions = {
-                    self.metagraph.hotkeys[uid]: miner_info[uid].model_dump()
+                    self.metagraph.hotkeys[uid]: miner_info[uid]
                     for uid in updated_uids
                     if miner_info[uid]
                 }
 
-                state_response = requests.post(f"{self.config.benchmarker_api}/start", json=submissions)
-
-                state_response.raise_for_status()
+                self.start_benchmarking(submissions)
 
                 bt.logging.info(f"Miners {updated_uids} changed their submissions")
 
