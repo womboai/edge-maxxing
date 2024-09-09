@@ -18,7 +18,7 @@ else
   rm -rf "$SANDBOX_DIRECTORY/*"
 
   git config --global advice.detachedHead false
-  git clone --depth 1 --shallow-submodules --no-checkout --progress "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
+  git clone --shallow-submodules --no-checkout --progress "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
   if $($BASELINE); then
     touch "$READY_MARKER"
   fi
