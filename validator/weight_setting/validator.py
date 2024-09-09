@@ -501,7 +501,7 @@ class Validator:
 
             info, block = submission
 
-            existing_submission = visited_repositories.get(info.image)
+            existing_submission = visited_repositories.get(info.repository)
 
             if existing_submission:
                 existing_uid, existing_block = existing_submission
@@ -513,7 +513,7 @@ class Validator:
                 miner_info[existing_uid] = None
 
             miner_info.append(info)
-            visited_repositories[info.image] = uid, block
+            visited_repositories[info.repository] = uid, block
 
         return miner_info
 
