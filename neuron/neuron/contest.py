@@ -3,7 +3,6 @@ from enum import Enum
 from io import BytesIO
 from typing import TypeVar
 
-from PIL import Image
 from pydantic import BaseModel
 
 RequestT = TypeVar("RequestT", bound=BaseModel)
@@ -60,6 +59,8 @@ class ImageContestMixIn(Contest, ABC):
 
         from torchvision.models import resnet50, ResNet50_Weights
         from torchvision.transforms.functional import pil_to_tensor
+
+        from PIL import Image
 
         resnet_embed = Sequential(*list(resnet50().eval().children())[:-1]).to(self.device)
 
