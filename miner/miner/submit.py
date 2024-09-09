@@ -27,7 +27,7 @@ def main():
     metagraph = subtensor.metagraph(netuid=config.netuid)
     wallet = bt.wallet(config=config)
 
-    revision = Repo(MODEL_DIRECTORY).rev_parse("HEAD")
+    revision = Repo(MODEL_DIRECTORY).head.object.hexsha
     checkpoint_info = CheckpointSubmission(repository=config.repository, revision=revision)
 
     make_submission(
