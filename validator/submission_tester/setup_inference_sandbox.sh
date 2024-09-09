@@ -17,15 +17,15 @@ if $($BASELINE) && [ -f "$READY_MARKER" ]; then
 else
   rm -rf "$SANDBOX_DIRECTORY/*"
 
-  git clone --recursive --no-checkout "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
-
+  git config --global advice.detachedHead false
+  git clone --depth 1 --shallow-submodules --no-checkout --progress "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
   if $($BASELINE); then
     touch "$READY_MARKER"
   fi
 fi
 
 git checkout "$REVISION"
-git submodule update --init
+git submodule update --init --progress
 
 if ! [ -f "$VENV" ]; then
   python3.10 -m venv "$VENV"

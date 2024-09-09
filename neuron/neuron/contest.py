@@ -105,9 +105,14 @@ class CudaContest(ImageContestMixIn, Contest):
         self.expected_device_name = expected_device_name
 
     def get_vram_used(self):
+        import pynvml
         import torch
 
-        return torch.cuda.memory_allocated()
+        pynvml.nvmlInit()
+        handle = pynvml.nvmlDeviceGetHandleByIndex(torch.cuda.current_device())
+        vram = pynvml.nvmlDeviceGetMemoryInfo(handle).used
+        pynvml.nvmlShutdown()
+        return vram
 
     def get_joules(self):
         import pynvml

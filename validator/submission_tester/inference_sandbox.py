@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 from multiprocessing.connection import Client
@@ -14,6 +15,7 @@ SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "setup_inferenc
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
+SOCKET_TIMEOUT = 120
 
 
 def sandbox_args(user: str):
@@ -69,12 +71,19 @@ class InferenceSandbox(Generic[RequestT]):
         )
 
         bt.logging.info(f"Inference process starting")
-        time.sleep(60.0)
+        socket_path = abspath(self._sandbox_directory / "inferences.sock")
+
+        for _ in range(SOCKET_TIMEOUT):
+            if os.path.exists(socket_path):
+                break
+            time.sleep(1)
+        else:
+            bt.logging.error(f"Socket file '{socket_path}' not found after {SOCKET_TIMEOUT} seconds.")
 
         self._check_exit()
 
         bt.logging.info(f"Connecting to socket")
-        self._client = Client(abspath(self._sandbox_directory / "inferences.sock"))
+        self._client = Client(socket_path)
 
     def _check_exit(self):
         if self._process.returncode:
