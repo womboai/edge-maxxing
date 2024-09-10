@@ -15,7 +15,7 @@ cd "$SANDBOX_DIRECTORY"
 if $($BASELINE) && [ -f "$READY_MARKER" ]; then
   git fetch
 else
-  rm -rf "$SANDBOX_DIRECTORY/*"
+  rm -rf "$SANDBOX_DIRECTORY"/{*,.[!.],..?*}
 
   git config --global advice.detachedHead false
   git clone --shallow-submodules --no-checkout --progress "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
