@@ -31,4 +31,10 @@ if ! [ -f "$VENV" ]; then
   python3.10 -m venv "$VENV"
 fi
 
-"$VENV/bin/pip" install $(cat "$SANDBOX_DIRECTORY/install_args.txt") -e $SANDBOX_DIRECTORY
+REQUIREMENTS="$SANDBOX_DIRECTORY/requirements.txt"
+
+if [ -f REQUIREMENTS ]
+  "$VENV/bin/pip" install -r $REQUIREMENTS -e $SANDBOX_DIRECTORY
+else
+  "$VENV/bin/pip" install -e $SANDBOX_DIRECTORY
+fi
