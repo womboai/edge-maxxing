@@ -146,7 +146,7 @@ class Validator:
 
         self.wandb_run = None
 
-        self.benchmarks = [None] * self.metagraph.n.item()
+        self.benchmarks = self.clear_benchmarks()
 
         self.load_state()
 
@@ -277,19 +277,22 @@ class Validator:
 
         if self.contest_state:
             if self.contest_state.miner_score_version != WEIGHTS_VERSION:
-                pass
+                self.benchmarks = self.clear_benchmarks()
 
             if self.last_day:
                 self.start_wandb_run()
 
-    def reset_validator(self, uid: int):
+    def clear_benchmarks(self) -> list[CheckpointSubmission | None]:
+        return [None] * self.metagraph.n.item()
+
+    def reset_miner(self, uid: int):
         self.benchmarks[uid] = None
 
     def set_miner_benchmarks(self, uid: int, benchmark: CheckpointBenchmark):
         self.benchmarks[uid] = benchmark
 
     def resize(self):
-        new_data = [None] * self.metagraph.n.item()
+        new_data = self.clear_benchmarks()
         length = len(self.metagraph.hotkeys)
         new_data[:length] = self.benchmarks[:length]
         self.benchmarks = new_data
@@ -334,7 +337,7 @@ class Validator:
         for uid, hotkey in enumerate(self.hotkeys):
             if hotkey != self.metagraph.hotkeys[uid]:
                 # hotkey has been replaced
-                self.reset_validator(uid)
+                self.reset_miner(uid)
 
                 filtered_winners = [
                     (winner_uid, score)
@@ -547,15 +550,7 @@ class Validator:
 
             if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
                 # New contest, restart
-                self.contest = CURRENT_CONTEST
-
                 bt.logging.info(f"Working on contest {self.contest.id.name} today's submissions")
-
-                self.benchmarks = [None] * self.metagraph.n.item()
-
-                self.contest_state = ContestState(self.contest.id, miner_info)
-                self.previous_day_winners = []
-                self.start_wandb_run()
 
                 submissions = {
                     self.metagraph.hotkeys[uid]: submission
@@ -564,6 +559,14 @@ class Validator:
                 }
 
                 self.start_benchmarking(submissions)
+
+                self.contest = CURRENT_CONTEST
+
+                self.benchmarks = self.clear_benchmarks()
+
+                self.contest_state = ContestState(self.contest.id, miner_info)
+                self.previous_day_winners = []
+                self.start_wandb_run()
             else:
                 def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
                     if old_info is None and new_info is None:
@@ -573,8 +576,6 @@ class Validator:
                         return True
 
                     return old_info.repository != new_info.repository or old_info.revision != new_info.revision
-
-                self.start_wandb_run()
 
                 updated_uids = set([
                     uid
@@ -592,8 +593,10 @@ class Validator:
 
                 bt.logging.info(f"Miners {updated_uids} changed their submissions")
 
+                self.start_wandb_run()
+
                 for uid in updated_uids:
-                    self.reset_validator(uid)
+                    self.reset_miner(uid)
 
                 self.contest_state.miner_info = miner_info
 
@@ -652,7 +655,7 @@ class Validator:
                     self.set_miner_benchmarks(self.metagraph.hotkeys.index(hotkey), benchmark)
 
             for uid in failing_submission_uids:
-                self.reset_validator(uid)
+                self.reset_miner(uid)
 
             bt.logging.info(
                 "Benchmarking API has reported submission testing as done. "
