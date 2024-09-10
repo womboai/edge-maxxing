@@ -7,9 +7,6 @@ services:
     volumes:
       - ~/edge-maxxing/baseline-sandbox:/baseline-sandbox
 
-    networks:
-      - api
-
     ports:
       - 127.0.0.1:8000:8000
 
@@ -30,9 +27,4 @@ services:
 
     command: --benchmarker_api http://localhost:8000 $VALIDATOR_ARGS
 
-    networks:
-      - validator
-
-networks:
-  api:
-  validator:
+    network_mode: host
