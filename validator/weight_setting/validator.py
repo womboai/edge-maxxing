@@ -352,16 +352,16 @@ class Validator:
 
         self.hotkeys = self.metagraph.hotkeys
 
-        if not self.contest_state:
-            bt.logging.info("Will not set weights as the contest state has not been set")
-            return
-
         try:
             self.set_weights()
         except Exception as e:
             bt.logging.error(f"Failed to set weights, {e}")
 
     def set_weights(self):
+        if not self.contest_state:
+            bt.logging.info("Will not set weights as the contest state has not been set")
+            return
+
         if self.benchmarking:
             bt.logging.info("Will not set weights as contest is not done")
             return
@@ -562,7 +562,6 @@ class Validator:
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
                 self.previous_day_winners = []
-                self.start_wandb_run()
             else:
                 def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
                     if old_info is None and new_info is None:
@@ -589,8 +588,6 @@ class Validator:
 
                 bt.logging.info(f"Miners {updated_uids} changed their submissions")
 
-                self.start_wandb_run()
-
                 for uid in updated_uids:
                     self.reset_miner(uid)
 
@@ -611,6 +608,8 @@ class Validator:
                         self.previous_day_winners = winners
 
             self.last_day = now.date()
+
+            self.start_wandb_run()
 
             self.benchmarking = True
 
