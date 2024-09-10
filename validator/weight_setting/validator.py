@@ -538,15 +538,11 @@ class Validator:
 
         if (not self.last_day or self.last_day < now.date()) and now.hour >= 12:
             # Past noon, should start collecting submissions
-            self.last_day = now.date()
-
             bt.logging.info("Collecting all submissions")
 
             miner_info = self.get_miner_submissions()
 
             bt.logging.info(f"Got {miner_info} submissions")
-
-            self.benchmarking = True
 
             if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
                 # New contest, restart
@@ -613,6 +609,10 @@ class Validator:
                             self.previous_day_winners = new_winners
                     else:
                         self.previous_day_winners = winners
+
+            self.last_day = now.date()
+
+            self.benchmarking = True
 
             self.step += 1
             return
