@@ -39,7 +39,7 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-WEIGHTS_VERSION = 14
+WEIGHTS_VERSION = 15
 VALIDATOR_VERSION = "2.0.0"
 
 WINNER_PERCENTAGE = 0.8
@@ -285,6 +285,7 @@ class Validator:
         if self.contest_state:
             if self.contest_state.miner_score_version != WEIGHTS_VERSION:
                 self.benchmarks = self.clear_benchmarks()
+                self.failed.clear()
 
             if self.last_day:
                 self.start_wandb_run()
