@@ -562,6 +562,8 @@ class Validator:
         return miner_info
 
     def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
+        bt.logging.info(f"Sending {submissions} for testing")
+
         submissions_json = RootModel[dict[Key, CheckpointSubmission]](submissions).model_dump_json()
 
         state_response = requests.post(
@@ -681,6 +683,11 @@ class Validator:
 
         if result.state == BenchmarkState.NOT_STARTED:
             # API likely crashed or got restarted, need to re-benchmark any submissions sent to API
+            bt.logging.info(
+                "API in different state than expected, likely restarted. "
+                "Sending submissions again for testing"
+            )
+
             no_results = {
                 uid
                 for uid, benchmark in enumerate(self.benchmarks)
@@ -697,6 +704,7 @@ class Validator:
             self.start_benchmarking(submissions)
         else:
             for hotkey, benchmark in result.results:
+                bt.logging.info(f"Updating {hotkey}'s benchmarks to {benchmark}")
                 if hotkey in self.metagraph.hotkeys:
                     self.set_miner_benchmarks(self.metagraph.hotkeys.index(hotkey), benchmark)
 
