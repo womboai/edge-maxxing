@@ -1,5 +1,5 @@
 import traceback
-from typing import cast, Any
+from typing import cast, Any, NewType, TypeAlias
 
 import bittensor as bt
 from bittensor.extrinsics.serving import get_metadata, publish_metadata
@@ -7,6 +7,9 @@ from pydantic import BaseModel
 
 from .contest import ContestId, CURRENT_CONTEST
 from .network_commitments import Encoder, Decoder
+
+Uid: TypeAlias = int
+Key: TypeAlias = str
 
 SPEC_VERSION = 4
 
@@ -32,6 +35,16 @@ class CheckpointSubmission(BaseModel):
             revision=revision,
             contest=contest_id,
         )
+
+
+def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
+    if old_info is None and new_info is None:
+        return False
+
+    if (old_info is None) != (new_info is None):
+        return True
+
+    return old_info.repository != new_info.repository or old_info.revision != new_info.revision
 
 
 def make_submission(
@@ -61,7 +74,7 @@ def make_submission(
 def get_submission(
     subtensor: bt.subtensor,
     metagraph: bt.metagraph,
-    hotkey: str,
+    hotkey: Key,
     block: int | None = None
 ) -> tuple[CheckpointSubmission, int] | None:
     try:

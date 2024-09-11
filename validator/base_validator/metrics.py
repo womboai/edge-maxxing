@@ -1,4 +1,8 @@
+from enum import Enum
+
 from pydantic import BaseModel
+
+from neuron import Key
 
 
 class MetricData(BaseModel):
@@ -25,5 +29,12 @@ class CheckpointBenchmark(BaseModel):
         return max(0.0, self.baseline.generation_time - self.model.generation_time) * self.model.similarity_score
 
 
-class BenchmarkState(BaseModel):
-    results: dict[str, CheckpointBenchmark] | None
+class BenchmarkState(Enum):
+    NOT_STARTED = 0
+    IN_PROGRESS = 1
+    FINISHED = 2
+
+
+class BenchmarkResults(BaseModel):
+    state: BenchmarkState
+    results: dict[Key, CheckpointBenchmark]

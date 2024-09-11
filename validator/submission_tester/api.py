@@ -1,13 +1,11 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, BackgroundTasks
+from base_validator.metrics import BenchmarkState, BenchmarkResults
+from fastapi import FastAPI
 from starlette.requests import Request
 
+from neuron import CURRENT_CONTEST, CheckpointSubmission, Key
 from .benchmarker import Benchmarker
-
-from base_validator.metrics import BenchmarkState
-
-from neuron import CURRENT_CONTEST, CheckpointSubmission
 
 
 @asynccontextmanager
@@ -23,30 +21,30 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.post("/start")
-def start_benchmarking(
-    submissions: dict[str, CheckpointSubmission],
-    background_tasks: BackgroundTasks,
-    request: Request,
-):
+def start_benchmarking(submissions: dict[Key, CheckpointSubmission], request: Request):
     benchmarker: Benchmarker = request.state.benchmarker
 
-    background_tasks.add_task(
-        benchmarker.start_benchmarking,
-        submissions,
-    )
+    benchmarker.start_benchmarking(submissions)
 
 
 @app.get("/state")
 def state(request: Request) -> BenchmarkState:
     benchmarker: Benchmarker = request.state.benchmarker
 
-    if not benchmarker.done:
-        return BenchmarkState(results=None)
+    benchmark_state: BenchmarkState
 
-    return BenchmarkState(
+    if not benchmarker.started:
+        benchmark_state = BenchmarkState.NOT_STARTED
+    elif benchmarker.done:
+        benchmark_state = BenchmarkState.FINISHED
+    else:
+        benchmark_state = BenchmarkState.IN_PROGRESS
+
+    return BenchmarkResults(
+        state=benchmark_state,
         results={
             hotkey: submission
             for hotkey, submission in benchmarker.benchmarks.items()
             if submission
-        }
+        },
     )

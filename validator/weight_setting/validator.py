@@ -3,9 +3,10 @@ import traceback
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from datetime import date, datetime
+from operator import itemgetter
 from os import makedirs
 from os.path import isfile, expanduser, join
-from typing import cast, NewType, TypeAlias
+from typing import cast, TypeAlias
 from zoneinfo import ZoneInfo
 
 import bittensor as bt
@@ -30,8 +31,11 @@ from neuron import (
     find_contest,
     ContestDeviceValidationError,
     Contest,
+    Key,
+    Uid,
+    should_update,
 )
-from base_validator.metrics import BenchmarkState, CheckpointBenchmark
+from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointBenchmark
 
 from .wandb_args import add_wandb_args
 
@@ -41,7 +45,6 @@ VALIDATOR_VERSION = "2.0.0"
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
 
-Uid = NewType("Uid", int)
 WinnerList: TypeAlias = list[tuple[Uid, float]]
 
 
@@ -99,9 +102,9 @@ class Validator:
     subtensor: bt.subtensor
     metagraph: bt.metagraph
     wallet: bt.wallet
-    uid: int
+    uid: Uid
 
-    hotkeys: list[str]
+    hotkeys: list[Key]
     step: int
 
     last_day: date | None
@@ -115,6 +118,7 @@ class Validator:
     last_block_fetch: datetime | None = None
 
     benchmarks: list[CheckpointBenchmark | None]
+    failed: set[int]
     contest: Contest
 
     def __init__(self):
@@ -244,6 +248,7 @@ class Validator:
                     "step": self.step,
                     "hotkeys": self.hotkeys,
                     "benchmarks": self.benchmarks,
+                    "failed": self.failed,
                     "last_day": self.last_day,
                     "contest_state": self.contest_state,
                     "previous_day_winners": self.previous_day_winners,
@@ -268,6 +273,7 @@ class Validator:
         self.step = state["step"]
         self.hotkeys = state["hotkeys"]
         self.benchmarks = state.get("benchmarks", self.benchmarks)
+        self.failed = state.get("failed", self.failed)
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
         self.previous_day_winners = (
@@ -286,11 +292,17 @@ class Validator:
     def clear_benchmarks(self) -> list[CheckpointSubmission | None]:
         return [None] * self.metagraph.n.item()
 
-    def reset_miner(self, uid: int):
+    def reset_miner(self, uid: Uid):
         self.benchmarks[uid] = None
 
-    def set_miner_benchmarks(self, uid: int, benchmark: CheckpointBenchmark):
+        if uid in self.failed:
+            self.failed.remove(uid)
+
+    def set_miner_benchmarks(self, uid: Uid, benchmark: CheckpointBenchmark | None):
         self.benchmarks[uid] = benchmark
+
+        if not benchmark:
+            self.failed.add(uid)
 
     def resize(self):
         new_data = self.clear_benchmarks()
@@ -298,13 +310,13 @@ class Validator:
         new_data[:length] = self.benchmarks[:length]
         self.benchmarks = new_data
 
-    def get_sorted_contestants(self) -> list[tuple[int, float]]:
+    def get_sorted_contestants(self) -> list[tuple[Uid, float]]:
         contestants = []
         for uid in range(self.metagraph.n.item()):
             metric_data = self.benchmarks[uid]
             if metric_data:
                 contestants.append((uid, metric_data.calculate_score()))
-        return sorted(contestants, key=lambda score: score[1])
+        return sorted(contestants, key=itemgetter(1))
 
     def sync(self):
         # --- Check for registration.
@@ -494,7 +506,7 @@ class Validator:
         return [(uid, score) for uid, score in self.get_score_buckets()[-1] if score > 0.0]
 
     def get_miner_submissions(self):
-        visited_repositories: dict[str, tuple[int, int]] = {}
+        visited_repositories: dict[str, tuple[Uid, int]] = {}
 
         miner_info: list[CheckpointSubmission | None] = []
 
@@ -548,8 +560,8 @@ class Validator:
 
         return miner_info
 
-    def start_benchmarking(self, submissions: dict[str, CheckpointSubmission]):
-        submissions_json = RootModel[dict[str, CheckpointSubmission]](submissions).model_dump_json()
+    def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
+        submissions_json = RootModel[dict[Key, CheckpointSubmission]](submissions).model_dump_json()
 
         state_response = requests.post(
             f"{self.config.benchmarker_api}/start",
@@ -585,24 +597,18 @@ class Validator:
                 self.contest = CURRENT_CONTEST
 
                 self.benchmarks = self.clear_benchmarks()
+                self.failed.clear()
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
                 self.previous_day_winners = []
             else:
-                def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
-                    if old_info is None and new_info is None:
-                        return False
-
-                    if (old_info is None) != (new_info is None):
-                        return True
-
-                    return old_info.repository != new_info.repository or old_info.revision != new_info.revision
-
-                updated_uids = set([
-                    uid
-                    for uid in range(self.metagraph.n.item())
-                    if should_update(self.contest_state.miner_info[uid], miner_info[uid])
-                ])
+                updated_uids = set(
+                    [
+                        uid
+                        for uid in range(self.metagraph.n.item())
+                        if should_update(self.contest_state.miner_info[uid], miner_info[uid])
+                    ]
+                )
 
                 submissions = {
                     self.metagraph.hotkeys[uid]: miner_info[uid]
@@ -625,7 +631,11 @@ class Validator:
                     if len(self.previous_day_winners):
                         bucket_score = min([score for _, score in self.previous_day_winners])
 
-                        new_winners = [(uid, score) for uid, score in winners if score > bucket_score * IMPROVEMENT_BENCHMARK_PERCENTAGE]
+                        new_winners = [
+                            (uid, score)
+                            for uid, score in winners
+                            if score > bucket_score * IMPROVEMENT_BENCHMARK_PERCENTAGE
+                        ]
 
                         if len(new_winners):
                             # New winner
@@ -666,30 +676,38 @@ class Validator:
 
         state_response.raise_for_status()
 
-        result = BenchmarkState.model_validate(state_response.json())
+        result = BenchmarkResults.model_validate(state_response.json())
 
-        if result.results is not None:
-            failing_submission_uids = [
+        if result.state == BenchmarkState.NOT_STARTED:
+            # API likely crashed or got restarted, need to re-benchmark any submissions sent to API
+            no_results = {
                 uid
-                for uid, submission in enumerate(self.contest_state.miner_info)
-                if submission is not None and self.metagraph.hotkeys[uid] not in result.results
-            ]
+                for uid, benchmark in enumerate(self.benchmarks)
+                if self.contest_state.miner_info[uid] and not benchmark
+            }
 
+            remaining_uids = no_results - self.failed
+
+            submissions = {
+                self.metagraph.hotkeys[uid]: self.contest_state.miner_info[uid]
+                for uid in remaining_uids
+            }
+
+            self.start_benchmarking(submissions)
+        else:
             for hotkey, benchmark in result.results:
                 if hotkey in self.metagraph.hotkeys:
                     self.set_miner_benchmarks(self.metagraph.hotkeys.index(hotkey), benchmark)
 
-            for uid in failing_submission_uids:
-                self.reset_miner(uid)
+            if result.state == BenchmarkState.FINISHED:
+                bt.logging.info(
+                    "Benchmarking API has reported submission testing as done. "
+                    "Miner metrics updated"
+                )
 
-            bt.logging.info(
-                "Benchmarking API has reported submission testing as done. "
-                "Miner metrics updated"
-            )
-
-            self.benchmarking = False
-        else:
-            time.sleep(self.config.epoch_length * 60)
+                self.benchmarking = False
+            else:
+                time.sleep(self.config.epoch_length * 60)
 
         self.step += 1
 
