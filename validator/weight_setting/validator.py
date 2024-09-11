@@ -18,6 +18,7 @@ from numpy.polynomial import Polynomial
 from pickle import dump, load
 
 from pydantic import RootModel
+from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
 
 from neuron import (
@@ -497,8 +498,31 @@ class Validator:
 
         miner_info: list[CheckpointSubmission | None] = []
 
-        for uid in range(self.metagraph.n.item()):
-            submission = get_submission(self.subtensor, self.metagraph, self.metagraph.hotkeys[uid], self.current_block)
+        for uid in tqdm(range(self.metagraph.n.item())):
+            hotkey = self.metagraph.hotkeys[uid]
+            error: Exception | None = None
+
+            for attempt in range(3):
+                try:
+                    if attempt:
+                        bt.logging.warning(f"Failed to get submission, attempt #{attempt + 1}")
+                    else:
+                        bt.logging.info(f"Getting submission for hotkey {hotkey}")
+
+                    submission = get_submission(
+                        self.subtensor,
+                        self.metagraph,
+                        hotkey,
+                        self.current_block,
+                    )
+
+                    break
+                except Exception as e:
+                    error = e
+                    time.sleep(0.1)
+                    continue
+            else:
+                raise error
 
             if not submission:
                 miner_info.append(None)
@@ -519,6 +543,8 @@ class Validator:
 
             miner_info.append(info)
             visited_repositories[info.repository] = uid, block
+
+            time.sleep(0.2)
 
         return miner_info
 
