@@ -575,7 +575,9 @@ class Validator:
         return miner_info
 
     def api_logs(self):
-        with connect(f"{self.config.benchmarker_api}/logs") as websocket:
+        url: str = self.config.benchmarker_api.replace("http", "ws")
+
+        with connect(f"{url}/logs") as websocket:
             for line in websocket:
                 sys.stdout.write(line)
 
