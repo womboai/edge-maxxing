@@ -2,16 +2,16 @@
 
 set -e
 
-useradd --shell=/bin/false --create-home --home-dir /home/sandbox sandbox
-useradd --shell=/bin/false --create-home --home-dir /home/baseline-sandbox baseline-sandbox
+useradd --shell=/bin/false --create-home --home-dir /home/sandbox sandbox || true
+useradd --shell=/bin/false --create-home --home-dir /home/baseline-sandbox baseline-sandbox || true
 
-mkdir /sandbox
-mkdir /baseline-sandbox
+mkdir /sandbox || true
+mkdir /baseline-sandbox || true
 
 chown sandbox:sandbox /sandbox
 chown baseline-sandbox:baseline-sandbox /baseline-sandbox
 
-useradd --create-home --home-dir /home/api api
+useradd --create-home --home-dir /home/api api || true
 
 chown -R api:api /api
 
