@@ -152,6 +152,7 @@ class Validator:
         self.wandb_run = None
 
         self.benchmarks = self.clear_benchmarks()
+        self.failed = set()
 
         self.load_state()
 
