@@ -1,6 +1,7 @@
 import asyncio
 import sys
 from asyncio import Future, AbstractEventLoop
+from collections.abc import Iterable
 from contextlib import asynccontextmanager
 from io import TextIOBase
 from typing import TextIO
@@ -94,12 +95,21 @@ class WebSocketLogStream(TextIOBase):
 
         self._data.clear()
 
+    def _send_line(self, line: str):
+        self._data.append(f"{self._log_type}:{line}")
+
     def write(self, text: str):
         count = self._delegate.write(text)
 
-        self._data.append(f"{self._log_type}:{text}")
+        self._send_line(text)
 
         return count
+
+    def writelines(self, lines: Iterable[str]):
+        self._delegate.writelines(lines)
+
+        for line in lines:
+            self._send_line(line)
 
 
 @asynccontextmanager
