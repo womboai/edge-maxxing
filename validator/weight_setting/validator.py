@@ -579,7 +579,9 @@ class Validator:
 
         with connect(f"{url}/logs") as websocket:
             for line in websocket:
-                sys.stdout.write(line)
+                output = sys.stderr if line.startswith("err:") else sys.stdout
+
+                output.write(line[4:])
 
     def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
         bt.logging.info(f"Sending {submissions} for testing")

@@ -4,8 +4,7 @@ import time
 from multiprocessing.connection import Client
 from os.path import abspath
 from pathlib import Path
-from subprocess import Popen, run, PIPE, STDOUT
-from threading import Thread
+from subprocess import Popen, run
 from typing import Generic
 
 from neuron import RequestT, bt
@@ -23,12 +22,6 @@ def sandbox_args(user: str):
         "-u",
         user,
     ]
-
-
-def stream_logs(pipe, log):
-    with pipe:
-        for line in iter(pipe.readline, b""):
-            log(line.decode().strip())
 
 
 class InferenceSandbox(Generic[RequestT]):
@@ -71,11 +64,9 @@ class InferenceSandbox(Generic[RequestT]):
                 abspath(self._sandbox_directory / ".venv" / "bin" / "start_inference")
             ],
             cwd=self._sandbox_directory,
-            stdout=PIPE,
-            stderr=STDOUT,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
         )
-
-        Thread(target=stream_logs, args=(self._process.stdout, bt.logging.info), daemon=True).start()
 
         bt.logging.info(f"Inference process starting")
         socket_path = abspath(self._sandbox_directory / "inferences.sock")

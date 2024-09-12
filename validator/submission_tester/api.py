@@ -1,7 +1,10 @@
 import asyncio
+import logging
+import sys
 from asyncio import Future, AbstractEventLoop
 from contextlib import asynccontextmanager
-from io import TextIOBase, StringIO
+from io import TextIOBase
+from typing import TextIO
 
 from base_validator.metrics import BenchmarkState, BenchmarkResults
 from fastapi import FastAPI, WebSocket, Request
@@ -9,49 +12,68 @@ from fastapi import FastAPI, WebSocket, Request
 from neuron import CURRENT_CONTEST, CheckpointSubmission, Key
 from .benchmarker import Benchmarker
 
-import logging
+
+async def send_data(websocket: WebSocket, data: list[str]):
+    for line in data:
+        await websocket.send_text(line)
 
 
 class WebSocketLogStream(TextIOBase):
     _websocket: WebSocket
-    _buffer: StringIO
+    _log_type: str
+    _delegate: TextIO
 
+    _data: list[str]
     _futures: list[Future[None]]
+
     _loop: AbstractEventLoop
 
-    def __init__(self, websocket: WebSocket, loop: AbstractEventLoop):
+    def __init__(self, websocket: WebSocket, log_type: str, delegate: TextIO, loop: AbstractEventLoop):
         super().__init__()
 
         self._websocket = websocket
-        self._buffer = StringIO()
+        self._log_type = log_type
+        self._delegate = delegate
 
+        self._data = []
         self._futures = []
 
         self._loop = loop
 
     def __enter__(self):
-        self._buffer.__enter__()
+        self._delegate.__enter__()
 
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._buffer.__exit__(exc_type, exc_val, exc_tb)
+        self._delegate.__exit__(exc_type, exc_val, exc_tb)
 
     def __await__(self):
         yield from asyncio.gather(*self._futures).__await__()
 
         self._futures.clear()
 
+    def __getattr__(self, item):
+        attribute_owner = self if hasattr(self, item) else self._delegate
+
+        return getattr(attribute_owner, item)
+
     def flush(self):
-        buffered_text = self._buffer.getvalue()
+        self._delegate.flush()
 
-        self._futures.append(asyncio.ensure_future(self._websocket.send_text(buffered_text), loop=self._loop))
+        coroutine = send_data(self._websocket, self._data.copy())
+        future = asyncio.ensure_future(coroutine, loop=self._loop)
 
-        self._buffer.truncate(0)
-        self._buffer.seek(0)
+        self._futures.append(future)
+
+        self._data.clear()
 
     def write(self, text: str):
-        self._buffer.write(text)
+        count = self._delegate.write(text)
+
+        self._data.append(f"{self._log_type}:{text}")
+
+        return count
 
 
 @asynccontextmanager
@@ -100,16 +122,23 @@ def state(request: Request) -> BenchmarkResults:
 async def stream_logs(websocket: WebSocket):
     await websocket.accept()
 
-    with WebSocketLogStream(websocket, asyncio.get_running_loop()) as stream:
-        handler = logging.StreamHandler(stream)
+    loop = asyncio.get_running_loop()
 
-        try:
-            logging.root.addHandler(handler)
+    old_out = sys.stdout
+    old_err = sys.stderr
 
-            while True:
-                await asyncio.sleep(500)
+    out = WebSocketLogStream(websocket, "out", sys.stdout, loop)
+    err = WebSocketLogStream(websocket, "err", sys.stderr, loop)
 
-                await stream
-        finally:
-            # On disconnect
-            logging.root.removeHandler(handler)
+    try:
+        sys.stdout = out
+        sys.stderr = err
+
+        while True:
+            await asyncio.sleep(500)
+
+            await out
+            await err
+    finally:
+        sys.stdout = old_out
+        sys.stderr = old_err
