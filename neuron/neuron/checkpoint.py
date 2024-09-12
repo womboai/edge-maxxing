@@ -7,7 +7,7 @@ from .bt import (
     metagraph as bt_metagraph,
     subtensor as bt_subtensor,
     wallet as bt_wallet,
-    logging,
+    logging as bt_logging,
 )
 from pydantic import BaseModel
 
@@ -111,6 +111,6 @@ def get_submission(
 
         return info, block
     except Exception as e:
-        logging.error(f"Failed to get submission from miner {hotkey}, {e}")
-        logging.debug(f"Submission parsing error, {traceback.format_exception(e)}")
+        bt_logging.error(f"Failed to get submission from miner {hotkey}, {e}")
+        bt_logging.debug(f"Submission parsing error, {traceback.format_exception(e)}")
         return None

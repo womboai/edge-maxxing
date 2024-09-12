@@ -4,7 +4,6 @@ import traceback
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from datetime import date, datetime
-from io import TextIOBase
 from operator import itemgetter
 from os import makedirs
 from os.path import isfile, expanduser, join

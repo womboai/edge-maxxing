@@ -31,7 +31,6 @@ __cached_handlers = {}
 for __logger in __all_loggers():
     __cached_handlers[__logger] = __logger.handlers.copy()
 
-from bittensor import *
 from bittensor.extrinsics.serving import *
 
 for __logger in __all_loggers():
@@ -40,3 +39,5 @@ for __logger in __all_loggers():
 
     for handler in __cached_handlers[__logger]:
         __logger.addHandler(handler)
+
+from bittensor import *
