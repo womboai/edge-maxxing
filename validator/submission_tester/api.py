@@ -43,7 +43,7 @@ def start_benchmarking(submissions: dict[Key, CheckpointSubmission], request: Re
 
 
 @app.get("/state")
-def state(request: Request) -> BenchmarkState:
+def state(request: Request) -> BenchmarkResults:
     benchmarker: Benchmarker = request.state.benchmarker
 
     benchmark_state: BenchmarkState

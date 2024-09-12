@@ -43,10 +43,8 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-from websockets.sync.client import connect, ClientConnection
-
-WEIGHTS_VERSION = 16
-VALIDATOR_VERSION = "2.0.2"
+WEIGHTS_VERSION = 18
+VALIDATOR_VERSION = "2.0.4"
 
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
@@ -413,27 +411,30 @@ class Validator:
         highest_bucket = len(buckets) - 1
 
         if self.wandb_run:
+            bt.logging.info("Uploading benchmarks to wandb")
+
             log_data = {}
 
             for index, bucket in enumerate(buckets):
                 bucket_rank = highest_bucket - index
 
                 for uid, score in bucket.scores:
-                    metric_data = self.benchmarks[uid]
+                    metric_data: CheckpointBenchmark | None = self.benchmarks[uid]
                     if metric_data:
                         submission = cast(CheckpointSubmission, self.contest_state.miner_info[uid])
                         if submission:
                             log_data[str(uid)] = {
                                 "rank": bucket_rank,
                                 "model": submission.repository,
-                                "baseline_generation_time": metric_data.baseline_average,
-                                "generation_time": metric_data.model_average,
-                                "similarity": metric_data.similarity_average,
-                                "size": metric_data.size,
-                                "baseline_vram_used": metric_data.vram_used,
-                                "vram_used": metric_data.vram_used,
-                                "baseline_watts_used": metric_data.watts_used,
-                                "watts_used": metric_data.watts_used,
+                                "baseline_generation_time": metric_data.baseline.generation_time,
+                                "generation_time": metric_data.model.generation_time,
+                                "similarity": metric_data.similarity_score,
+                                "baseline_size": metric_data.baseline.size,
+                                "size": metric_data.model.size,
+                                "baseline_vram_used": metric_data.baseline.vram_used,
+                                "vram_used": metric_data.model.vram_used,
+                                "baseline_watts_used": metric_data.baseline.watts_used,
+                                "watts_used": metric_data.model.watts_used,
                                 "hotkey": self.hotkeys[uid],
                                 "multiday_winner": bucket.previous_day_winners,
                             }
