@@ -1,11 +1,26 @@
+import asyncio
 from contextlib import asynccontextmanager
+from io import TextIOBase
 
 from base_validator.metrics import BenchmarkState, BenchmarkResults
-from fastapi import FastAPI
-from starlette.requests import Request
+from fastapi import FastAPI, WebSocket, Request
 
 from neuron import CURRENT_CONTEST, CheckpointSubmission, Key
 from .benchmarker import Benchmarker
+
+import logging
+
+
+class WebSocketLogStream(TextIOBase):
+    _websocket: WebSocket
+
+    def __init__(self, websocket: WebSocket):
+        super().__init__()
+
+        self._websocket = websocket
+
+    def write(self, text: str):
+        self._websocket.send_text(text)
 
 
 @asynccontextmanager
@@ -48,3 +63,19 @@ def state(request: Request) -> BenchmarkState:
             if submission
         },
     )
+
+
+@app.websocket("/logs")
+async def stream_logs(websocket: WebSocket):
+    await websocket.accept()
+
+    handler = logging.StreamHandler(WebSocketLogStream(websocket))
+
+    try:
+        logging.root.addHandler(handler)
+
+        while True:
+            await asyncio.sleep(250)
+    finally:
+        # On disconnect
+        logging.root.removeHandler(handler)

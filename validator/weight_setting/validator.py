@@ -1,11 +1,14 @@
+import sys
 import time
 import traceback
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from datetime import date, datetime
+from io import TextIOBase
 from operator import itemgetter
 from os import makedirs
 from os.path import isfile, expanduser, join
+from threading import Thread
 from typing import cast, TypeAlias
 from zoneinfo import ZoneInfo
 
@@ -35,12 +38,15 @@ from neuron import (
     Uid,
     should_update,
 )
+
 from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointBenchmark
 
 from .wandb_args import add_wandb_args
 
-WEIGHTS_VERSION = 15
-VALIDATOR_VERSION = "2.0.1"
+from websockets.sync.client import connect, ClientConnection
+
+WEIGHTS_VERSION = 16
+VALIDATOR_VERSION = "2.0.2"
 
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
@@ -121,6 +127,8 @@ class Validator:
     failed: set[int]
     contest: Contest
 
+    log_thread: Thread | None
+
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
 
@@ -157,6 +165,8 @@ class Validator:
         self.load_state()
 
         self.contest = find_contest(self.contest_state.id) if self.contest_state else CURRENT_CONTEST
+
+        self.log_thread = None
 
     def new_wandb_run(self):
         """Creates a new wandb run to save information to."""
@@ -562,6 +572,11 @@ class Validator:
 
         return miner_info
 
+    def api_logs(self):
+        with connect(f"{self.config.benchmarker_api}/start") as websocket:
+            for line in websocket:
+                sys.stdout.write(line)
+
     def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
         bt.logging.info(f"Sending {submissions} for testing")
 
@@ -574,6 +589,9 @@ class Validator:
         )
 
         state_response.raise_for_status()
+
+        if not self.log_thread:
+            self.log_thread = Thread(target=self.api_logs)
 
     def do_step(self, block: int):
         now = datetime.now(tz=ZoneInfo("America/New_York"))
