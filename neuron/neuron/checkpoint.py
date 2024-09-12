@@ -1,8 +1,14 @@
 import traceback
 from typing import cast, Any, TypeAlias
 
-import bt
-from bt import get_metadata, publish_metadata
+from .bt import (
+    get_metadata,
+    publish_metadata,
+    metagraph as bt_metagraph,
+    subtensor as bt_subtensor,
+    wallet as bt_wallet,
+    logging,
+)
 from pydantic import BaseModel
 
 from .contest import ContestId, CURRENT_CONTEST
@@ -48,9 +54,9 @@ def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSub
 
 
 def make_submission(
-    subtensor: bt.subtensor,
-    metagraph: bt.metagraph,
-    wallet: bt.wallet,
+    subtensor: bt_subtensor,
+    metagraph: bt_metagraph,
+    wallet: bt_wallet,
     submission: CheckpointSubmission,
 ):
     encoder = Encoder()
@@ -72,8 +78,8 @@ def make_submission(
 
 
 def get_submission(
-    subtensor: bt.subtensor,
-    metagraph: bt.metagraph,
+    subtensor: bt_subtensor,
+    metagraph: bt_metagraph,
     hotkey: Key,
     block: int | None = None
 ) -> tuple[CheckpointSubmission, int] | None:
@@ -105,6 +111,6 @@ def get_submission(
 
         return info, block
     except Exception as e:
-        bt.logging.error(f"Failed to get submission from miner {hotkey}, {e}")
-        bt.logging.debug(f"Submission parsing error, {traceback.format_exception(e)}")
+        logging.error(f"Failed to get submission from miner {hotkey}, {e}")
+        logging.debug(f"Submission parsing error, {traceback.format_exception(e)}")
         return None

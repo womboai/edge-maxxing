@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import sys
 from asyncio import Future, AbstractEventLoop
 from contextlib import asynccontextmanager
