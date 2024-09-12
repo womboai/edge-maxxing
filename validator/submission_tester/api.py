@@ -12,6 +12,29 @@ from neuron import CURRENT_CONTEST, CheckpointSubmission, Key
 from .benchmarker import Benchmarker
 
 
+_DELEGATION_NAMES = [
+    "closed",
+    "_checkClosed",
+    "_checkReadable",
+    "_checkSeekable",
+    "_checkWritable",
+    "close",
+    "detach",
+    "fileno",
+    "isatty",
+    "next",
+    "read",
+    "readable",
+    "readline",
+    "readlines",
+    "seek",
+    "seekable",
+    "tell",
+    "truncate",
+    "writable",
+    "__iter__",
+]
+
 async def send_data(websocket: WebSocket, data: list[str]):
     for line in data:
         await websocket.send_text(line)
@@ -33,6 +56,10 @@ class WebSocketLogStream(TextIOBase):
         self._websocket = websocket
         self._log_type = log_type
         self._delegate = delegate
+
+        for name in _DELEGATION_NAMES:
+            if hasattr(self._delegate, name):
+                setattr(self, name, getattr(self._delegate, name))
 
         self._data = []
         self._futures = []
@@ -140,3 +167,11 @@ async def stream_logs(websocket: WebSocket):
     finally:
         sys.stdout = old_out
         sys.stderr = old_err
+
+
+async def main():
+    print(WebSocketLogStream(None, "out", sys.stdout, asyncio.get_running_loop()).__next__)
+
+
+if __name__ == '__main__':
+    asyncio.run(main())
