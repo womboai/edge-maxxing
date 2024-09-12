@@ -22,6 +22,7 @@ from pickle import dump, load
 from pydantic import RootModel
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
+from websockets import ConnectionClosedError
 from websockets.sync.client import connect
 
 from neuron import (
@@ -576,11 +577,15 @@ class Validator:
     def api_logs(self):
         url: str = self.config.benchmarker_api.replace("http", "ws")
 
-        with connect(f"{url}/logs") as websocket:
-            for line in websocket:
-                output = sys.stderr if line.startswith("err:") else sys.stdout
+        while True:
+            with connect(f"{url}/logs") as websocket:
+                try:
+                    for line in websocket:
+                        output = sys.stderr if line.startswith("err:") else sys.stdout
 
-                output.write(line[4:])
+                        output.write(line[4:])
+                except ConnectionClosedError:
+                    continue
 
     def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
         bt.logging.info(f"Sending {submissions} for testing")
