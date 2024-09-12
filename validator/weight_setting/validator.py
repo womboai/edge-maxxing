@@ -595,6 +595,8 @@ class Validator:
         if not self.log_thread:
             self.log_thread = Thread(target=self.api_logs)
 
+            self.log_thread.start()
+
     def do_step(self, block: int):
         now = datetime.now(tz=ZoneInfo("America/New_York"))
 
@@ -738,6 +740,9 @@ class Validator:
                 self.benchmarking = False
             else:
                 time.sleep(self.config.epoch_length * 60)
+
+        if not self.log_thread.is_alive():
+            self.log_thread.join()
 
         self.step += 1
 
