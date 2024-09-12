@@ -60,6 +60,7 @@ class Benchmarker:
             self.submissions.update(submissions)
 
             for hotkey in submissions.keys():
-                del self.benchmarks[hotkey]
+                if hotkey in self.benchmarks:
+                    del self.benchmarks[hotkey]
 
         self.benchmark_task = asyncio.create_task(self._start_benchmarking(submissions))
