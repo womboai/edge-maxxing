@@ -35,7 +35,7 @@ class Benchmarker:
     async def _benchmark_key_async(self, hotkey: Key):
         loop = asyncio.get_running_loop()
 
-        loop.run_in_executor(None, self._benchmark_key, hotkey)
+        await loop.run_in_executor(None, self._benchmark_key, hotkey)
 
     async def _start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
         self.submissions = submissions
@@ -53,7 +53,7 @@ class Benchmarker:
 
         self.done = True
 
-    def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
+    async def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
         if not self.done and self.started:
             self.benchmark_task.cancel()
 
