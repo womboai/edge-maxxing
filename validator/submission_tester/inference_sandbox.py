@@ -76,6 +76,9 @@ class InferenceSandbox(Generic[RequestT]):
         for _ in range(SOCKET_TIMEOUT):
             if os.path.exists(socket_path):
                 break
+
+            self._check_exit()
+
             time.sleep(1)
         else:
             bt.logging.error(f"Socket file '{socket_path}' not found after {SOCKET_TIMEOUT} seconds.")
