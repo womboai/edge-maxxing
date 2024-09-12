@@ -21,10 +21,10 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.post("/start")
-def start_benchmarking(submissions: dict[Key, CheckpointSubmission], request: Request):
+async def start_benchmarking(submissions: dict[Key, CheckpointSubmission], request: Request):
     benchmarker: Benchmarker = request.state.benchmarker
 
-    benchmarker.start_benchmarking(submissions)
+    await benchmarker.start_benchmarking(submissions)
 
 
 @app.get("/state")
