@@ -25,6 +25,8 @@ class WebSocketLogStream(TextIOBase):
         self._websocket = websocket
         self._buffer = StringIO()
 
+        self._futures = []
+
         self._loop = loop
 
     def __enter__(self):
