@@ -48,7 +48,7 @@ class Benchmarker:
 
             try:
                 await self._benchmark_key_async(hotkey)
-            except asyncio.TimeoutError:
+            except asyncio.CancelledError | asyncio.TimeoutError:
                 return
 
         self.done = True
