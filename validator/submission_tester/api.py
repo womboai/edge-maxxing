@@ -98,7 +98,7 @@ def state(request: Request) -> BenchmarkResults:
 async def stream_logs(websocket: WebSocket):
     await websocket.accept()
 
-    async with WebSocketLogStream(websocket, asyncio.get_running_loop()) as stream:
+    with WebSocketLogStream(websocket, asyncio.get_running_loop()) as stream:
         handler = logging.StreamHandler(stream)
 
         try:
