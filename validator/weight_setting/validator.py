@@ -24,6 +24,7 @@ from pickle import dump, load
 from pydantic import RootModel
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
+from websockets.sync.client import connect
 
 from neuron import (
     CheckpointSubmission,
@@ -574,7 +575,7 @@ class Validator:
         return miner_info
 
     def api_logs(self):
-        with connect(f"{self.config.benchmarker_api}/start") as websocket:
+        with connect(f"{self.config.benchmarker_api}/logs") as websocket:
             for line in websocket:
                 sys.stdout.write(line)
 
