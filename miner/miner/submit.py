@@ -1,9 +1,9 @@
 from argparse import ArgumentParser
 
-import bittensor as bt
 from git import Repo
 
 from neuron import (
+    bt,
     CheckpointSubmission,
     get_config,
     make_submission,

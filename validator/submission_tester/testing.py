@@ -2,9 +2,7 @@ from dataclasses import dataclass
 from os import urandom
 from time import perf_counter
 
-import bittensor as bt
-
-from neuron import Contest, CheckpointSubmission
+from neuron import Contest, CheckpointSubmission, bt
 from pipelines.models import TextToImageRequest
 from .inference_sandbox import InferenceSandbox
 from .random_inputs import generate_random_prompt

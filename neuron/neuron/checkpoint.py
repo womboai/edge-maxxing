@@ -1,8 +1,8 @@
 import traceback
-from typing import cast, Any, NewType, TypeAlias
+from typing import cast, Any, TypeAlias
 
-import bittensor as bt
-from bittensor.extrinsics.serving import get_metadata, publish_metadata
+import bt
+from bt import get_metadata, publish_metadata
 from pydantic import BaseModel
 
 from .contest import ContestId, CURRENT_CONTEST

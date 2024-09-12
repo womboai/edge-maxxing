@@ -8,8 +8,8 @@ from os import makedirs
 from os.path import expanduser, join, isfile
 from pathlib import Path
 
-import bittensor as bt
 from pickle import load
+from neuron import bt
 
 from .validator import ContestState  # noqa (Needed for depickling)
 

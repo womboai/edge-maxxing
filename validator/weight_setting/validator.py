@@ -12,7 +12,6 @@ from threading import Thread
 from typing import cast, TypeAlias
 from zoneinfo import ZoneInfo
 
-import bittensor as bt
 import numpy
 import requests
 import wandb
@@ -27,6 +26,7 @@ from wandb.sdk.wandb_run import Run
 from websockets.sync.client import connect
 
 from neuron import (
+    bt,
     CheckpointSubmission,
     get_config,
     ContestId,
