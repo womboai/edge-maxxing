@@ -167,11 +167,3 @@ async def stream_logs(websocket: WebSocket):
     finally:
         sys.stdout = old_out
         sys.stderr = old_err
-
-
-async def main():
-    print(WebSocketLogStream(None, "out", sys.stdout, asyncio.get_running_loop()).__next__)
-
-
-if __name__ == '__main__':
-    asyncio.run(main())
