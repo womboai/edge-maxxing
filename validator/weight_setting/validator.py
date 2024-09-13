@@ -582,7 +582,7 @@ class Validator:
                     for line in websocket:
                         output = sys.stderr if line.startswith("err:") else sys.stdout
 
-                        output.write(line[4:])
+                        print(line[4:], file=output)
                 except ConnectionClosedError:
                     continue
 
