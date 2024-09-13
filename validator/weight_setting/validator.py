@@ -378,7 +378,7 @@ class Validator:
         try:
             self.set_weights()
         except Exception as e:
-            bt.logging.error(f"Failed to set weights, {e}")
+            bt.logging.error(f"Failed to set weights", exc_info=e)
 
     def set_weights(self):
         if not self.contest_state:
