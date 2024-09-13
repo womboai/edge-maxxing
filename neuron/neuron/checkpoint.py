@@ -1,4 +1,3 @@
-import traceback
 from typing import cast, Any, TypeAlias
 
 import neuron.bt as bt
@@ -105,6 +104,6 @@ def get_submission(
 
         return info, block
     except Exception as e:
-        bt.logging.error(f"Failed to get submission from miner {hotkey}, {e}")
-        bt.logging.debug(f"Submission parsing error, {traceback.format_exception(e)}")
+        bt.logging.error(f"Failed to get submission from miner {hotkey}")
+        bt.logging.debug(f"Submission parsing error", exc_info=e)
         return None

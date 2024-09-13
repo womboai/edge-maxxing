@@ -1,6 +1,5 @@
 import sys
 import time
-import traceback
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -768,7 +767,7 @@ class Validator:
                 self.do_step(self.current_block)
             except Exception as e:
                 if not isinstance(e, ContestDeviceValidationError):
-                    bt.logging.error(f"Error during validation step {self.step}, {traceback.format_exception(e)}")
+                    bt.logging.error(f"Error during validation step {self.step}", exc_info=e)
                     continue
 
                 raise
