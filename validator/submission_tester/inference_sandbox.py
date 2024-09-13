@@ -5,7 +5,7 @@ from multiprocessing.connection import Client
 from os.path import abspath
 from pathlib import Path
 from subprocess import Popen, run
-from typing import Generic
+from typing import Generic, cast, IO
 
 from neuron import RequestT, bt
 
@@ -22,6 +22,23 @@ def sandbox_args(user: str):
         "-u",
         user,
     ]
+
+
+class OutputDelegate:
+    _name: str
+
+    def __init__(self, name: str):
+        self._name = name
+
+    def __getattr__(self, item):
+        output_delegate = getattr(sys, self._name)
+        attribute_owner = self if hasattr(self, item) else output_delegate
+
+        return getattr(attribute_owner, item)
+
+
+def delegate(name: str):
+    return cast(IO[str], OutputDelegate(name))
 
 
 class InferenceSandbox(Generic[RequestT]):
@@ -50,8 +67,8 @@ class InferenceSandbox(Generic[RequestT]):
                 revision,
                 str(baseline).lower(),
             ],
-            stdout=sys.stdout,
-            stderr=sys.stderr,
+            stdout=delegate("stdout"),
+            stderr=delegate("stderr"),
         ).check_returncode()
 
         self._file_size = sum(file.stat().st_size for file in self._sandbox_directory.rglob("*"))
