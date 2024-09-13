@@ -19,8 +19,10 @@ services:
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/state"]
-      interval: 30s
-      timeout: 10s
+      interval: 1m
+      timeout: 5s
+      start_period: 15s
+      start_interval: 10s
 
   validator:
     build:
