@@ -749,7 +749,7 @@ class Validator:
             else:
                 time.sleep(self.config.epoch_length * 60)
 
-        if not self.log_thread.is_alive():
+        if self.log_thread and not self.log_thread.is_alive():
             self.log_thread.join()
 
         self.step += 1
