@@ -17,6 +17,11 @@ services:
             - capabilities:
                 - gpu
 
+    healthcheck:
+      test: ["curl", "http://localhost:8000/state"]
+      interval: 30s
+      timeout: 10s
+
   validator:
     build:
       context: ../
@@ -29,3 +34,7 @@ services:
     command: --benchmarker_api http://localhost:8000 $VALIDATOR_ARGS
 
     network_mode: host
+
+    depends_on:
+      api:
+        condition: service_healthy
