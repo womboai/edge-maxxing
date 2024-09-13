@@ -14,7 +14,6 @@ from .benchmarker import Benchmarker
 
 
 _DELEGATION_NAMES = [
-    "closed",
     "_checkClosed",
     "_checkReadable",
     "_checkSeekable",
@@ -35,6 +34,7 @@ _DELEGATION_NAMES = [
     "writable",
     "__iter__",
 ]
+
 
 async def send_data(websocket: WebSocket, data: list[str]):
     for line in data:
@@ -84,6 +84,10 @@ class WebSocketLogStream(TextIOBase):
         attribute_owner = self if hasattr(self, item) else self._delegate
 
         return getattr(attribute_owner, item)
+
+    @property
+    def closed(self):
+        return self._delegate.closed
 
     def flush(self):
         self._delegate.flush()
