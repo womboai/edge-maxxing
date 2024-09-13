@@ -18,7 +18,7 @@ services:
                 - gpu
 
     healthcheck:
-      test: ["curl", "http://localhost:8000/state"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/state"]
       interval: 30s
       timeout: 10s
 
