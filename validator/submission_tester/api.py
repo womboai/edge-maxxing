@@ -3,7 +3,6 @@ import sys
 from asyncio import Future, AbstractEventLoop
 from collections.abc import Iterable
 from contextlib import asynccontextmanager
-from io import TextIOBase
 from typing import TextIO
 
 from base_validator.metrics import BenchmarkState, BenchmarkResults
@@ -13,35 +12,12 @@ from neuron import CURRENT_CONTEST, CheckpointSubmission, Key
 from .benchmarker import Benchmarker
 
 
-_DELEGATION_NAMES = [
-    "_checkClosed",
-    "_checkReadable",
-    "_checkSeekable",
-    "_checkWritable",
-    "close",
-    "detach",
-    "fileno",
-    "isatty",
-    "next",
-    "read",
-    "readable",
-    "readline",
-    "readlines",
-    "seek",
-    "seekable",
-    "tell",
-    "truncate",
-    "writable",
-    "__iter__",
-]
-
-
 async def send_data(websocket: WebSocket, data: list[str]):
     for line in data:
         await websocket.send_text(line)
 
 
-class WebSocketLogStream(TextIOBase):
+class WebSocketLogStream:
     _websocket: WebSocket
     _log_type: str
     _delegate: TextIO
@@ -57,10 +33,6 @@ class WebSocketLogStream(TextIOBase):
         self._websocket = websocket
         self._log_type = log_type
         self._delegate = delegate
-
-        for name in _DELEGATION_NAMES:
-            if hasattr(self._delegate, name):
-                setattr(self, name, getattr(self._delegate, name))
 
         self._data = []
         self._futures = []
@@ -84,13 +56,10 @@ class WebSocketLogStream(TextIOBase):
         yield from asyncio.gather(*futures).__await__()
 
     def __getattr__(self, item):
-        attribute_owner = self if hasattr(self, item) else self._delegate
+        if item in self.__dict__:
+            return self.__dict__[item]
 
-        return getattr(attribute_owner, item)
-
-    @property
-    def closed(self):
-        return self._delegate.closed
+        return getattr(self._delegate, item)
 
     def flush(self):
         self._delegate.flush()

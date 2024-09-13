@@ -1,5 +1,7 @@
 FROM pytorch/pytorch:2.4.0-cuda12.4-cudnn9-runtime
 
+RUN apt-get update && apt-get install -y curl
+
 WORKDIR /api
 
 COPY README.md .
@@ -24,5 +26,12 @@ COPY validator/submission_tester validator/submission_tester
 WORKDIR /api/validator
 
 EXPOSE 8000
+
+HEALTHCHECK \
+    --interval=1m \
+    --timeout=5s \
+    --start-period=15s \
+    --start-interval=10s \
+    CMD curl -f http://localhost:8000/state || exit 1
 
 ENTRYPOINT ["submission_tester/entrypoint.sh"]

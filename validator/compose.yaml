@@ -17,13 +17,6 @@ services:
             - capabilities:
                 - gpu
 
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/state"]
-      interval: 1m
-      timeout: 5s
-      start_period: 15s
-      start_interval: 10s
-
   validator:
     build:
       context: ../
