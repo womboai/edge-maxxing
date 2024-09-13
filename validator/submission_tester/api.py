@@ -175,7 +175,7 @@ async def stream_logs(websocket: WebSocket):
         sys.stderr = err
 
         while True:
-            await asyncio.sleep(500)
+            await asyncio.sleep(0.5)
 
             await asyncio.gather(out, err)
     finally:
