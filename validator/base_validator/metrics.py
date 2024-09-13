@@ -26,7 +26,7 @@ class CheckpointBenchmark(BaseModel):
             # Deviating too much from original quality
             return 0.0
 
-        return max(0.0, self.baseline.generation_time - self.model.generation_time) * self.model.similarity_score
+        return max(0.0, self.baseline.generation_time - self.model.generation_time) * self.similarity_score
 
 
 class BenchmarkState(Enum):
