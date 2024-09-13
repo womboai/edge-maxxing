@@ -76,9 +76,10 @@ class WebSocketLogStream(TextIOBase):
         self._delegate.__exit__(exc_type, exc_val, exc_tb)
 
     def __await__(self):
-        yield from asyncio.gather(*self._futures).__await__()
-
+        futures = self._futures.copy()
         self._futures.clear()
+
+        yield from asyncio.gather(*futures).__await__()
 
     def __getattr__(self, item):
         attribute_owner = self if hasattr(self, item) else self._delegate
