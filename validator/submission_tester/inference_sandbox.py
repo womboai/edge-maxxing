@@ -7,9 +7,7 @@ from pathlib import Path
 from subprocess import Popen, run
 from typing import Generic
 
-import bittensor as bt
-
-from neuron import RequestT
+from neuron import RequestT, bt
 
 SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "setup_inference_sandbox.sh")
 

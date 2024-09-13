@@ -1,3 +1,4 @@
+import sys
 import time
 import traceback
 from argparse import ArgumentParser
@@ -6,10 +7,10 @@ from datetime import date, datetime
 from operator import itemgetter
 from os import makedirs
 from os.path import isfile, expanduser, join
+from threading import Thread
 from typing import cast, TypeAlias
 from zoneinfo import ZoneInfo
 
-import bittensor as bt
 import numpy
 import requests
 import wandb
@@ -21,8 +22,11 @@ from pickle import dump, load
 from pydantic import RootModel
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
+from websockets import ConnectionClosedError
+from websockets.sync.client import connect
 
 from neuron import (
+    bt,
     CheckpointSubmission,
     get_config,
     ContestId,
@@ -35,12 +39,13 @@ from neuron import (
     Uid,
     should_update,
 )
+
 from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointBenchmark
 
 from .wandb_args import add_wandb_args
 
-WEIGHTS_VERSION = 17
-VALIDATOR_VERSION = "2.0.3"
+WEIGHTS_VERSION = 18
+VALIDATOR_VERSION = "2.0.4"
 
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
@@ -121,6 +126,8 @@ class Validator:
     failed: set[int]
     contest: Contest
 
+    log_thread: Thread | None
+
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
 
@@ -157,6 +164,8 @@ class Validator:
         self.load_state()
 
         self.contest = find_contest(self.contest_state.id) if self.contest_state else CURRENT_CONTEST
+
+        self.log_thread = None
 
     def new_wandb_run(self):
         """Creates a new wandb run to save information to."""
@@ -565,6 +574,19 @@ class Validator:
 
         return miner_info
 
+    def api_logs(self):
+        url: str = self.config.benchmarker_api.replace("http", "ws")
+
+        while True:
+            with connect(f"{url}/logs") as websocket:
+                try:
+                    for line in websocket:
+                        output = sys.stderr if line.startswith("err:") else sys.stdout
+
+                        output.write(line[4:])
+                except ConnectionClosedError:
+                    continue
+
     def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
         bt.logging.info(f"Sending {submissions} for testing")
 
@@ -577,6 +599,11 @@ class Validator:
         )
 
         state_response.raise_for_status()
+
+        if not self.log_thread:
+            self.log_thread = Thread(target=self.api_logs)
+
+            self.log_thread.start()
 
     def do_step(self, block: int):
         now = datetime.now(tz=ZoneInfo("America/New_York"))
@@ -721,6 +748,9 @@ class Validator:
                 self.benchmarking = False
             else:
                 time.sleep(self.config.epoch_length * 60)
+
+        if not self.log_thread.is_alive():
+            self.log_thread.join()
 
         self.step += 1
 

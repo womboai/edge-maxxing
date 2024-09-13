@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
 from typing import Callable
 
-import bittensor as bt
+import neuron.bt as bt
 
 
 def get_config(add_args: Callable[[ArgumentParser], None] | None = None):

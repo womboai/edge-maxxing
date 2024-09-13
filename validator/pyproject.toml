@@ -43,6 +43,7 @@ accelerate = "0.34.2"
 omegaconf = "2.3.0"
 pynvml = "11.5.3"
 torchvision = "0.19.1"
+websockets = "13.0.1"
 edge-maxxing-pipelines = { path = "../pipelines", develop = true }
 edge-maxxing-neuron = { path = "../neuron", develop = true }
 
