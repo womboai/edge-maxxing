@@ -30,8 +30,8 @@ EXPOSE 8000
 HEALTHCHECK \
     --interval=1m \
     --timeout=5s \
-    --start_period=15s \
-    --start_interval=10s \
+    --start-period=15s \
+    --start-interval=10s \
     CMD curl -f http://localhost:8000/state || exit 1
 
 ENTRYPOINT ["submission_tester/entrypoint.sh"]
