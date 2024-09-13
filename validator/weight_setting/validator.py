@@ -734,7 +734,7 @@ class Validator:
 
             self.start_benchmarking(submissions)
         else:
-            for hotkey, benchmark in result.results:
+            for hotkey, benchmark in result.results.items():
                 bt.logging.info(f"Updating {hotkey}'s benchmarks to {benchmark}")
                 if hotkey in self.metagraph.hotkeys:
                     self.set_miner_benchmarks(self.metagraph.hotkeys.index(hotkey), benchmark)
