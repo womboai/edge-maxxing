@@ -76,6 +76,8 @@ class WebSocketLogStream(TextIOBase):
         self._delegate.__exit__(exc_type, exc_val, exc_tb)
 
     def __await__(self):
+        self._flush_socket()
+
         futures = self._futures.copy()
         self._futures.clear()
 
@@ -92,7 +94,9 @@ class WebSocketLogStream(TextIOBase):
 
     def flush(self):
         self._delegate.flush()
+        self._flush_socket()
 
+    def _flush_socket(self):
         coroutine = send_data(self._websocket, self._data.copy())
         future = asyncio.ensure_future(coroutine, loop=self._loop)
 
