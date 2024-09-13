@@ -56,9 +56,10 @@ class WebSocketLogStream:
         yield from asyncio.gather(*futures).__await__()
 
     def __getattr__(self, item):
-        attribute_owner = self if hasattr(self, item) else self._delegate
+        if item in self.__dict__:
+            return self.__dict__[item]
 
-        return getattr(attribute_owner, item)
+        return getattr(self._delegate, item)
 
     def flush(self):
         self._delegate.flush()

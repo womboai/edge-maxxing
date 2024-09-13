@@ -31,10 +31,7 @@ class OutputDelegate:
         self._name = name
 
     def __getattr__(self, item):
-        output_delegate = getattr(sys, self._name)
-        attribute_owner = self if hasattr(self, item) else output_delegate
-
-        return getattr(attribute_owner, item)
+        return getattr(getattr(sys, self._name), item)
 
 
 def delegate(name: str):
