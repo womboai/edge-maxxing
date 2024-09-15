@@ -440,6 +440,8 @@ class Validator:
                             }
 
             self.wandb_run.log(data=log_data)
+            bt.logging.info(log_data)
+            bt.logging.info("Benchmarks uploaded to wandb")
 
         sequence_ratio = _winner_percentage_sequence_ratio(len(buckets))
 
@@ -742,8 +744,9 @@ class Validator:
             if result.state == BenchmarkState.FINISHED:
                 bt.logging.info(
                     "Benchmarking API has reported submission testing as done. "
-                    "Miner metrics updated"
+                    "Miner metrics updated:"
                 )
+                bt.logging.info(self.benchmarks)
 
                 self.benchmarking = False
             else:
