@@ -4,7 +4,7 @@ import time
 from multiprocessing.connection import Client
 from os.path import abspath
 from pathlib import Path
-from subprocess import Popen, run
+from subprocess import Popen, run, TimeoutExpired
 from typing import Generic, cast, IO
 
 from neuron import RequestT, bt
@@ -114,7 +114,13 @@ class InferenceSandbox(Generic[RequestT]):
         self._client.__exit__(exc_type, exc_val, exc_tb)
 
         self._process.terminate()
-        self._process.__exit__(exc_type, exc_val, exc_tb)
+
+        try:
+            self._process.wait(timeout=30)
+        except TimeoutExpired:
+            self._process.kill()
+            self._process.wait()
+            bt.logging.warning(f"Forcefully killed inference process")
 
         run(
             [
