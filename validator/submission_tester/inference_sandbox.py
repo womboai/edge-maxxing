@@ -119,8 +119,9 @@ class InferenceSandbox(Generic[RequestT]):
             self._process.wait(timeout=30)
         except TimeoutExpired:
             self._process.kill()
-            self._process.wait()
             bt.logging.warning(f"Forcefully killed inference process")
+
+        self._process.__exit__(exc_type, exc_val, exc_tb)
 
         run(
             [
