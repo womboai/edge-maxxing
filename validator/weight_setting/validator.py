@@ -43,8 +43,8 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-WEIGHTS_VERSION = 20
-VALIDATOR_VERSION = "2.1.1"
+WEIGHTS_VERSION = 21
+VALIDATOR_VERSION = "2.1.2"
 
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
@@ -635,13 +635,14 @@ class Validator:
                 self.contest_state = ContestState(self.contest.id, miner_info)
                 self.previous_day_winners = []
             else:
-                updated_uids = set(
-                    [
-                        uid
-                        for uid in range(self.metagraph.n.item())
-                        if should_update(self.contest_state.miner_info[uid], miner_info[uid])
-                    ]
-                )
+                updated_uids = [
+                    uid
+                    for uid in range(self.metagraph.n.item())
+                    if (
+                        should_update(self.contest_state.miner_info[uid], miner_info[uid]) or
+                        (self.contest_state.miner_info[uid] and not self.benchmarks[uid] and uid not in self.failed)
+                    )
+                ]
 
                 submissions = {
                     self.metagraph.hotkeys[uid]: miner_info[uid]
@@ -651,7 +652,7 @@ class Validator:
 
                 self.start_benchmarking(submissions)
 
-                bt.logging.info(f"Miners {updated_uids} changed their submissions")
+                bt.logging.info(f"Miners {updated_uids} changed their submissions or have not been tested yet")
 
                 for uid in updated_uids:
                     self.reset_miner(uid)
