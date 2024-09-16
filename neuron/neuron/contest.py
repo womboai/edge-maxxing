@@ -171,14 +171,6 @@ CONTESTS = [
 ]
 
 
-def get_contest(contest_id: str) -> Contest:
-    for contest in CONTESTS:
-        if contest.id.name == contest_id:
-            return contest
-
-    raise ValueError(f"Unknown contest ID {contest_id}")
-
-
 def find_contest(contest_id: ContestId):
     for c in CONTESTS:
         if c.id != contest_id:

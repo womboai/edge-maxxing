@@ -1,5 +1,5 @@
-from argparse import ArgumentParser
 import re
+from argparse import ArgumentParser
 
 from git import GitCommandError, cmd
 
@@ -8,10 +8,10 @@ from neuron import (
     CheckpointSubmission,
     get_config,
     make_submission,
-    get_contest,
+    find_contest,
     Contest,
     CURRENT_CONTEST,
-    CONTESTS,
+    CONTESTS, ContestId,
 )
 
 VALID_REPO_REGEX = r'^https:\/\/[a-zA-Z0-9.-]+\/[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$'
@@ -76,7 +76,7 @@ def main():
 
     if config.contest:
         try:
-            contest = get_contest(config.contest)
+            contest = find_contest(ContestId[config.contest])
         except ValueError:
             exit(f"Unknown contest: {config.contest}")
 
@@ -101,15 +101,17 @@ def main():
 
     if not contest:
         while True:
-            print("Available contests:")
+            print("\nAvailable contests:")
             for c in CONTESTS:
                 print(f"\t- {c.id.name}")
             contest_id = input(f"Enter the contest (default: {CURRENT_CONTEST.id.name}): ") or CURRENT_CONTEST.id.name
             try:
-                contest = get_contest(contest_id)
+                contest = find_contest(ContestId[contest_id])
                 break
             except ValueError:
                 print(f"Unknown contest: {contest_id}")
+            except KeyError:
+                print(f"Invalid contest: {contest_id}")
 
     try:
         validate(repository, revision, contest)
@@ -122,7 +124,7 @@ def main():
         "\nSubmission info:\n"
         f"Repository: {checkpoint_info.repository}\n"
         f"Revision:   {checkpoint_info.revision}\n"
-        f"Contest:    {checkpoint_info.contest.name}"
+        f"Contest:    {checkpoint_info.contest.name}\n"
     )
     if input("Confirm submission? (Y/n): ").strip().lower() not in ("yes", "y", ""):
         print("Submission cancelled.")
