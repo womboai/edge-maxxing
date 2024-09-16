@@ -40,7 +40,8 @@ from neuron import (
     should_update,
 )
 
-from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointBenchmark, VALIDATOR_VERSION
+from base_validator import VALIDATOR_VERSION
+from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointBenchmark
 
 from .wandb_args import add_wandb_args
 
@@ -81,9 +82,9 @@ class ContestState:
     miner_info: list[CheckpointSubmission | None]
 
     def __init__(
-        self,
-        contest_id: ContestId,
-        miner_info: list[CheckpointSubmission | None],
+            self,
+            contest_id: ContestId,
+            miner_info: list[CheckpointSubmission | None],
     ):
         self.id = contest_id
         self.miner_score_version = WEIGHTS_VERSION
@@ -290,8 +291,8 @@ class Validator:
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
         self.previous_day_winners = (
-            state.get("previous_day_winners", self.previous_day_winners) or
-            self.previous_day_winners
+                state.get("previous_day_winners", self.previous_day_winners) or
+                self.previous_day_winners
         )
         self.benchmarking = state.get("benchmarking", self.benchmarking)
 
@@ -335,9 +336,9 @@ class Validator:
     def sync(self):
         # --- Check for registration.
         if not self.subtensor.is_hotkey_registered(
-            netuid=self.config.netuid,
-            hotkey_ss58=self.wallet.hotkey.ss58_address,
-            block=self.current_block,
+                netuid=self.config.netuid,
+                hotkey_ss58=self.wallet.hotkey.ss58_address,
+                block=self.current_block,
         ):
             bt.logging.error(
                 f"Wallet: {self.wallet} is not registered on netuid {self.config.netuid}."
@@ -654,8 +655,8 @@ class Validator:
                     uid
                     for uid in range(self.metagraph.n.item())
                     if (
-                        should_update(self.contest_state.miner_info[uid], miner_info[uid]) or
-                        (self.contest_state.miner_info[uid] and not self.benchmarks[uid] and uid not in self.failed)
+                            should_update(self.contest_state.miner_info[uid], miner_info[uid]) or
+                            (self.contest_state.miner_info[uid] and not self.benchmarks[uid] and uid not in self.failed)
                     )
                 ]
 
