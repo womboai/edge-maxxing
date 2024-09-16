@@ -16,7 +16,7 @@ from neuron import (
 )
 
 VALID_REPO_REGEX = r'^https:\/\/[a-zA-Z0-9.-]+\/[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$'
-VALID_REVISION_REGEX = r"^[a-f0-9]{40}$"
+VALID_REVISION_REGEX = r"^[a-f0-9]{7}$"
 
 
 def add_extra_args(argument_parser: ArgumentParser):
@@ -61,7 +61,7 @@ def validate(repository: str, revision: str, contest: Contest):
 
 def get_latest_revision(repository: str):
     git = cmd.Git()
-    return git.ls_remote(repository).split()[0]
+    return git.ls_remote(repository).split()[0][:7]
 
 
 def main():
@@ -92,13 +92,13 @@ def main():
     if not revision:
         while True:
             try:
-                revision = input("Enter revision hash (default: HEAD): ") or get_latest_revision(repository)
+                revision = input("Enter short revision hash (default: HEAD): ") or get_latest_revision(repository)
             except GitCommandError as e:
                 exit(f"Failed to get latest revision: {e}")
             if re.match(VALID_REVISION_REGEX, revision):
                 break
             else:
-                print("Invalid revision hash.")
+                print("Invalid revision hash. Should be 7 characters long.")
 
     if not contest:
         while True:
