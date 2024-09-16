@@ -128,7 +128,7 @@ There is no need to manage venvs in any way, as poetry will handle that.
 ```
 2. Make your own repository on a git provider such as `GitHub` or `HuggingFace` to optimize in
 3. Edit the `src/pipeline.py` file to include any loading or inference optimizations, and save any changed models in `models` (use git submodules for referencing huggingface models or other git provider repositories) and commit
-4. Go to the miner directory after creating and optmizing your repository and run:
+4. After creating and optimizing your repository, run:
 ```bash
 cd miner
 poetry install
