@@ -2,6 +2,10 @@
 
 set -e
 
+DIRECTORY=$(dirname $(realpath $0))
+
+cd $DIRECTORY
+
 VERSION=$(git rev-parse HEAD)
 
 git pull --rebase --autostash
