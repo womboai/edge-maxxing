@@ -1,3 +1,4 @@
+import json
 import sys
 import time
 from argparse import ArgumentParser
@@ -22,7 +23,7 @@ from pydantic import RootModel
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
 from websockets import ConnectionClosedError
-from websockets.sync.client import connect
+from websockets.sync.client import connect, ClientConnection
 
 from neuron import (
     bt,
@@ -39,12 +40,11 @@ from neuron import (
     should_update,
 )
 
-from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointBenchmark
+from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointBenchmark, VALIDATOR_VERSION
 
 from .wandb_args import add_wandb_args
 
 WEIGHTS_VERSION = 21
-VALIDATOR_VERSION = "2.1.2"
 
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
@@ -125,7 +125,8 @@ class Validator:
     failed: set[int]
     contest: Contest
 
-    log_thread: Thread | None
+    websocket: ClientConnection
+    log_thread: Thread
 
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
@@ -164,7 +165,10 @@ class Validator:
 
         self.contest = find_contest(self.contest_state.id) if self.contest_state else CURRENT_CONTEST
 
-        self.log_thread = None
+        self.websocket = self.connect_to_api()
+
+        self.log_thread = Thread(target=self.api_logs)
+        self.log_thread.start()
 
     def new_wandb_run(self):
         """Creates a new wandb run to save information to."""
@@ -575,18 +579,32 @@ class Validator:
 
         return miner_info
 
-    def api_logs(self):
+    def connect_to_api(self):
         url: str = self.config.benchmarker_api.replace("http", "ws")
 
-        while True:
-            with connect(f"{url}/logs") as websocket:
-                try:
-                    for line in websocket:
-                        output = sys.stderr if line.startswith("err:") else sys.stdout
+        websocket = connect(f"{url}/logs")
 
-                        print(line[4:], file=output)
-                except ConnectionClosedError:
-                    continue
+        try:
+            version = json.loads(websocket.recv())["version"]
+        except:
+            raise RuntimeError("Validator API out of date")
+
+        if version != VALIDATOR_VERSION:
+            raise RuntimeError(
+                f"Validator API out of date, received {version} but expected {VALIDATOR_VERSION}"
+            )
+
+        return websocket
+
+    def api_logs(self):
+        while True:
+            try:
+                for line in self.websocket:
+                    output = sys.stderr if line.startswith("err:") else sys.stdout
+
+                    print(line[4:], file=output)
+            except ConnectionClosedError:
+                self.websocket = self.connect_to_api()
 
     def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
         bt.logging.info(f"Sending {submissions} for testing")
@@ -600,11 +618,6 @@ class Validator:
         )
 
         state_response.raise_for_status()
-
-        if not self.log_thread:
-            self.log_thread = Thread(target=self.api_logs)
-
-            self.log_thread.start()
 
     def do_step(self, block: int):
         now = datetime.now(tz=ZoneInfo("America/New_York"))
@@ -751,9 +764,6 @@ class Validator:
                 self.benchmarking = False
             else:
                 time.sleep(self.config.epoch_length * 60)
-
-        if self.log_thread and not self.log_thread.is_alive():
-            self.log_thread.join()
 
         self.step += 1
 

@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from contextlib import asynccontextmanager
 from typing import TextIO
 
-from base_validator.metrics import BenchmarkState, BenchmarkResults
+from base_validator.metrics import BenchmarkState, BenchmarkResults, VALIDATOR_VERSION
 from fastapi import FastAPI, WebSocket, Request
 
 from neuron import CURRENT_CONTEST, CheckpointSubmission, Key
@@ -135,6 +135,8 @@ def state(request: Request) -> BenchmarkResults:
 @app.websocket("/logs")
 async def stream_logs(websocket: WebSocket):
     await websocket.accept()
+
+    await websocket.send_json({"version": VALIDATOR_VERSION})
 
     loop = asyncio.get_running_loop()
 
