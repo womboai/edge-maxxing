@@ -150,16 +150,22 @@ There is no need to manage venvs in any way, as poetry will handle that.
 The validator setup requires two components, an API container and a scoring validator
 
 ### Dedicated Hardware
-If your hardware is not accessed within a container(as in, can use Docker), then the easiest way to set the different components up is to use docker compose, such as the following:
+If your hardware is not accessed within a container(as in, can use Docker), then the easiest way to set the different components up is to use docker compose.
 
-```bash
-cd validator
-
-env "VALIDATOR_ARGS=--netuid {netuid} --subtensor.network {network} --wallet.name {wallet} --wallet.hotkey {hotkey} --logging.trace --logging.debug" \
-    docker compose up --detach
+To get started, go to the `validator`, and create a `.env` file with the following contents:
+```
+VALIDATOR_ARGS=--netuid {netuid} --subtensor.network {network} --wallet.name {wallet} --wallet.hotkey {hotkey} --logging.trace --logging.debug
 ```
 
-Keep in mind that auto-updating is not supported with this configuration yet.
+And then start docker compose
+```bash
+env docker compose up --detach
+```
+
+To setup auto-updating, simply run
+```bash
+./initialize-docker-auto-update.sh
+```
 
 ### RunPod/Containers
 If running in a containerized environment like RunPod(which does not support Docker), then you need to run 2 pods/containers. The following setup assumes using PM2.
