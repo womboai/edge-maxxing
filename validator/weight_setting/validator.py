@@ -1,3 +1,4 @@
+import json
 import sys
 import time
 from argparse import ArgumentParser
@@ -22,7 +23,7 @@ from pydantic import RootModel
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
 from websockets import ConnectionClosedError
-from websockets.sync.client import connect
+from websockets.sync.client import connect, ClientConnection
 
 from neuron import (
     bt,
@@ -39,12 +40,12 @@ from neuron import (
     should_update,
 )
 
+from base_validator import VALIDATOR_VERSION
 from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointBenchmark
 
 from .wandb_args import add_wandb_args
 
 WEIGHTS_VERSION = 21
-VALIDATOR_VERSION = "2.1.2"
 
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
@@ -117,6 +118,7 @@ class Validator:
     benchmarking: bool
 
     wandb_run: Run | None
+    wandb_run_date: date | None
 
     current_block: int
     last_block_fetch: datetime | None = None
@@ -125,7 +127,8 @@ class Validator:
     failed: set[int]
     contest: Contest
 
-    log_thread: Thread | None
+    websocket: ClientConnection
+    log_thread: Thread
 
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
@@ -147,6 +150,7 @@ class Validator:
         if hotkey not in self.hotkeys:
             bt.logging.error(f"Hotkey '{hotkey}' has not been registered in SN{self.config.netuid}!")
             exit(1)
+
         self.uid = self.hotkeys.index(hotkey)
         self.step = 0
 
@@ -156,19 +160,28 @@ class Validator:
         self.benchmarking = False
 
         self.wandb_run = None
+        self.wandb_run_date = None
 
         self.benchmarks = self.clear_benchmarks()
         self.failed = set()
 
         self.load_state()
+        self.start_wandb_run()
 
         self.contest = find_contest(self.contest_state.id) if self.contest_state else CURRENT_CONTEST
 
-        self.log_thread = None
+        self.websocket = self.connect_to_api()
+
+        self.log_thread = Thread(target=self.api_logs)
+        self.log_thread.start()
 
     def new_wandb_run(self):
         """Creates a new wandb run to save information to."""
-        day = self.last_day
+        day = self.last_day or self.current_time().date()
+
+        if self.wandb_run and self.wandb_run_date == day:
+            return
+
         hotkey = self.wallet.hotkey.ss58_address
         uid = self.metagraph.hotkeys.index(hotkey)
         netuid = self.metagraph.netuid
@@ -200,6 +213,8 @@ class Validator:
                 f"sn{netuid}",
             ],
         )
+
+        self.wandb_run_date = day
 
         bt.logging.debug(f"Started a new wandb run: {name}")
 
@@ -291,13 +306,9 @@ class Validator:
         )
         self.benchmarking = state.get("benchmarking", self.benchmarking)
 
-        if self.contest_state:
-            if self.contest_state.miner_score_version != WEIGHTS_VERSION:
-                self.benchmarks = self.clear_benchmarks()
-                self.failed.clear()
-
-            if self.last_day:
-                self.start_wandb_run()
+        if self.contest_state and self.contest_state.miner_score_version != WEIGHTS_VERSION:
+            self.benchmarks = self.clear_benchmarks()
+            self.failed.clear()
 
     def clear_benchmarks(self) -> list[CheckpointSubmission | None]:
         return [None] * self.metagraph.n.item()
@@ -575,18 +586,32 @@ class Validator:
 
         return miner_info
 
-    def api_logs(self):
+    def connect_to_api(self):
         url: str = self.config.benchmarker_api.replace("http", "ws")
 
-        while True:
-            with connect(f"{url}/logs") as websocket:
-                try:
-                    for line in websocket:
-                        output = sys.stderr if line.startswith("err:") else sys.stdout
+        websocket = connect(f"{url}/logs")
 
-                        print(line[4:], file=output)
-                except ConnectionClosedError:
-                    continue
+        try:
+            version = json.loads(websocket.recv())["version"]
+        except:
+            raise RuntimeError("Validator API out of date")
+
+        if version != VALIDATOR_VERSION:
+            raise RuntimeError(
+                f"Validator API has mismatched version, received {version} but expected {VALIDATOR_VERSION}"
+            )
+
+        return websocket
+
+    def api_logs(self):
+        while True:
+            try:
+                for line in self.websocket:
+                    output = sys.stderr if line.startswith("err:") else sys.stdout
+
+                    print(line[4:], file=output)
+            except ConnectionClosedError:
+                self.websocket = self.connect_to_api()
 
     def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
         bt.logging.info(f"Sending {submissions} for testing")
@@ -601,13 +626,11 @@ class Validator:
 
         state_response.raise_for_status()
 
-        if not self.log_thread:
-            self.log_thread = Thread(target=self.api_logs)
-
-            self.log_thread.start()
+    def current_time(self):
+        return datetime.now(tz=ZoneInfo("America/New_York"))
 
     def do_step(self, block: int):
-        now = datetime.now(tz=ZoneInfo("America/New_York"))
+        now = self.current_time()
 
         if (not self.last_day or self.last_day < now.date()) and now.hour >= 12:
             # Past noon, should start collecting submissions
@@ -751,9 +774,6 @@ class Validator:
                 self.benchmarking = False
             else:
                 time.sleep(self.config.epoch_length * 60)
-
-        if self.log_thread and not self.log_thread.is_alive():
-            self.log_thread.join()
 
         self.step += 1
 
