@@ -591,7 +591,7 @@ class Validator:
 
         if version != VALIDATOR_VERSION:
             raise RuntimeError(
-                f"Validator API out of date, received {version} but expected {VALIDATOR_VERSION}"
+                f"Validator API has mismatched version, received {version} but expected {VALIDATOR_VERSION}"
             )
 
         return websocket
