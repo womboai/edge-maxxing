@@ -11,7 +11,8 @@ from neuron import (
     find_contest,
     Contest,
     CURRENT_CONTEST,
-    CONTESTS, ContestId,
+    CONTESTS,
+    ContestId,
 )
 
 VALID_REPO_REGEX = r'^https:\/\/[a-zA-Z0-9.-]+\/[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$'

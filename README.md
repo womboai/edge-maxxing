@@ -128,7 +128,12 @@ There is no need to manage venvs in any way, as poetry will handle that.
 ```
 2. Make your own repository on a git provider such as `GitHub` or `HuggingFace` to optimize in
 3. Edit the `src/pipeline.py` file to include any loading or inference optimizations, and save any changed models in `models` (use git submodules for referencing huggingface models or other git provider repositories) and commit
-4. Submit the model, changing the options as necessary
+4. Go to the miner directory after creating and optmizing your repository and run:
+```bash
+cd miner
+poetry install
+```
+5. Submit the model, changing the options as necessary
 ```bash
 poetry run submit_model \
     --netuid {netuid} \
@@ -138,8 +143,8 @@ poetry run submit_model \
     --logging.trace \
     --logging.debug
 ```
-5. Follow the interactive prompts to submit the repository link, revision, and contest to participate in
-6. Validators will collect your submission on 12PM New York time and test it in the remainder of the day
+6. Follow the interactive prompts to submit the repository link, revision, and contest to participate in
+7. Validators will collect your submission on 12PM New York time and test it in the remainder of the day
 
 ### Validator setup
 The validator setup requires two components, an API container and a scoring validator
