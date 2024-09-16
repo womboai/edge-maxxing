@@ -814,7 +814,4 @@ def main():
 
 
 if __name__ == '__main__':
-    with open("state.bin", "rb") as f:
-        state = load(f)
-
-    print(state)
+    main()
