@@ -15,5 +15,5 @@ NEW_VERSION=$(git rev-parse HEAD)
 if [ $VERSION != $NEW_VERSION ]; then
   docker compose down
 
-  docker compose up -d --rebuild
+  docker compose up -d --build
 fi
