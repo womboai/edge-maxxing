@@ -45,7 +45,7 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-WEIGHTS_VERSION = 23
+WEIGHTS_VERSION = 24
 
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
@@ -629,6 +629,15 @@ class Validator:
     def current_time(self):
         return datetime.now(tz=ZoneInfo("America/New_York"))
 
+    def non_tested_miners(self):
+        return list(
+            {
+                uid
+                for uid, benchmark in enumerate(self.benchmarks)
+                if self.contest_state.miner_info[uid] and not benchmark and uid not in self.failed
+            }
+        )
+
     def do_step(self, block: int):
         now = self.current_time()
 
@@ -663,15 +672,12 @@ class Validator:
                 updated_uids = [
                     uid
                     for uid in range(self.metagraph.n.item())
-                    if (
-                        should_update(self.contest_state.miner_info[uid], miner_info[uid]) or
-                        (self.contest_state.miner_info[uid] and not self.benchmarks[uid] and uid not in self.failed)
-                    )
-                ]
+                    if should_update(self.contest_state.miner_info[uid], miner_info[uid])
+                ] + self.non_tested_miners()
 
                 submissions = {
                     self.metagraph.hotkeys[uid]: miner_info[uid]
-                    for uid in updated_uids
+                    for uid in set(updated_uids)
                     if miner_info[uid]
                 }
 
@@ -726,6 +732,20 @@ class Validator:
         if not self.benchmarking:
             self.step += 1
 
+            if self.contest_state:
+                remaining = self.non_tested_miners()
+
+                if not remaining:
+                    submissions = {
+                        self.metagraph.hotkeys[uid]: self.contest_state.miner_info[uid]
+                        for uid in remaining
+                    }
+
+                    self.start_benchmarking(submissions)
+                    self.benchmarking = True
+
+                    return
+
             bt.logging.info(f"Nothing to do in this step, sleeping for {self.config.epoch_length} blocks")
             time.sleep(self.config.epoch_length * 12)
 
@@ -744,17 +764,9 @@ class Validator:
                 "Sending submissions again for testing"
             )
 
-            no_results = {
-                uid
-                for uid, benchmark in enumerate(self.benchmarks)
-                if self.contest_state.miner_info[uid] and not benchmark
-            }
-
-            remaining_uids = no_results - self.failed
-
             submissions = {
                 self.metagraph.hotkeys[uid]: self.contest_state.miner_info[uid]
-                for uid in remaining_uids
+                for uid in self.non_tested_miners()
             }
 
             self.start_benchmarking(submissions)
@@ -802,4 +814,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    with open("state.bin", "rb") as f:
+        state = load(f)
+
+    print(state)
