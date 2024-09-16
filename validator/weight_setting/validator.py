@@ -118,6 +118,7 @@ class Validator:
     benchmarking: bool
 
     wandb_run: Run | None
+    wandb_run_date: date | None
 
     current_block: int
     last_block_fetch: datetime | None = None
@@ -149,6 +150,7 @@ class Validator:
         if hotkey not in self.hotkeys:
             bt.logging.error(f"Hotkey '{hotkey}' has not been registered in SN{self.config.netuid}!")
             exit(1)
+
         self.uid = self.hotkeys.index(hotkey)
         self.step = 0
 
@@ -158,11 +160,13 @@ class Validator:
         self.benchmarking = False
 
         self.wandb_run = None
+        self.wandb_run_date = None
 
         self.benchmarks = self.clear_benchmarks()
         self.failed = set()
 
         self.load_state()
+        self.start_wandb_run()
 
         self.contest = find_contest(self.contest_state.id) if self.contest_state else CURRENT_CONTEST
 
@@ -173,7 +177,11 @@ class Validator:
 
     def new_wandb_run(self):
         """Creates a new wandb run to save information to."""
-        day = self.last_day
+        day = self.last_day or self.current_time().date()
+
+        if self.wandb_run and self.wandb_run_date == day:
+            return
+
         hotkey = self.wallet.hotkey.ss58_address
         uid = self.metagraph.hotkeys.index(hotkey)
         netuid = self.metagraph.netuid
@@ -205,6 +213,8 @@ class Validator:
                 f"sn{netuid}",
             ],
         )
+
+        self.wandb_run_date = day
 
         bt.logging.debug(f"Started a new wandb run: {name}")
 
@@ -300,9 +310,6 @@ class Validator:
             if self.contest_state.miner_score_version != WEIGHTS_VERSION:
                 self.benchmarks = self.clear_benchmarks()
                 self.failed.clear()
-
-            if self.last_day:
-                self.start_wandb_run()
 
     def clear_benchmarks(self) -> list[CheckpointSubmission | None]:
         return [None] * self.metagraph.n.item()
@@ -620,8 +627,11 @@ class Validator:
 
         state_response.raise_for_status()
 
+    def current_time(self):
+        return datetime.now(tz=ZoneInfo("America/New_York"))
+
     def do_step(self, block: int):
-        now = datetime.now(tz=ZoneInfo("America/New_York"))
+        now = self.current_time()
 
         if (not self.last_day or self.last_day < now.date()) and now.hour >= 12:
             # Past noon, should start collecting submissions
