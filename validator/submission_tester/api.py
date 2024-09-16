@@ -5,7 +5,8 @@ from collections.abc import Iterable
 from contextlib import asynccontextmanager
 from typing import TextIO
 
-from base_validator.metrics import BenchmarkState, BenchmarkResults, VALIDATOR_VERSION
+from base_validator import VALIDATOR_VERSION
+from base_validator.metrics import BenchmarkState, BenchmarkResults
 from fastapi import FastAPI, WebSocket, Request
 
 from neuron import CURRENT_CONTEST, CheckpointSubmission, Key
