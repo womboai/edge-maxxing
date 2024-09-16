@@ -41,9 +41,6 @@ def delegate(name: str):
 class InferenceSandbox(Generic[RequestT]):
     _repository: str
 
-    _user: str
-    _sandbox_directory: Path
-
     _client: Client
     _process: Popen
 
@@ -52,8 +49,7 @@ class InferenceSandbox(Generic[RequestT]):
 
         self._repository = repository
 
-        self._user = "baseline-sandbox" if baseline else "sandbox"
-        self._sandbox_directory = BASELINE_SANDBOX_DIRECTORY if baseline else SANDBOX_DIRECTORY
+        self._baseline = baseline
 
         run(
             [
@@ -100,6 +96,14 @@ class InferenceSandbox(Generic[RequestT]):
         bt.logging.info(f"Connecting to socket")
         self._client = Client(socket_path)
 
+    @property
+    def _user(self) -> str:
+        return "baseline-sandbox" if self._baseline else "sandbox"
+
+    @property
+    def _sandbox_directory(self) -> Path:
+        return BASELINE_SANDBOX_DIRECTORY if self._baseline else SANDBOX_DIRECTORY
+
     def _check_exit(self):
         if self._process.returncode:
             raise RuntimeError(f"'{self._repository}'s inference crashed, got exit code {self._process.returncode}")
@@ -117,26 +121,27 @@ class InferenceSandbox(Generic[RequestT]):
 
         try:
             self._process.wait(timeout=30)
+
+            self._check_exit()
         except TimeoutExpired:
             self._process.kill()
             bt.logging.warning(f"Forcefully killed inference process")
 
         self._process.__exit__(exc_type, exc_val, exc_tb)
 
-        run(
-            [
-                *sandbox_args(self._user),
-                "find",
-                str(self._sandbox_directory),
-                "-mindepth",
-                "1",
-                "-delete",
-            ],
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-        ).check_returncode()
-
-        self._check_exit()
+        if not self._baseline:
+            run(
+                [
+                    *sandbox_args(self._user),
+                    "find",
+                    str(self._sandbox_directory),
+                    "-mindepth",
+                    "1",
+                    "-delete",
+                ],
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+            ).check_returncode()
 
     def __call__(self, request: RequestT):
         self._check_exit()
