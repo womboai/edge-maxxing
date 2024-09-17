@@ -45,8 +45,8 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.2.4"
-WEIGHTS_VERSION = 24
+VALIDATOR_VERSION = "2.2.5"
+WEIGHTS_VERSION = 25
 
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
@@ -245,6 +245,20 @@ class Validator:
             "--benchmarker_api",
             type=str,
             help="The API route to the validator benchmarking API.",
+        )
+
+        argument_parser.add_argument(
+            "--blacklist.coldkeys",
+            type=str,
+            nargs="*",
+            default=["5CCefwu4fFXkBorK4ETJpaijXTG3LD5J2kBb7U5aEP4eABny"],
+        )
+
+        argument_parser.add_argument(
+            "--blacklist.hotkeys",
+            type=str,
+            nargs="*",
+            default=[],
         )
 
         add_wandb_args(argument_parser)
@@ -542,6 +556,13 @@ class Validator:
 
         for uid in tqdm(range(self.metagraph.n.item())):
             hotkey = self.metagraph.hotkeys[uid]
+
+            if (
+                hotkey in self.config.blacklist.hotkeys or
+                self.metagraph.coldkeys[uid] in self.config.blacklist.coldkeys
+            ):
+                miner_info.append(None)
+
             error: Exception | None = None
 
             for attempt in range(3):
