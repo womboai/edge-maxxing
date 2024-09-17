@@ -92,7 +92,7 @@ def main():
     if not revision:
         while True:
             try:
-                revision = input("Enter short revision hash (default: HEAD): ") or get_latest_revision(repository)
+                revision = input("Enter short revision hash (leave blank to fetch latest): ") or get_latest_revision(repository)
             except GitCommandError as e:
                 exit(f"Failed to get latest revision: {e}")
             if re.match(VALID_REVISION_REGEX, revision):
@@ -128,8 +128,7 @@ def main():
         f"Contest:    {checkpoint_info.contest.name}\n"
     )
     if input("Confirm submission? (Y/n): ").strip().lower() not in ("yes", "y", ""):
-        print("Submission cancelled.")
-        exit()
+        exit("Submission cancelled.")
 
     make_submission(
         subtensor,
