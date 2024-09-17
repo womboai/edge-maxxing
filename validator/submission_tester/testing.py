@@ -1,8 +1,9 @@
+import logging
 from dataclasses import dataclass
 from os import urandom
 from time import perf_counter
 
-from neuron import Contest, CheckpointSubmission, bt
+from neuron import Contest, CheckpointSubmission
 from pipelines.models import TextToImageRequest
 from .inference_sandbox import InferenceSandbox
 from .random_inputs import generate_random_prompt
@@ -10,6 +11,8 @@ from .vram_monitor import VRamMonitor
 from base_validator.metrics import CheckpointBenchmark, MetricData
 
 SAMPLE_COUNT = 5
+
+logger = logging.getLogger(__file__)
 
 
 @dataclass
@@ -50,7 +53,7 @@ def generate(contest: Contest, container: InferenceSandbox, prompt: str, seed: i
 
 
 def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> CheckpointBenchmark:
-    bt.logging.info("Generating model samples")
+    logger.info("Generating model samples")
 
     outputs: list[GenerationOutput] = []
 
@@ -62,7 +65,7 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
             prompt = generate_random_prompt()
             seed = int.from_bytes(urandom(4), "little")
 
-            bt.logging.info(f"Sample {i + 1}, prompt {prompt} and seed {seed}")
+            logger.info(f"Sample {i + 1}, prompt {prompt} and seed {seed}")
 
             output = generate(
                 contest,
@@ -71,7 +74,7 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
                 seed,
             )
 
-            bt.logging.info(
+            logger.info(
                 f"Sample {i} Generated\n"
                 f"Generation Time: {output.generation_time}s\n"
                 f"VRAM Usage: {output.vram_used}b\n"
@@ -84,7 +87,7 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
     vram_used = max(output.vram_used for output in outputs)
     watts_used = max(output.watts_used for output in outputs)
 
-    bt.logging.info(
+    logger.info(
         f"Tested {SAMPLE_COUNT} Samples\n"
         f"Average Generation Time: {average_time}s\n"
         f"Model Size: {size}b\n"
@@ -92,7 +95,7 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
         f"Max Power Usage: {watts_used}W"
     )
 
-    bt.logging.info("Generating baseline samples to compare")
+    logger.info("Generating baseline samples to compare")
 
     baseline_outputs: list[GenerationOutput] = []
 
@@ -111,7 +114,7 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
 
             similarity = contest.compare_outputs(output.output, baseline.output)
 
-            bt.logging.info(
+            logger.info(
                 f"Baseline sample {i + 1} Generated\n"
                 f"Generation Time: {baseline.generation_time}s\n"
                 f"Similarity: {similarity}\n"
@@ -127,7 +130,7 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
     baseline_vram_used = max(output.vram_used for output in baseline_outputs)
     baseline_watts_used = max(output.watts_used for output in baseline_outputs)
 
-    bt.logging.info(f"Average Similarity: {average_similarity}")
+    logger.info(f"Average Similarity: {average_similarity}")
 
     return CheckpointBenchmark(
         baseline=MetricData(

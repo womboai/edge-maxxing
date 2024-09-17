@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import sys
 from asyncio import Future, AbstractEventLoop
 from collections.abc import Iterable
@@ -100,6 +101,7 @@ async def lifespan(_: FastAPI):
     }
 
 
+logging.basicConfig(level=logging.DEBUG)
 app = FastAPI(lifespan=lifespan)
 
 

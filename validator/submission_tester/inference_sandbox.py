@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import time
@@ -7,13 +8,15 @@ from pathlib import Path
 from subprocess import Popen, run, TimeoutExpired
 from typing import Generic, cast, IO
 
-from neuron import RequestT, bt
+from neuron import RequestT
 
 SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "setup_inference_sandbox.sh")
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
 SOCKET_TIMEOUT = 300
+
+logger = logging.getLogger(__file__)
 
 
 def sandbox_args(user: str):
@@ -45,7 +48,7 @@ class InferenceSandbox(Generic[RequestT]):
     _process: Popen
 
     def __init__(self, repository: str, revision: str, baseline: bool):
-        bt.logging.info(f"Downloading {repository} with revision {revision}")
+        logger.info(f"Downloading {repository} with revision {revision}")
 
         self._repository = repository
 
@@ -66,7 +69,7 @@ class InferenceSandbox(Generic[RequestT]):
 
         self._file_size = sum(file.stat().st_size for file in self._sandbox_directory.rglob("*"))
 
-        bt.logging.info(f"Repository {repository} had size {self._file_size}")
+        logger.info(f"Repository {repository} had size {self._file_size}")
 
         self._process = Popen(
             [
@@ -78,7 +81,7 @@ class InferenceSandbox(Generic[RequestT]):
             stderr=sys.stderr,
         )
 
-        bt.logging.info(f"Inference process starting")
+        logger.info(f"Inference process starting")
         socket_path = abspath(self._sandbox_directory / "inferences.sock")
 
         for _ in range(SOCKET_TIMEOUT):
@@ -91,7 +94,7 @@ class InferenceSandbox(Generic[RequestT]):
         else:
             raise RuntimeError(f"Socket file '{socket_path}' not found after {SOCKET_TIMEOUT} seconds.")
 
-        bt.logging.info(f"Connecting to socket")
+        logger.info(f"Connecting to socket")
         self._client = Client(socket_path)
 
     @property
@@ -123,7 +126,7 @@ class InferenceSandbox(Generic[RequestT]):
             self._check_exit()
         except TimeoutExpired:
             self._process.kill()
-            bt.logging.warning(f"Forcefully killed inference process")
+            logger.warning(f"Forcefully killed inference process")
 
         self._process.__exit__(exc_type, exc_val, exc_tb)
 
