@@ -119,7 +119,7 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
                 f"Power Usage: {baseline.watts_used}W"
             )
 
-            baseline_outputs.append(output)
+            baseline_outputs.append(baseline)
 
             average_similarity = (average_similarity * i + similarity) / (i + 1)
 
