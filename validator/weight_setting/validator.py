@@ -188,7 +188,9 @@ class Validator:
 
         name = f"validator-{uid}-{day.year}-{day.month}-{day.day}"
 
-        signing_message = f"{uid}:{hotkey}:{self.contest_state.id.name}"
+        contest_id = self.contest_state.id if self.contest_state else CURRENT_CONTEST.id
+
+        signing_message = f"{uid}:{hotkey}:{contest_id.name}"
         signature = f"0x{self.wallet.hotkey.sign(signing_message).hex()}"
 
         self.wandb_run = wandb.init(
@@ -203,7 +205,7 @@ class Validator:
                 "hotkey": hotkey,
                 "type": "validator",
                 "uid": uid,
-                "contest": self.contest_state.id.name,
+                "contest": contest_id.name,
                 "signature": signature,
             },
             allow_val_change=True,
