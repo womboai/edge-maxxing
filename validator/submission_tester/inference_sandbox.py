@@ -13,7 +13,7 @@ SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "setup_inferenc
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
-SOCKET_TIMEOUT = 120
+SOCKET_TIMEOUT = 300
 
 
 def sandbox_args(user: str):
