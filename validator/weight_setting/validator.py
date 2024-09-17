@@ -45,8 +45,8 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.2.5"
-WEIGHTS_VERSION = 25
+VALIDATOR_VERSION = "2.2.6"
+WEIGHTS_VERSION = 26
 
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
@@ -562,6 +562,7 @@ class Validator:
                 self.metagraph.coldkeys[uid] in self.config.blacklist.coldkeys
             ):
                 miner_info.append(None)
+                continue
 
             error: Exception | None = None
 
