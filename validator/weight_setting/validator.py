@@ -40,11 +40,12 @@ from neuron import (
     should_update,
 )
 
-from base_validator import VALIDATOR_VERSION
+from base_validator import API_VERSION
 from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointBenchmark
 
 from .wandb_args import add_wandb_args
 
+VALIDATOR_VERSION = "2.2.4"
 WEIGHTS_VERSION = 24
 
 WINNER_PERCENTAGE = 0.8
@@ -598,9 +599,9 @@ class Validator:
         except:
             raise RuntimeError("Validator API out of date")
 
-        if version != VALIDATOR_VERSION:
+        if version != API_VERSION:
             raise RuntimeError(
-                f"Validator API has mismatched version, received {version} but expected {VALIDATOR_VERSION}"
+                f"Validator API has mismatched version, received {version} but expected {API_VERSION}"
             )
 
         return websocket
