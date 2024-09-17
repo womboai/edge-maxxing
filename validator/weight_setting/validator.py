@@ -40,11 +40,12 @@ from neuron import (
     should_update,
 )
 
-from base_validator import VALIDATOR_VERSION
+from base_validator import API_VERSION
 from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointBenchmark
 
 from .wandb_args import add_wandb_args
 
+VALIDATOR_VERSION = "2.2.4"
 WEIGHTS_VERSION = 24
 
 WINNER_PERCENTAGE = 0.8
@@ -188,7 +189,9 @@ class Validator:
 
         name = f"validator-{uid}-{day.year}-{day.month}-{day.day}"
 
-        signing_message = f"{uid}:{hotkey}:{self.contest_state.id.name}"
+        contest_id = self.contest_state.id if self.contest_state else CURRENT_CONTEST.id
+
+        signing_message = f"{uid}:{hotkey}:{contest_id.name}"
         signature = f"0x{self.wallet.hotkey.sign(signing_message).hex()}"
 
         self.wandb_run = wandb.init(
@@ -203,7 +206,7 @@ class Validator:
                 "hotkey": hotkey,
                 "type": "validator",
                 "uid": uid,
-                "contest": self.contest_state.id.name,
+                "contest": contest_id.name,
                 "signature": signature,
             },
             allow_val_change=True,
@@ -533,6 +536,7 @@ class Validator:
 
     def get_miner_submissions(self):
         visited_repositories: dict[str, tuple[Uid, int]] = {}
+        visited_revisions: dict[str, tuple[Uid, int]] = {}
 
         miner_info: list[CheckpointSubmission | None] = []
 
@@ -568,7 +572,13 @@ class Validator:
 
             info, block = submission
 
-            existing_submission = visited_repositories.get(info.repository)
+            existing_repository_submission = visited_repositories.get(info.repository)
+            existing_revision_submission = visited_revisions.get(info.revision)
+
+            if existing_repository_submission and existing_revision_submission:
+                existing_submission = min(existing_repository_submission, existing_revision_submission, key=itemgetter(1))
+            else:
+                existing_submission = existing_repository_submission or existing_revision_submission
 
             if existing_submission:
                 existing_uid, existing_block = existing_submission
@@ -581,6 +591,7 @@ class Validator:
 
             miner_info.append(info)
             visited_repositories[info.repository] = uid, block
+            visited_revisions[info.revision] = uid, block
 
             time.sleep(0.2)
 
@@ -596,9 +607,9 @@ class Validator:
         except:
             raise RuntimeError("Validator API out of date")
 
-        if version != VALIDATOR_VERSION:
+        if version != API_VERSION:
             raise RuntimeError(
-                f"Validator API has mismatched version, received {version} but expected {VALIDATOR_VERSION}"
+                f"Validator API has mismatched version, received {version} but expected {API_VERSION}"
             )
 
         return websocket

@@ -122,29 +122,29 @@ cd edge-maxxing
 There is no need to manage venvs in any way, as poetry will handle that.
 
 ### Miner setup
-1. Go to the miner directory after cloning the repository,
-    ```bash
-    cd miner
-    poetry install
-    ```
-2. Clone the base inference repository into a directory `model`
-    ```bash
+1. Clone the [base inference repository](https://github.com/womboai/sdxl-newdream-20-inference)
+```bash
     git clone --recursive --depth 1 https://github.com/womboai/sdxl-newdream-20-inference model
-    ```
-3. Make your own repository on a git provider to optimize in
-4. Edit the src/pipeline.py file to include any loading or inference optimizations, and save any changed models in `models`(use git submodules for referencing huggingface models or other git provider repositories) and commit
+```
+2. Make your own repository on a git provider such as `GitHub` or `HuggingFace` to optimize in
+3. Edit the `src/pipeline.py` file to include any loading or inference optimizations, and save any changed models in `models` (use git submodules for referencing huggingface models or other git provider repositories) and commit
+4. After creating and optimizing your repository, run:
+```bash
+cd miner
+poetry install
+```
 5. Submit the model, changing the options as necessary
-    ```bash
-    poetry run submit_model \
-        --repository {repository} \
-        --netuid {netuid} \
-        --subtensor.network finney \
-        --wallet.name {wallet} \
-        --wallet.hotkey {hotkey} \
-        --logging.trace \
-        --logging.debug
-    ```
-6. Validators will collect your submission on 12PM New York time and test it in the remainder of the day
+```bash
+poetry run submit_model \
+    --netuid {netuid} \
+    --subtensor.network finney \
+    --wallet.name {wallet} \
+    --wallet.hotkey {hotkey} \
+    --logging.trace \
+    --logging.debug
+```
+6. Follow the interactive prompts to submit the repository link, revision, and contest to participate in
+7. Validators will collect your submission on 12PM New York time and test it in the remainder of the day
 
 ### Validator setup
 The validator setup requires two components, an API container and a scoring validator
