@@ -536,6 +536,7 @@ class Validator:
 
     def get_miner_submissions(self):
         visited_repositories: dict[str, tuple[Uid, int]] = {}
+        visited_revisions: dict[str, tuple[Uid, int]] = {}
 
         miner_info: list[CheckpointSubmission | None] = []
 
@@ -571,7 +572,13 @@ class Validator:
 
             info, block = submission
 
-            existing_submission = visited_repositories.get(info.repository)
+            existing_repository_submission = visited_repositories.get(info.repository)
+            existing_revision_submission = visited_revisions.get(info.revision)
+
+            if existing_repository_submission and existing_revision_submission:
+                existing_submission = min(existing_repository_submission, existing_revision_submission, key=itemgetter(1))
+            else:
+                existing_submission = existing_repository_submission or existing_revision_submission
 
             if existing_submission:
                 existing_uid, existing_block = existing_submission
@@ -584,6 +591,7 @@ class Validator:
 
             miner_info.append(info)
             visited_repositories[info.repository] = uid, block
+            visited_revisions[info.revision] = uid, block
 
             time.sleep(0.2)
 
