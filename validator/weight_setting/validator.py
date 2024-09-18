@@ -45,7 +45,7 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.2.6"
+VALIDATOR_VERSION = "2.3.0"
 WEIGHTS_VERSION = 26
 
 WINNER_PERCENTAGE = 0.8
@@ -349,11 +349,12 @@ class Validator:
         self.benchmarks = new_data
 
     def get_sorted_contestants(self) -> list[tuple[Uid, float]]:
-        contestants = []
-        for uid in range(self.metagraph.n.item()):
-            metric_data = self.benchmarks[uid]
-            if metric_data:
-                contestants.append((uid, metric_data.calculate_score()))
+        contestants = [
+            (uid, metric_data.calculate_score())
+            for uid, metric_data in enumerate(self.benchmarks)
+            if metric_data
+        ]
+
         return sorted(contestants, key=itemgetter(1))
 
     def sync(self):
@@ -429,8 +430,8 @@ class Validator:
 
                 winner_overrides = [
                     (uid, score)
-                    for uid, score in self.previous_day_winners if
-                    score > highest_score * IMPROVEMENT_BENCHMARK_PERCENTAGE
+                    for uid, score in self.previous_day_winners
+                    if highest_score <= score * IMPROVEMENT_BENCHMARK_PERCENTAGE
                 ]
 
                 if len(winner_overrides):
@@ -732,7 +733,7 @@ class Validator:
                         new_winners = [
                             (uid, score)
                             for uid, score in winners
-                            if score > bucket_score * IMPROVEMENT_BENCHMARK_PERCENTAGE
+                            if bucket_score <= score * IMPROVEMENT_BENCHMARK_PERCENTAGE
                         ]
 
                         if len(new_winners):
