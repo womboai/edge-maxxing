@@ -45,7 +45,7 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.3.0"
+VALIDATOR_VERSION = "2.3.1"
 WEIGHTS_VERSION = 26
 
 WINNER_PERCENTAGE = 0.8
@@ -231,6 +231,49 @@ class Validator:
             self.wandb_run.finish()
 
         self.new_wandb_run()
+
+    def send_wandb_metrics(self, ranks: dict[Uid, tuple[int, bool]] | None = None):
+        if not self.wandb_run:
+            return
+
+        bt.logging.info("Uploading benchmarks to wandb")
+
+        log_data = {}
+
+        for uid, benchmark in enumerate(self.benchmarks):
+            if not benchmark:
+                continue
+
+            miner_info = self.contest_state.miner_info[uid]
+            if not miner_info:
+                continue
+
+            data = {
+                "model": miner_info.repository,
+                "revision": miner_info.revision,
+                "baseline_generation_time": benchmark.baseline.generation_time,
+                "generation_time": benchmark.model.generation_time,
+                "similarity": benchmark.similarity_score,
+                "baseline_size": benchmark.baseline.size,
+                "size": benchmark.model.size,
+                "baseline_vram_used": benchmark.baseline.vram_used,
+                "vram_used": benchmark.model.vram_used,
+                "baseline_watts_used": benchmark.baseline.watts_used,
+                "watts_used": benchmark.model.watts_used,
+                "hotkey": self.hotkeys[uid],
+            }
+
+            if ranks and uid in ranks:
+                rank, multiday_winner = ranks.get(uid)
+                data["rank"] = rank
+                data["multiday_winner"] = multiday_winner
+
+            log_data[str(uid)] = data
+
+        self.wandb_run.log(data=log_data)
+
+        bt.logging.info(log_data)
+        bt.logging.info("Benchmarks uploaded to wandb")
 
     @classmethod
     def add_extra_args(cls, argument_parser: ArgumentParser):
@@ -439,38 +482,15 @@ class Validator:
 
         highest_bucket = len(buckets) - 1
 
-        if self.wandb_run:
-            bt.logging.info("Uploading benchmarks to wandb")
+        ranks: dict[Uid, tuple[int, bool]] = {}
 
-            log_data = {}
+        for index, bucket in enumerate(buckets):
+            bucket_rank = highest_bucket - index
+            for uid, _ in bucket.scores:
+                ranks[uid] = (bucket_rank, bucket.previous_day_winners)
 
-            for index, bucket in enumerate(buckets):
-                bucket_rank = highest_bucket - index
+        self.send_wandb_metrics(ranks)
 
-                for uid, score in bucket.scores:
-                    metric_data: CheckpointBenchmark | None = self.benchmarks[uid]
-                    if metric_data:
-                        submission = cast(CheckpointSubmission, self.contest_state.miner_info[uid])
-                        if submission:
-                            log_data[str(uid)] = {
-                                "rank": bucket_rank,
-                                "model": submission.repository,
-                                "baseline_generation_time": metric_data.baseline.generation_time,
-                                "generation_time": metric_data.model.generation_time,
-                                "similarity": metric_data.similarity_score,
-                                "baseline_size": metric_data.baseline.size,
-                                "size": metric_data.model.size,
-                                "baseline_vram_used": metric_data.baseline.vram_used,
-                                "vram_used": metric_data.model.vram_used,
-                                "baseline_watts_used": metric_data.baseline.watts_used,
-                                "watts_used": metric_data.model.watts_used,
-                                "hotkey": self.hotkeys[uid],
-                                "multiday_winner": bucket.previous_day_winners,
-                            }
-
-            self.wandb_run.log(data=log_data)
-            bt.logging.info(log_data)
-            bt.logging.info("Benchmarks uploaded to wandb")
 
         sequence_ratio = _winner_percentage_sequence_ratio(len(buckets))
 
@@ -810,6 +830,8 @@ class Validator:
                 if hotkey in self.metagraph.hotkeys:
                     self.set_miner_benchmarks(self.metagraph.hotkeys.index(hotkey), benchmark)
 
+            self.send_wandb_metrics()
+
             if result.state == BenchmarkState.FINISHED:
                 bt.logging.info(
                     "Benchmarking API has reported submission testing as done. "
@@ -819,6 +841,7 @@ class Validator:
 
                 self.benchmarking = False
             else:
+                bt.logging.info(f"Benchmarking in progress, sleeping for {self.config.epoch_length * 5} blocks")
                 time.sleep(self.config.epoch_length * 60)
 
         self.step += 1
