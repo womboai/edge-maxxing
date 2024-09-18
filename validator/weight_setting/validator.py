@@ -458,7 +458,7 @@ class Validator:
             return
 
         if self.benchmarking:
-            bt.logging.info("Will not set weights as contest is not done")
+            bt.logging.info("Will not set weights as benchmarking is not done")
             return
 
         bt.logging.info("Setting weights")
