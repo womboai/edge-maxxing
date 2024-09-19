@@ -367,6 +367,7 @@ class Validator:
         self.benchmarking = state.get("benchmarking", self.benchmarking)
 
         if self.contest_state and self.contest_state.miner_score_version != WEIGHTS_VERSION:
+            bt.logging.warning(f"Contest state has outdated weights version: {self.contest_state.miner_score_version}, current version: {WEIGHTS_VERSION}. Resetting benchmarks.")
             self.benchmarks = self.clear_benchmarks()
             self.failed.clear()
 
