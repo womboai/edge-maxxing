@@ -9,7 +9,7 @@ from os.path import expanduser, join, isfile
 from pathlib import Path
 
 from pickle import load
-import bittensor as bt
+import neuron.bt as bt
 
 from .validator import ContestState  # noqa (Needed for depickling)
 

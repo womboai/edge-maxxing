@@ -1,6 +1,6 @@
 from typing import cast, Any
 
-import bittensor as bt
+import neuron.bt as bt
 from bittensor.extrinsics.serving import get_metadata, publish_metadata
 
 from .checkpoint import CheckpointSubmission, SPEC_VERSION, Key

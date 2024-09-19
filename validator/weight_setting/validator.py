@@ -24,9 +24,9 @@ from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
 from websockets import ConnectionClosedError
 from websockets.sync.client import connect, ClientConnection
-import bittensor as bt
 
 from neuron import (
+    bt,
     CheckpointSubmission,
     get_config,
     ContestId,

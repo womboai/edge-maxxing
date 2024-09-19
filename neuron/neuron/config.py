@@ -3,7 +3,7 @@ from typing import Callable
 
 
 def get_config(add_args: Callable[[ArgumentParser], None] | None = None):
-    import bittensor as bt
+    import neuron.bt as bt
     argument_parser = ArgumentParser()
 
     argument_parser.add_argument(

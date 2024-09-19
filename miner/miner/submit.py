@@ -2,9 +2,9 @@ import re
 from argparse import ArgumentParser
 
 from git import GitCommandError, cmd
-import bittensor as bt
 
 from neuron import (
+    bt,
     CheckpointSubmission,
     get_config,
     find_contest,
