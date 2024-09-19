@@ -2,18 +2,19 @@ import re
 from argparse import ArgumentParser
 
 from git import GitCommandError, cmd
+import bittensor as bt
 
 from neuron import (
-    bt,
     CheckpointSubmission,
     get_config,
-    make_submission,
     find_contest,
     Contest,
     CURRENT_CONTEST,
     CONTESTS,
     ContestId,
 )
+
+from neuron.submissions import make_submission
 
 VALID_REPO_REGEX = r'^https:\/\/[a-zA-Z0-9.-]+\/[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$'
 VALID_REVISION_REGEX = r"^[a-f0-9]{7}$"

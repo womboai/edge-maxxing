@@ -24,13 +24,12 @@ from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
 from websockets import ConnectionClosedError
 from websockets.sync.client import connect, ClientConnection
+import bittensor as bt
 
 from neuron import (
-    bt,
     CheckpointSubmission,
     get_config,
     ContestId,
-    get_submission,
     CURRENT_CONTEST,
     find_contest,
     ContestDeviceValidationError,
@@ -39,6 +38,8 @@ from neuron import (
     Uid,
     should_update,
 )
+
+from neuron.submissions import get_submission
 
 from base_validator import API_VERSION
 from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointBenchmark
