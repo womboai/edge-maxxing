@@ -30,7 +30,6 @@ from neuron import (
     CheckpointSubmission,
     get_config,
     ContestId,
-    get_submission,
     CURRENT_CONTEST,
     find_contest,
     ContestDeviceValidationError,
@@ -39,6 +38,8 @@ from neuron import (
     Uid,
     should_update,
 )
+
+from neuron.submissions import get_submission
 
 from base_validator import API_VERSION
 from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointBenchmark

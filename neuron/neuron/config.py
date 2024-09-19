@@ -1,10 +1,9 @@
 from argparse import ArgumentParser
 from typing import Callable
 
-import neuron.bt as bt
-
 
 def get_config(add_args: Callable[[ArgumentParser], None] | None = None):
+    import neuron.bt as bt
     argument_parser = ArgumentParser()
 
     argument_parser.add_argument(
