@@ -18,14 +18,14 @@ else
   find "$SANDBOX_DIRECTORY" -mindepth 1 -delete
 
   git config --global advice.detachedHead false
-  git clone --shallow-submodules --no-checkout --progress "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
+  git clone --shallow-submodules --no-checkout "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
   if $($BASELINE); then
     touch "$READY_MARKER"
   fi
 fi
 
 git checkout "$REVISION"
-git submodule update --init --progress
+git submodule update --init
 
 if ! [ -f "$VENV" ]; then
   python3.10 -m venv "$VENV"

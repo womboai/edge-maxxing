@@ -52,7 +52,7 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.3.5"
+VALIDATOR_VERSION = "2.3.6"
 WEIGHTS_VERSION = 27
 
 WINNER_PERCENTAGE = 0.8
@@ -140,7 +140,6 @@ class Validator:
     contest: Contest
 
     websocket: ClientConnection
-    log_thread: Thread
 
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
@@ -188,9 +187,7 @@ class Validator:
         self.contest = find_contest(self.contest_state.id) if self.contest_state else CURRENT_CONTEST
 
         self.websocket = self.connect_to_api()
-
-        self.log_thread = Thread(target=self.api_logs)
-        self.log_thread.start()
+        Thread(target=self.api_logs).start()
 
     def new_wandb_run(self):
         """Creates a new wandb run to save information to."""
@@ -640,7 +637,7 @@ class Validator:
                 for line in self.websocket:
                     output = sys.stderr if line.startswith("err:") else sys.stdout
 
-                    print(line[4:], file=output)
+                    print(f"[API] -{line[4:]}", file=output)
             except ConnectionClosedError:
                 self.websocket = self.connect_to_api()
 
