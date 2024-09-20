@@ -1,4 +1,5 @@
 import json
+import random
 import sys
 import time
 from argparse import ArgumentParser
@@ -46,7 +47,7 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.3.3"
+VALIDATOR_VERSION = "2.3.4"
 WEIGHTS_VERSION = 27
 
 WINNER_PERCENTAGE = 0.8
@@ -124,6 +125,7 @@ class Validator:
 
     current_block: int
     last_block_fetch: datetime | None = None
+    attempted_set_weights: bool = False
 
     benchmarks: list[CheckpointBenchmark | None]
     failed: set[int]
@@ -456,6 +458,9 @@ class Validator:
             bt.logging.error(f"Failed to set weights", exc_info=e)
 
     def set_weights(self):
+        if self.attempted_set_weights:
+            return
+
         if not self.contest_state:
             bt.logging.info("Will not set weights as the contest state has not been set")
             return
@@ -547,6 +552,13 @@ class Validator:
             bt.logging.info(f"set_weights successful, {message}")
         else:
             bt.logging.warning(f"set_weights failed, {message}")
+
+        self.attempted_set_weights = True
+
+        self.metagraph.sync(
+            subtensor=self.subtensor,
+            block=self.current_block
+        )
 
     def get_score_buckets(self) -> list[WinnerList]:
         sorted_contestants = cast(list[tuple[Uid, float]], self.get_sorted_contestants())
@@ -779,6 +791,9 @@ class Validator:
         if blocks_elapsed >= self.config.epoch_length:
             bt.logging.info(f"{blocks_elapsed} blocks since last update, resyncing metagraph")
             self.sync()
+
+            # Recalculate in-case weights were set
+            blocks_elapsed = block - self.metagraph.last_update[self.uid]
         else:
             bt.logging.info(
                 f"{blocks_elapsed} since last update, "
@@ -800,10 +815,19 @@ class Validator:
                     self.start_benchmarking(submissions)
                     self.benchmarking = True
 
+                    self.save_state()
+
                     return
 
-            bt.logging.info(f"Nothing to do in this step, sleeping for {self.config.epoch_length} blocks")
-            time.sleep(self.config.epoch_length * 12)
+            blocks_to_wait = self.config.epoch_length - blocks_elapsed
+
+            if blocks_to_wait <= 0:
+                # Randomize in case multiple validators are in this same state,
+                # to avoid multiple validators setting weights all in the same block
+                blocks_to_wait = random.randint(1, 10)
+
+            bt.logging.info(f"Nothing to do in this step, sleeping for {blocks_to_wait} blocks")
+            time.sleep(self.config.epoch_length * blocks_to_wait)
 
             return
 
@@ -864,6 +888,7 @@ class Validator:
             if not self.last_block_fetch or (datetime.now() - self.last_block_fetch).seconds >= 12:
                 self.current_block = self.subtensor.get_current_block()
                 self.last_block_fetch = datetime.now()
+                self.attempted_set_weights = False
 
             try:
                 bt.logging.info(f"Step {self.step}, block {self.current_block}")
