@@ -96,7 +96,7 @@ async def stream_logs(websocket: WebSocket):
         while True:
             if not logs.empty():
                 message = logs.get()
-                await websocket.send_text(f"[API] - {message}")
+                await websocket.send_text(message)
             await asyncio.sleep(0.1)
     except Exception as e:
         logger.error(f"WebSocket error", exc_info=e)
