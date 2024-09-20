@@ -16,7 +16,7 @@ SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
 SOCKET_TIMEOUT = 180
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 def sandbox_args(user: str):

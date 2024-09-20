@@ -9,7 +9,7 @@ from os.path import expanduser, join, isfile
 from pathlib import Path
 
 from pickle import load
-import neuron.bt as bt
+from typing import Any
 
 from .validator import ContestState  # noqa (Needed for depickling)
 
@@ -52,17 +52,14 @@ def load_state(diagnostics: DiagnosticsData) -> dict:
         return load(file)
 
 
-def save_validator_diagnostics(config: bt.config):
+def save_validator_diagnostics(config: dict[str, Any]):
     data = {
         "process_command": " ".join(sys.argv),
         "wallet": {
-            "name": config.wallet.name,
-            "hotkey": config.wallet.hotkey,
+            "name": config["wallet.name"],
+            "hotkey": config["wallet.hotkey"],
         },
-        "netuid": config.netuid,
-        "logging": {
-            "logging_dir": config.logging.logging_dir,
-        },
+        "netuid": config["netuid"],
     }
 
     DIAGNOSTICS_DIR.mkdir(exist_ok=True)

@@ -1,10 +1,12 @@
 import re
 from argparse import ArgumentParser
 
+from fiber.chain_interactions.chain_utils import load_hotkey_keypair
+from fiber.chain_interactions.interface import get_substrate_interface
+from fiber.logging_utils import get_logger
 from git import GitCommandError, cmd
 
 from neuron import (
-    bt,
     CheckpointSubmission,
     get_config,
     find_contest,
@@ -20,17 +22,22 @@ VALID_REPO_REGEX = r'^https:\/\/[a-zA-Z0-9.-]+\/[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+
 VALID_REVISION_REGEX = r"^[a-f0-9]{7}$"
 
 
+logger = get_logger(__name__)
+
+
 def add_extra_args(argument_parser: ArgumentParser):
     argument_parser.add_argument(
         "--repository",
         type=str,
         help="The repository to push to",
     )
+
     argument_parser.add_argument(
         "--revision",
         type=str,
         help="The revision to checkout",
     )
+
     argument_parser.add_argument(
         "--contest",
         type=str,
@@ -68,9 +75,12 @@ def get_latest_revision(repository: str):
 def main():
     config = get_config(add_extra_args)
 
-    subtensor = bt.subtensor(config=config)
-    metagraph = subtensor.metagraph(netuid=config.netuid)
-    wallet = bt.wallet(config=config)
+    substrate = get_substrate_interface(
+        subtensor_network=config["subtensor.network"],
+        subtensor_address=config["subtensor.chain_address"]
+    )
+
+    keypair = load_hotkey_keypair(wallet_name=config["wallet.name"], hotkey_name=config["wallet.hotkey"])
 
     repository = config.repository
     revision = config.revision
@@ -132,13 +142,13 @@ def main():
         exit("Submission cancelled.")
 
     make_submission(
-        subtensor,
-        metagraph,
-        wallet,
+        substrate,
+        config["netuid"],
+        keypair,
         checkpoint_info,
     )
 
-    bt.logging.info(f"Submitted {checkpoint_info} as the info for this miner")
+    logger.info(f"Submitted {checkpoint_info} as the info for this miner")
 
 
 if __name__ == '__main__':
