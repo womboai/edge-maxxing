@@ -101,7 +101,11 @@ async def lifespan(_: FastAPI):
     }
 
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(filename)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
 app = FastAPI(lifespan=lifespan)
 
 
