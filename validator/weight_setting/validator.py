@@ -674,7 +674,7 @@ class Validator:
                 for line in self.websocket:
                     output = sys.stderr if line.startswith("err:") else sys.stdout
 
-                    print(f"[API] - {line[4:]}", file=output)
+                    print(f"[API] -{line[4:]}", file=output)
             except ConnectionClosedError:
                 self.websocket = self.connect_to_api()
 
