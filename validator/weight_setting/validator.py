@@ -827,7 +827,7 @@ class Validator:
                 blocks_to_wait = random.randint(1, 10)
 
             bt.logging.info(f"Nothing to do in this step, sleeping for {blocks_to_wait} blocks")
-            time.sleep(self.config.epoch_length * blocks_to_wait)
+            time.sleep(blocks_to_wait * 12)
 
             return
 
