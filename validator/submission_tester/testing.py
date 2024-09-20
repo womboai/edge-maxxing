@@ -5,7 +5,7 @@ from time import perf_counter
 
 from neuron import Contest, CheckpointSubmission
 from pipelines.models import TextToImageRequest
-from .inference_sandbox import InferenceSandbox
+from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
 from .random_inputs import generate_random_prompt
 from .vram_monitor import VRamMonitor
 from base_validator.metrics import CheckpointBenchmark, MetricData
@@ -52,36 +52,40 @@ def generate(contest: Contest, container: InferenceSandbox, prompt: str, seed: i
     )
 
 
-def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> CheckpointBenchmark:
+def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> CheckpointBenchmark | None:
     logger.info("Generating model samples")
 
     outputs: list[GenerationOutput] = []
 
-    with InferenceSandbox(submission.repository, submission.revision, False) as sandbox:
-        size = sandbox.model_size
+    try:
+        with InferenceSandbox(submission.repository, submission.revision, False) as sandbox:
+            size = sandbox.model_size
 
-        f"Take {SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been"
-        for i in range(SAMPLE_COUNT):
-            prompt = generate_random_prompt()
-            seed = int.from_bytes(urandom(4), "little")
+            f"Take {SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been"
+            for i in range(SAMPLE_COUNT):
+                prompt = generate_random_prompt()
+                seed = int.from_bytes(urandom(4), "little")
 
-            logger.info(f"Sample {i + 1}, prompt {prompt} and seed {seed}")
+                logger.info(f"Sample {i + 1}, prompt {prompt} and seed {seed}")
 
-            output = generate(
-                contest,
-                sandbox,
-                prompt,
-                seed,
-            )
+                output = generate(
+                    contest,
+                    sandbox,
+                    prompt,
+                    seed,
+                )
 
-            logger.info(
-                f"Sample {i} Generated\n"
-                f"Generation Time: {output.generation_time}s\n"
-                f"VRAM Usage: {output.vram_used}b\n"
-                f"Power Usage: {output.watts_used}W"
-            )
+                logger.info(
+                    f"Sample {i} Generated\n"
+                    f"Generation Time: {output.generation_time}s\n"
+                    f"VRAM Usage: {output.vram_used}b\n"
+                    f"Power Usage: {output.watts_used}W"
+                )
 
-            outputs.append(output)
+                outputs.append(output)
+    except InvalidSubmissionError as e:
+        logger.error(f"Skipping invalid submission '{submission.repository}': '{e}'")
+        return None
 
     average_time = sum(output.generation_time for output in outputs) / len(outputs)
     vram_used = max(output.vram_used for output in outputs)

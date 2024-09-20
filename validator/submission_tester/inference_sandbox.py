@@ -5,7 +5,7 @@ import time
 from multiprocessing.connection import Client
 from os.path import abspath
 from pathlib import Path
-from subprocess import Popen, run, TimeoutExpired
+from subprocess import Popen, run, TimeoutExpired, CalledProcessError
 from typing import Generic, cast, IO
 
 from neuron import RequestT
@@ -25,6 +25,9 @@ def sandbox_args(user: str):
         "-u",
         user,
     ]
+
+
+class InvalidSubmissionError(Exception): ...
 
 
 class OutputDelegate:
@@ -54,18 +57,21 @@ class InferenceSandbox(Generic[RequestT]):
 
         self._baseline = baseline
 
-        run(
-            [
-                *sandbox_args(self._user),
-                SETUP_INFERENCE_SANDBOX_SCRIPT,
-                self._sandbox_directory,
-                repository,
-                revision,
-                str(baseline).lower(),
-            ],
-            stdout=delegate("stdout"),
-            stderr=delegate("stderr"),
-        ).check_returncode()
+        try:
+            run(
+                [
+                    *sandbox_args(self._user),
+                    SETUP_INFERENCE_SANDBOX_SCRIPT,
+                    self._sandbox_directory,
+                    repository,
+                    revision,
+                    str(baseline).lower(),
+                ],
+                stdout=delegate("stdout"),
+                stderr=delegate("stderr"),
+            ).check_returncode()
+        except CalledProcessError as e:
+            raise InvalidSubmissionError(f"Failed to setup sandbox: {e}")
 
         self._file_size = sum(file.stat().st_size for file in self._sandbox_directory.rglob("*"))
 
@@ -92,7 +98,7 @@ class InferenceSandbox(Generic[RequestT]):
 
             self._check_exit()
         else:
-            raise RuntimeError(f"Socket file '{socket_path}' not found after {SOCKET_TIMEOUT} seconds.")
+            raise InvalidSubmissionError(f"Socket file '{socket_path}' not found after {SOCKET_TIMEOUT} seconds.")
 
         logger.info(f"Connecting to socket")
         self._client = Client(socket_path)
@@ -107,7 +113,7 @@ class InferenceSandbox(Generic[RequestT]):
 
     def _check_exit(self):
         if self._process.returncode:
-            raise RuntimeError(f"'{self._repository}'s inference crashed, got exit code {self._process.returncode}")
+            raise InvalidSubmissionError(f"'{self._repository}'s inference crashed, got exit code {self._process.returncode}")
 
     def __enter__(self):
         self._process.__enter__()
