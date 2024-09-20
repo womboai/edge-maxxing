@@ -2,7 +2,7 @@ import asyncio
 import logging
 import sys
 from contextlib import asynccontextmanager
-from io import StringIO
+from io import TextIOWrapper
 from queue import Queue
 
 from base_validator import API_VERSION
@@ -14,26 +14,27 @@ from .benchmarker import Benchmarker
 
 logs = Queue()
 
-class LogsIO(StringIO):
-    old_stdout: StringIO
 
-    def __init__(self, old_stdout):
-        super().__init__()
+class LogsIO(TextIOWrapper):
+    old_stdout: TextIOWrapper
+    log_type: str
+
+    def __init__(self, old_stdout, log_type: str):
+        super().__init__(old_stdout.buffer, encoding=old_stdout.encoding, errors=old_stdout.errors, newline=old_stdout.newlines)
         self.old_stdout = old_stdout
+        self.log_type = log_type
 
     def write(self, text):
-        self.old_stdout.write(text)
         if text.strip():
-            logs.put(text.strip())
-        return super().write(text)
+            logs.put(f"{self.log_type}: {text.strip()}")
+        return self.old_stdout.write(text)
 
     def flush(self):
         self.old_stdout.flush()
-        return super().flush()
 
 
-sys.stdout = LogsIO(sys.stdout)
-sys.stderr = LogsIO(sys.stderr)
+sys.stdout = LogsIO(sys.stdout, "out")
+sys.stderr = LogsIO(sys.stderr, "err")
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s - %(levelname)s - %(filename)s: %(message)s",
@@ -98,4 +99,4 @@ async def stream_logs(websocket: WebSocket):
                 await websocket.send_text(f"[API] - {message}")
             await asyncio.sleep(0.1)
     except Exception as e:
-        logger.error(f"WebSocket error: {e}")
+        logger.error(f"WebSocket error", exc_info=e)

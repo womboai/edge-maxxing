@@ -1,4 +1,3 @@
-import asyncio
 import json
 import random
 import sys
@@ -9,6 +8,7 @@ from datetime import date, datetime
 from operator import itemgetter
 from os import makedirs
 from os.path import isfile, expanduser, join
+from threading import Thread
 from typing import cast, TypeAlias
 from zoneinfo import ZoneInfo
 
@@ -174,7 +174,7 @@ class Validator:
         self.contest = find_contest(self.contest_state.id) if self.contest_state else CURRENT_CONTEST
 
         self.websocket = self.connect_to_api()
-        asyncio.run(self.api_logs())
+        Thread(target=self.api_logs).start()
 
     def new_wandb_run(self):
         """Creates a new wandb run to save information to."""
@@ -668,13 +668,13 @@ class Validator:
 
         return websocket
 
-    async def api_logs(self):
+    def api_logs(self):
         while True:
             try:
                 for line in self.websocket:
                     output = sys.stderr if line.startswith("err:") else sys.stdout
 
-                    print(line, file=output)
+                    print(line[4:], file=output)
             except ConnectionClosedError:
                 self.websocket = self.connect_to_api()
 

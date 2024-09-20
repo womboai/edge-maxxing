@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import time
 from multiprocessing.connection import Client
 from os.path import abspath
@@ -57,7 +58,7 @@ class InferenceSandbox(Generic[RequestT]):
                 encoding='utf-8',
             )
             print(start_process.stdout)
-            print(start_process.stderr)
+            print(start_process.stderr, file=sys.stderr)
             start_process.check_returncode()
 
         except CalledProcessError as e:
@@ -122,7 +123,7 @@ class InferenceSandbox(Generic[RequestT]):
         )
 
         print(process.stdout)
-        print(process.stderr)
+        print(process.stderr, file=sys.stderr)
         process.check_returncode()
 
     def __enter__(self):
