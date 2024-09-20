@@ -27,7 +27,8 @@ def sandbox_args(user: str):
     ]
 
 
-class InvalidSubmissionError(Exception): ...
+class InvalidSubmissionError(Exception):
+    ...
 
 
 class OutputDelegate:
