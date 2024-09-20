@@ -1,95 +1,47 @@
 import asyncio
 import logging
 import sys
-from asyncio import Future, AbstractEventLoop
-from collections.abc import Iterable
 from contextlib import asynccontextmanager
-from typing import TextIO
+from io import TextIOWrapper
+from queue import Queue
 
 from base_validator import API_VERSION
 from base_validator.metrics import BenchmarkState, BenchmarkResults
 from fastapi import FastAPI, WebSocket, Request
-
 from neuron import CURRENT_CONTEST, CheckpointSubmission, Key
+
 from .benchmarker import Benchmarker
 
-
-async def send_data(websocket: WebSocket, data: list[str]):
-    for line in data:
-        await websocket.send_text(line)
+logs = Queue()
 
 
-class WebSocketLogStream:
-    _websocket: WebSocket
-    _log_type: str
-    _delegate: TextIO
+class LogsIO(TextIOWrapper):
+    old_stdout: TextIOWrapper
+    log_type: str
 
-    _data: list[str]
-    _futures: list[Future[None]]
+    def __init__(self, old_stdout, log_type: str):
+        super().__init__(old_stdout.buffer, encoding=old_stdout.encoding, errors=old_stdout.errors, newline=old_stdout.newlines)
+        self.old_stdout = old_stdout
+        self.log_type = log_type
 
-    _loop: AbstractEventLoop
-
-    def __init__(self, websocket: WebSocket, log_type: str, delegate: TextIO, loop: AbstractEventLoop):
-        super().__init__()
-
-        self._websocket = websocket
-        self._log_type = log_type
-        self._delegate = delegate
-
-        self._data = []
-        self._futures = []
-
-        self._loop = loop
-
-    def __enter__(self):
-        self._delegate.__enter__()
-
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._delegate.__exit__(exc_type, exc_val, exc_tb)
-
-    def __await__(self):
-        self._flush_socket()
-
-        futures = self._futures.copy()
-        self._futures.clear()
-
-        yield from asyncio.gather(*futures).__await__()
-
-    def __getattr__(self, item):
-        if item in self.__dict__:
-            return self.__dict__[item]
-
-        return getattr(self._delegate, item)
+    def write(self, text):
+        if text.strip():
+            logs.put(f"{self.log_type}: {text.strip()}")
+        return self.old_stdout.write(text)
 
     def flush(self):
-        self._delegate.flush()
-        self._flush_socket()
+        self.old_stdout.flush()
 
-    def _flush_socket(self):
-        coroutine = send_data(self._websocket, self._data.copy())
-        future = asyncio.ensure_future(coroutine, loop=self._loop)
 
-        self._futures.append(future)
-
-        self._data.clear()
-
-    def _send_line(self, line: str):
-        self._data.append(f"{self._log_type}:{line}")
-
-    def write(self, text: str):
-        count = self._delegate.write(text)
-
-        self._send_line(text)
-
-        return count
-
-    def writelines(self, lines: Iterable[str]):
-        self._delegate.writelines(lines)
-
-        for line in lines:
-            self._send_line(line)
+sys.stdout = LogsIO(sys.stdout, "out")
+sys.stderr = LogsIO(sys.stderr, "err")
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(filename)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    stream=sys.stdout
+)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -101,11 +53,6 @@ async def lifespan(_: FastAPI):
     }
 
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(levelname)s - %(filename)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
 app = FastAPI(lifespan=lifespan)
 
 
@@ -145,22 +92,11 @@ async def stream_logs(websocket: WebSocket):
 
     await websocket.send_json({"version": API_VERSION})
 
-    loop = asyncio.get_running_loop()
-
-    old_out = sys.stdout
-    old_err = sys.stderr
-
-    out = WebSocketLogStream(websocket, "out", sys.stdout, loop)
-    err = WebSocketLogStream(websocket, "err", sys.stderr, loop)
-
     try:
-        sys.stdout = out
-        sys.stderr = err
-
         while True:
-            await asyncio.sleep(0.5)
-
-            await asyncio.gather(out, err)
-    finally:
-        sys.stdout = old_out
-        sys.stderr = old_err
+            if not logs.empty():
+                message = logs.get()
+                await websocket.send_text(message)
+            await asyncio.sleep(0.1)
+    except Exception as e:
+        logger.error(f"WebSocket error", exc_info=e)
