@@ -46,8 +46,8 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.3.2"
-WEIGHTS_VERSION = 26
+VALIDATOR_VERSION = "2.3.3"
+WEIGHTS_VERSION = 27
 
 WINNER_PERCENTAGE = 0.8
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
@@ -494,7 +494,6 @@ class Validator:
 
         self.send_wandb_metrics(ranks)
 
-
         sequence_ratio = _winner_percentage_sequence_ratio(len(buckets))
 
         weights = numpy.zeros(self.metagraph.n)
@@ -827,29 +826,38 @@ class Validator:
             }
 
             self.start_benchmarking(submissions)
-        else:
-            for hotkey, benchmark in result.results.items():
-                bt.logging.info(f"Updating {hotkey}'s benchmarks to {benchmark}")
-                if hotkey in self.metagraph.hotkeys:
-                    self.set_miner_benchmarks(self.metagraph.hotkeys.index(hotkey), benchmark)
 
-            self.send_wandb_metrics()
+            self.step += 1
 
-            if result.state == BenchmarkState.FINISHED:
-                bt.logging.info(
-                    "Benchmarking API has reported submission testing as done. "
-                    "Miner metrics updated:"
-                )
-                bt.logging.info(self.benchmarks)
+            self.save_state()
+            return
 
-                self.benchmarking = False
-            else:
-                bt.logging.info(f"Benchmarking in progress, sleeping for {self.config.epoch_length * 5} blocks")
-                time.sleep(self.config.epoch_length * 60)
+        for hotkey, benchmark in result.results.items():
+            bt.logging.info(f"Updating {hotkey}'s benchmarks to {benchmark}")
+            if hotkey in self.metagraph.hotkeys:
+                self.set_miner_benchmarks(self.metagraph.hotkeys.index(hotkey), benchmark)
 
-        self.step += 1
+        self.send_wandb_metrics()
+
+        if result.state == BenchmarkState.FINISHED:
+            bt.logging.info(
+                "Benchmarking API has reported submission testing as done. "
+                "Miner metrics updated:"
+            )
+            bt.logging.info(self.benchmarks)
+
+            self.benchmarking = False
+            self.step += 1
+
+            self.save_state()
+            return
 
         self.save_state()
+
+        bt.logging.info(f"Benchmarking in progress, sleeping for {self.config.epoch_length * 5} blocks")
+        time.sleep(self.config.epoch_length * 60)
+
+        self.step += 1
 
     def run(self):
         while True:
