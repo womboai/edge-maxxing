@@ -878,8 +878,9 @@ class Validator:
 
         self.save_state()
 
-        bt.logging.info(f"Benchmarking in progress, sleeping for {self.config.epoch_length * 5} blocks")
-        time.sleep(self.config.epoch_length * 60)
+        blocks_to_wait = self.config.epoch_length * 3
+        bt.logging.info(f"Benchmarking in progress, sleeping for {blocks_to_wait} blocks")
+        time.sleep(blocks_to_wait * 12)
 
         self.step += 1
 
