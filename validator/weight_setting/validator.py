@@ -1,3 +1,4 @@
+import asyncio
 import json
 import random
 import sys
@@ -47,7 +48,7 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.3.5"
+VALIDATOR_VERSION = "2.3.6"
 WEIGHTS_VERSION = 27
 
 WINNER_PERCENTAGE = 0.8
@@ -175,9 +176,7 @@ class Validator:
         self.contest = find_contest(self.contest_state.id) if self.contest_state else CURRENT_CONTEST
 
         self.websocket = self.connect_to_api()
-
-        self.log_thread = Thread(target=self.api_logs)
-        self.log_thread.start()
+        asyncio.run(self.api_logs())
 
     def new_wandb_run(self):
         """Creates a new wandb run to save information to."""
@@ -671,13 +670,13 @@ class Validator:
 
         return websocket
 
-    def api_logs(self):
+    async def api_logs(self):
         while True:
             try:
                 for line in self.websocket:
                     output = sys.stderr if line.startswith("err:") else sys.stdout
 
-                    print(line[4:], file=output)
+                    print(line, file=output)
             except ConnectionClosedError:
                 self.websocket = self.connect_to_api()
 
