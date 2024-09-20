@@ -791,6 +791,9 @@ class Validator:
         if blocks_elapsed >= self.config.epoch_length:
             bt.logging.info(f"{blocks_elapsed} blocks since last update, resyncing metagraph")
             self.sync()
+
+            # Recalculate in-case weights were set
+            blocks_elapsed = block - self.metagraph.last_update[self.uid]
         else:
             bt.logging.info(
                 f"{blocks_elapsed} since last update, "
