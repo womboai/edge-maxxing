@@ -9,7 +9,6 @@ from datetime import date, datetime
 from operator import itemgetter
 from os import makedirs
 from os.path import isfile, expanduser, join
-from threading import Thread
 from typing import cast, TypeAlias
 from zoneinfo import ZoneInfo
 
@@ -133,7 +132,6 @@ class Validator:
     contest: Contest
 
     websocket: ClientConnection
-    log_thread: Thread
 
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
