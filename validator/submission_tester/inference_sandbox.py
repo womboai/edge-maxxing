@@ -72,7 +72,11 @@ class InferenceSandbox(Generic[RequestT]):
                 stderr=delegate("stderr"),
             ).check_returncode()
         except CalledProcessError as e:
-            raise InvalidSubmissionError(f"Failed to setup sandbox: {e}")
+            if baseline:
+                self.clear_sandbox()
+                raise RuntimeError(f"Failed to setup baseline sandbox, cleared baseline sandbox directory: {e}")
+            else:
+                raise InvalidSubmissionError(f"Failed to setup sandbox: {e}")
 
         self._file_size = sum(file.stat().st_size for file in self._sandbox_directory.rglob("*"))
 
@@ -116,6 +120,20 @@ class InferenceSandbox(Generic[RequestT]):
         if self._process.returncode:
             raise InvalidSubmissionError(f"'{self._repository}'s inference crashed, got exit code {self._process.returncode}")
 
+    def clear_sandbox(self):
+        run(
+            [
+                *sandbox_args(self._user),
+                "find",
+                str(self._sandbox_directory),
+                "-mindepth",
+                "1",
+                "-delete",
+            ],
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+        ).check_returncode()
+
     def __enter__(self):
         self._process.__enter__()
         self._client.__enter__()
@@ -138,18 +156,7 @@ class InferenceSandbox(Generic[RequestT]):
         self._process.__exit__(exc_type, exc_val, exc_tb)
 
         if not self._baseline:
-            run(
-                [
-                    *sandbox_args(self._user),
-                    "find",
-                    str(self._sandbox_directory),
-                    "-mindepth",
-                    "1",
-                    "-delete",
-                ],
-                stdout=sys.stdout,
-                stderr=sys.stderr,
-            ).check_returncode()
+            self.clear_sandbox()
 
     def __call__(self, request: RequestT):
         self._check_exit()
