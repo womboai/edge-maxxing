@@ -371,6 +371,7 @@ class Validator:
             bt.logging.warning(f"Contest state has outdated weights version: {self.contest_state.miner_score_version}, current version: {WEIGHTS_VERSION}. Resetting benchmarks.")
             self.benchmarks = self.clear_benchmarks()
             self.failed.clear()
+            self.contest_state.miner_score_version = WEIGHTS_VERSION
 
     def clear_benchmarks(self) -> list[CheckpointSubmission | None]:
         return [None] * self.metagraph.n.item()
