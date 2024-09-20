@@ -30,7 +30,6 @@ class Benchmarker:
             self.benchmarks[hotkey] = benchmark
         except:
             traceback.print_exc()
-            self.benchmarks[hotkey] = None
 
     async def _benchmark_key_async(self, hotkey: Key):
         loop = asyncio.get_running_loop()

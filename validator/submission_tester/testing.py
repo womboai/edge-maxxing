@@ -116,7 +116,15 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
                 output.seed,
             )
 
-            similarity = contest.compare_outputs(output.output, baseline.output)
+            try:
+                similarity = contest.compare_outputs(output.output, baseline.output)
+            except:
+                logger.info(
+                    f"Submission {submission.repository}'s output couldn't be compared in similarity",
+                    exc_info=True,
+                )
+
+                similarity = 0.0
 
             logger.info(
                 f"Baseline sample {i + 1} Generated\n"
