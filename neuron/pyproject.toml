@@ -33,7 +33,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
-fiber = { git = "https://github.com/namoray/fiber/", rev = "b03f4de" }
+fiber = { git = "https://github.com/rayonlabs/fiber", rev = "b03f4de" }
 loguru = "0.7.2"
 GitPython = "3.1.43"
 

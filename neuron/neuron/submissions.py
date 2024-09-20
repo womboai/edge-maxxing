@@ -1,4 +1,4 @@
-from fiber.chain_interactions.commitments import publish_raw_commitment, get_raw_commitment
+from fiber.chain.commitments import publish_raw_commitment, get_raw_commitment
 from fiber.logging_utils import get_logger
 from substrateinterface import SubstrateInterface, Keypair
 

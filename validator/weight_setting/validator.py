@@ -16,10 +16,10 @@ from zoneinfo import ZoneInfo
 import numpy
 import requests
 import wandb
-from fiber.chain_interactions.chain_utils import load_hotkey_keypair
-from fiber.chain_interactions.interface import get_substrate_interface
-from fiber.chain_interactions.metagraph import Metagraph
-from fiber.chain_interactions.weights import set_node_weights
+from fiber.chain.chain_utils import load_hotkey_keypair
+from fiber.chain.interface import get_substrate_interface
+from fiber.chain.metagraph import Metagraph
+from fiber.chain.weights import set_node_weights
 from fiber.logging_utils import get_logger
 from numpy import real, isreal
 from numpy.polynomial import Polynomial

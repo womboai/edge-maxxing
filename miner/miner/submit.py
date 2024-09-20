@@ -1,8 +1,8 @@
 import re
 from argparse import ArgumentParser
 
-from fiber.chain_interactions.chain_utils import load_hotkey_keypair
-from fiber.chain_interactions.interface import get_substrate_interface
+from fiber.chain.chain_utils import load_hotkey_keypair
+from fiber.chain.interface import get_substrate_interface
 from fiber.logging_utils import get_logger
 from git import GitCommandError, cmd
 
