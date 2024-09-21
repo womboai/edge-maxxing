@@ -1,6 +1,6 @@
 import asyncio
 import logging
-import time
+from time import perf_counter
 import traceback
 from asyncio import Task
 from datetime import timedelta, datetime
@@ -33,9 +33,9 @@ class Benchmarker:
         submission = self.submissions[hotkey]
 
         try:
-            start_time = time.time()
+            start_time = perf_counter()
             benchmark = compare_checkpoints(CURRENT_CONTEST, submission)
-            self.submission_times.append(time.time() - start_time)
+            self.submission_times.append(perf_counter() - start_time)
             self.benchmarks[hotkey] = benchmark
         except:
             traceback.print_exc()
@@ -60,16 +60,18 @@ class Benchmarker:
             except (asyncio.CancelledError, asyncio.TimeoutError):
                 return
 
-            logger.info(f"{len(self.benchmarks)}/{len(self.submissions)} submissions benchmarked")
+            valid_submissions = len([benchmark for benchmark in self.benchmarks.values() if benchmark])
+            logger.info(f"{len(self.benchmarks)}/{len(self.submissions)} submissions benchmarked. {valid_submissions} valid.")
 
             if self.submission_times:
                 average_time = sum(self.submission_times) / len(self.submission_times)
                 eta = int(average_time * (len(self.submissions) - len(self.benchmarks)))
                 if eta > 0:
-                    eta_date = datetime.now(tz=ZoneInfo("America/New_York")) + timedelta(seconds=eta)
-                    eta_time = eta_date.strftime("%Y-%m-%d %H:%M:%S")
+                    time_left = timedelta(seconds=eta)
+                    eta_date = datetime.now(tz=ZoneInfo("America/New_York")) + time_left
+                    eta_time = eta_date.strftime("%Y-%m-%d %I:%M:%S %p")
 
-                    logger.info(f"ETA: {eta_time} (EST). Time remaining: {timedelta(seconds=eta)}")
+                    logger.info(f"ETA: {eta_time} EST. Time remaining: {time_left}")
 
         self.done = True
 
