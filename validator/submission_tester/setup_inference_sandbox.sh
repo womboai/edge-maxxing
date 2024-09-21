@@ -34,7 +34,7 @@ fi
 REQUIREMENTS="$SANDBOX_DIRECTORY/requirements.txt"
 
 if [ -f "$REQUIREMENTS" ]; then
-  "$VENV/bin/pip" install -r "$REQUIREMENTS" -e "$SANDBOX_DIRECTORY"
+  "$VENV/bin/pip" install -q -r "$REQUIREMENTS" -e "$SANDBOX_DIRECTORY"
 else
-  "$VENV/bin/pip" install -e "$SANDBOX_DIRECTORY"
+  "$VENV/bin/pip" install -q -e "$SANDBOX_DIRECTORY"
 fi
