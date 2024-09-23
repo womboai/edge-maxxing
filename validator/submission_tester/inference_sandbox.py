@@ -14,7 +14,7 @@ SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "setup_inferenc
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
-SOCKET_TIMEOUT = 180
+SOCKET_TIMEOUT = 120
 
 logger = logging.getLogger(__file__)
 
