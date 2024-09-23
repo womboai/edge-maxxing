@@ -47,7 +47,7 @@ def add_extra_args(argument_parser: ArgumentParser):
     )
 
 
-def validate(repository: str, revision: str, contest: Contest):
+def validate(provider: str, repository: str, revision: str, contest: Contest):
     if not re.match(VALID_REPO_REGEX, repository):
         raise ValueError(f"Invalid repository URL: {repository}")
 
@@ -64,14 +64,14 @@ def validate(repository: str, revision: str, contest: Contest):
 
     git = cmd.Git()
     try:
-        git.ls_remote(repository, revision)
+        git.ls_remote(f"https://{provider}/{repository}", revision)
     except GitCommandError as e:
         raise ValueError(f"Invalid repository or revision: {e}")
 
 
-def get_latest_revision(repository: str):
+def get_latest_revision(provider: str, repository: str):
     git = cmd.Git()
-    return git.ls_remote(repository).split()[0][:7]
+    return git.ls_remote(f"https://{provider}/{repository}").split()[0][:7]
 
 
 def main():
@@ -111,7 +111,7 @@ def main():
     if not revision:
         while True:
             try:
-                revision = input("Enter short revision hash (leave blank to fetch latest): ") or get_latest_revision(repository)
+                revision = input("Enter short revision hash (leave blank to fetch latest): ") or get_latest_revision(provider, repository)
             except GitCommandError as e:
                 exit(f"Failed to get latest revision: {e}")
             if re.match(VALID_REVISION_REGEX, revision):
@@ -134,11 +134,16 @@ def main():
                 print(f"Invalid contest: {contest_id}")
 
     try:
-        validate(repository, revision, contest)
+        validate(provider, repository, revision, contest)
     except ValueError as e:
         exit(f"Validation failed: {e}")
 
-    checkpoint_info = CheckpointSubmission(repository=repository, revision=revision, contest=contest.id)
+    checkpoint_info = CheckpointSubmission(
+        provider=provider,
+        repository=repository,
+        revision=revision,
+        contest=contest.id,
+    )
 
     print(
         "\nSubmission info:\n"
