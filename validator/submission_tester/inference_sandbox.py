@@ -6,7 +6,7 @@ from multiprocessing.connection import Client
 from os.path import abspath
 from pathlib import Path
 from subprocess import Popen, run, TimeoutExpired, CalledProcessError
-from typing import Generic, cast, IO
+from typing import Generic
 
 from neuron import RequestT
 
@@ -31,20 +31,6 @@ class InvalidSubmissionError(Exception):
     ...
 
 
-class OutputDelegate:
-    _name: str
-
-    def __init__(self, name: str):
-        self._name = name
-
-    def __getattr__(self, item):
-        return getattr(getattr(sys, self._name), item)
-
-
-def delegate(name: str):
-    return cast(IO[str], OutputDelegate(name))
-
-
 class InferenceSandbox(Generic[RequestT]):
     _repository: str
 
@@ -59,7 +45,7 @@ class InferenceSandbox(Generic[RequestT]):
         self._baseline = baseline
 
         try:
-            run(
+            start_process = run(
                 [
                     *sandbox_args(self._user),
                     SETUP_INFERENCE_SANDBOX_SCRIPT,
@@ -69,9 +55,13 @@ class InferenceSandbox(Generic[RequestT]):
                     revision,
                     str(baseline).lower(),
                 ],
-                stdout=delegate("stdout"),
-                stderr=delegate("stderr"),
-            ).check_returncode()
+                capture_output=True,
+                encoding='utf-8',
+            )
+            print(start_process.stdout)
+            print(start_process.stderr, file=sys.stderr)
+            start_process.check_returncode()
+
         except CalledProcessError as e:
             if baseline:
                 self.clear_sandbox()
@@ -89,8 +79,6 @@ class InferenceSandbox(Generic[RequestT]):
                 abspath(self._sandbox_directory / ".venv" / "bin" / "start_inference")
             ],
             cwd=self._sandbox_directory,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
         )
 
         logger.info(f"Inference process starting")
@@ -122,7 +110,7 @@ class InferenceSandbox(Generic[RequestT]):
             raise InvalidSubmissionError(f"'{self._repository}'s inference crashed, got exit code {self._process.returncode}")
 
     def clear_sandbox(self):
-        run(
+        process = run(
             [
                 *sandbox_args(self._user),
                 "find",
@@ -131,9 +119,13 @@ class InferenceSandbox(Generic[RequestT]):
                 "1",
                 "-delete",
             ],
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-        ).check_returncode()
+            capture_output=True,
+            encoding='utf-8',
+        )
+
+        print(process.stdout)
+        print(process.stderr, file=sys.stderr)
+        process.check_returncode()
 
     def __enter__(self):
         self._process.__enter__()
