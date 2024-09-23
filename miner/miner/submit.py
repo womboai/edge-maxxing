@@ -148,9 +148,9 @@ def main():
     print(
         "\nSubmission info:\n"
         f"Git Provider: {checkpoint_info.provider}\n"
-        f"Repository: {checkpoint_info.repository}\n"
-        f"Revision:   {checkpoint_info.revision}\n"
-        f"Contest:    {checkpoint_info.contest.name}\n"
+        f"Repository:   {checkpoint_info.repository}\n"
+        f"Revision:     {checkpoint_info.revision}\n"
+        f"Contest:      {checkpoint_info.contest.name}\n"
     )
     if input("Confirm submission? (Y/n): ").strip().lower() not in ("yes", "y", ""):
         exit("Submission cancelled.")
