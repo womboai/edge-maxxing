@@ -12,6 +12,7 @@ from neuron import (
     CURRENT_CONTEST,
     CONTESTS,
     ContestId,
+    REVISION_LENGTH,
 )
 
 from neuron.submissions import make_submission
@@ -71,7 +72,7 @@ def validate(provider: str, repository: str, revision: str, contest: Contest):
 
 def get_latest_revision(provider: str, repository: str):
     git = cmd.Git()
-    return git.ls_remote(f"https://{provider}/{repository}").split()[0][:7]
+    return git.ls_remote(f"https://{provider}/{repository}").split()[0][:REVISION_LENGTH]
 
 
 def main():
