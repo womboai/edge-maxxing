@@ -427,11 +427,13 @@ class Validator:
         return sorted(contestants, key=itemgetter(1))
 
     def sync(self):
+        block = self.block
+
         # --- Check for registration.
         if not self.subtensor.is_hotkey_registered(
             netuid=self.config.netuid,
             hotkey_ss58=self.wallet.hotkey.ss58_address,
-            block=self.current_block,
+            block=block,
         ):
             bt.logging.error(
                 f"Wallet: {self.wallet} is not registered on netuid {self.config.netuid}."
@@ -442,7 +444,7 @@ class Validator:
 
         self.metagraph.sync(
             subtensor=self.subtensor,
-            block=self.current_block
+            block=block,
         )
 
         if len(self.hotkeys) != len(self.metagraph.hotkeys):
@@ -475,6 +477,13 @@ class Validator:
 
         try:
             self.set_weights()
+
+            self.attempted_set_weights = True
+
+            self.metagraph.sync(
+                subtensor=self.subtensor,
+                block=block,
+            )
         except Exception as e:
             bt.logging.error(f"Failed to set weights", exc_info=e)
 
@@ -574,13 +583,6 @@ class Validator:
         else:
             bt.logging.warning(f"set_weights failed, {message}")
 
-        self.attempted_set_weights = True
-
-        self.metagraph.sync(
-            subtensor=self.subtensor,
-            block=self.current_block
-        )
-
     def get_score_buckets(self) -> list[WinnerList]:
         sorted_contestants = cast(list[tuple[Uid, float]], self.get_sorted_contestants())
 
@@ -610,6 +612,8 @@ class Validator:
 
         miner_info: list[CheckpointSubmission | None] = []
 
+        block = self.block
+
         for uid in tqdm(range(self.metagraph.n.item())):
             hotkey = self.metagraph.hotkeys[uid]
 
@@ -633,7 +637,7 @@ class Validator:
                         self.subtensor,
                         self.metagraph,
                         hotkey,
-                        self.current_block,
+                        block,
                     )
 
                     break
@@ -905,17 +909,23 @@ class Validator:
 
         self.step += 1
 
+    @property
+    def block(self):
+        if not self.last_block_fetch or (datetime.now() - self.last_block_fetch).seconds >= 12:
+            self.current_block = self.subtensor.get_current_block()
+            self.last_block_fetch = datetime.now()
+            self.attempted_set_weights = False
+
+        return self.current_block
+
     def run(self):
         while True:
-            if not self.last_block_fetch or (datetime.now() - self.last_block_fetch).seconds >= 12:
-                self.current_block = self.subtensor.get_current_block()
-                self.last_block_fetch = datetime.now()
-                self.attempted_set_weights = False
+            current_block = self.block
 
             try:
-                bt.logging.info(f"Step {self.step}, block {self.current_block}")
+                bt.logging.info(f"Step {self.step}, block {current_block}")
 
-                self.do_step(self.current_block)
+                self.do_step(current_block)
             except Exception as e:
                 if not isinstance(e, ContestDeviceValidationError):
                     bt.logging.error(f"Error during validation step {self.step}", exc_info=e)
