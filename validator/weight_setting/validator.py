@@ -389,21 +389,11 @@ class Validator:
                     f"current version: {SPEC_VERSION}. Resetting benchmarks."
                 )
 
-                miner_info = self.get_miner_submissions()
-
-                submissions = {
-                    self.metagraph.hotkeys[uid]: submission
-                    for uid, submission in enumerate(miner_info)
-                    if submission
-                }
-
-                self.start_benchmarking(submissions)
-
                 self.benchmarks = self.clear_benchmarks()
                 self.failed.clear()
 
                 self.benchmarking = True
-                self.contest_state.miner_info = miner_info
+                self.contest_state.miner_info = self.get_miner_submissions()
                 self.contest_state.submission_spec_version = SPEC_VERSION
 
     def clear_benchmarks(self) -> list[CheckpointSubmission | None]:
