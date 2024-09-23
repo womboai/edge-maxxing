@@ -827,7 +827,7 @@ class Validator:
             if self.contest_state:
                 remaining = self.non_tested_miners()
 
-                if not remaining:
+                if len(remaining):
                     submissions = {
                         self.metagraph.hotkeys[uid]: self.contest_state.miner_info[uid]
                         for uid in remaining
