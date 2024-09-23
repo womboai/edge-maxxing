@@ -23,7 +23,7 @@ VALID_REVISION_REGEX = r"^[a-f0-9]{7}$"
 
 def add_extra_args(argument_parser: ArgumentParser):
     argument_parser.add_argument(
-        "--provier",
+        "--provider",
         type=str,
         help="The git provider containing the repository",
     )
