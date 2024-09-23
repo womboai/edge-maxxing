@@ -37,7 +37,7 @@ from neuron import (
     Contest,
     Key,
     Uid,
-    should_update,
+    should_update, SPEC_VERSION,
 )
 
 from neuron.submissions import get_submission
@@ -83,6 +83,7 @@ def _winner_percentage_sequence_ratio(sample_count: int):
 class ContestState:
     id: ContestId
     miner_score_version: int
+    submission_spec_version: int
     miner_info: list[CheckpointSubmission | None]
 
     def __init__(
@@ -99,7 +100,8 @@ class ContestState:
         if "miner_score_versions" in state:
             del state["miner_score_versions"]
 
-        self.miner_score_version = state.get("miner_score_version", WEIGHTS_VERSION)
+        self.miner_score_version = state.get("miner_score_version", 0)
+        self.submission_spec_version = state.get("submission_spec_version", 0)
         self.__dict__.update(state)
 
     def __repr__(self):
@@ -370,11 +372,39 @@ class Validator:
         )
         self.benchmarking = state.get("benchmarking", self.benchmarking)
 
-        if self.contest_state and self.contest_state.miner_score_version != WEIGHTS_VERSION:
-            bt.logging.warning(f"Contest state has outdated weights version: {self.contest_state.miner_score_version}, current version: {WEIGHTS_VERSION}. Resetting benchmarks.")
-            self.benchmarks = self.clear_benchmarks()
-            self.failed.clear()
-            self.contest_state.miner_score_version = WEIGHTS_VERSION
+        if self.contest_state:
+            if self.contest_state.miner_score_version != WEIGHTS_VERSION:
+                bt.logging.warning(
+                    f"Contest state has outdated weights version: {self.contest_state.miner_score_version}, "
+                    f"current version: {WEIGHTS_VERSION}. Resetting benchmarks."
+                )
+
+                self.benchmarks = self.clear_benchmarks()
+                self.failed.clear()
+                self.contest_state.miner_score_version = WEIGHTS_VERSION
+
+            if self.contest_state.submission_spec_version != SPEC_VERSION:
+                bt.logging.warning(
+                    f"Contest state has outdated spec version: {self.contest_state.submission_spec_version}, "
+                    f"current version: {SPEC_VERSION}. Resetting benchmarks."
+                )
+
+                miner_info = self.get_miner_submissions()
+
+                submissions = {
+                    self.metagraph.hotkeys[uid]: submission
+                    for uid, submission in enumerate(miner_info)
+                    if submission
+                }
+
+                self.start_benchmarking(submissions)
+
+                self.benchmarks = self.clear_benchmarks()
+                self.failed.clear()
+
+                self.benchmarking = True
+                self.contest_state.miner_info = miner_info
+                self.contest_state.submission_spec_version = SPEC_VERSION
 
     def clear_benchmarks(self) -> list[CheckpointSubmission | None]:
         return [None] * self.metagraph.n.item()
