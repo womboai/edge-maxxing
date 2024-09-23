@@ -51,7 +51,8 @@ VALIDATOR_VERSION = "2.3.5"
 WEIGHTS_VERSION = 27
 
 WINNER_PERCENTAGE = 0.8
-IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
+BUCKET_STEP_THRESHOLD = 1.01
+IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.10
 
 WinnerList: TypeAlias = list[tuple[Uid, float]]
 
@@ -570,7 +571,7 @@ class Validator:
         for contestant in sorted_contestants:
             _, score = contestant
 
-            if last_score and score > last_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
+            if last_score and score > last_score * BUCKET_STEP_THRESHOLD:
                 # New bucket
                 buckets.append([contestant])
             else:

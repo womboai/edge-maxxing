@@ -16,21 +16,30 @@ from neuron import (
 
 from neuron.submissions import make_submission
 
-VALID_REPO_REGEX = r'^https:\/\/[a-zA-Z0-9.-]+\/[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$'
+VALID_PROVIDER_REGEX = r'^[a-zA-Z0-9-.]+$'
+VALID_REPO_REGEX = r'^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$'
 VALID_REVISION_REGEX = r"^[a-f0-9]{7}$"
 
 
 def add_extra_args(argument_parser: ArgumentParser):
     argument_parser.add_argument(
+        "--provier",
+        type=str,
+        help="The git provider containing the repository",
+    )
+
+    argument_parser.add_argument(
         "--repository",
         type=str,
         help="The repository to push to",
     )
+
     argument_parser.add_argument(
         "--revision",
         type=str,
         help="The revision to checkout",
     )
+
     argument_parser.add_argument(
         "--contest",
         type=str,
@@ -72,6 +81,7 @@ def main():
     metagraph = subtensor.metagraph(netuid=config.netuid)
     wallet = bt.wallet(config=config)
 
+    provider = config.provider
     repository = config.repository
     revision = config.revision
     contest: Contest | None = None
@@ -82,9 +92,17 @@ def main():
         except ValueError:
             exit(f"Unknown contest: {config.contest}")
 
+    if not provider:
+        while True:
+            provider = input("Enter git provider (such as github.com or huggingface.co): ")
+            if re.match(VALID_PROVIDER_REGEX, provider):
+                break
+            else:
+                print("Invalid git provider.")
+
     if not repository:
         while True:
-            repository = input("Enter repository URL (format: https://<git-provider>/<username>/<repo>): ")
+            repository = input("Enter repository URL (format: <username>/<repo>): ")
             if re.match(VALID_REPO_REGEX, repository):
                 break
             else:
@@ -124,6 +142,7 @@ def main():
 
     print(
         "\nSubmission info:\n"
+        f"Git Provider: {checkpoint_info.provider}\n"
         f"Repository: {checkpoint_info.repository}\n"
         f"Revision:   {checkpoint_info.revision}\n"
         f"Contest:    {checkpoint_info.contest.name}\n"
@@ -135,7 +154,7 @@ def main():
         subtensor,
         metagraph,
         wallet,
-        checkpoint_info,
+        [checkpoint_info],
     )
 
     bt.logging.info(f"Submitted {checkpoint_info} as the info for this miner")
