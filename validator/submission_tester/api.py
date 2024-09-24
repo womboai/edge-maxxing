@@ -21,7 +21,7 @@ from .benchmarker import Benchmarker
 hotkey = os.getenv("VALIDATOR_HOTKEY_SS58_ADDRESS")
 
 if not hotkey:
-    raise ValueError("Header VALIDATOR_HOTKEY_SS58_ADDRESS was not specified")
+    raise ValueError("Environment variable VALIDATOR_HOTKEY_SS58_ADDRESS was not specified")
 
 keypair = Keypair(ss58_address=hotkey)
 
