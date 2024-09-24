@@ -78,7 +78,11 @@ async def start_benchmarking(
 ):
     benchmarker: Benchmarker = request.state.benchmarker
 
-    if time.time_ns() - x_nonce > 1_000_000:
+    current_timestamp = time.time_ns()
+
+    if current_timestamp - x_nonce > 1_000_000_000:
+        logger.info(f"Got request with nonce {x_nonce}, which is {current_timestamp - x_nonce} nanoseconds old.")
+
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid nonce",
@@ -87,13 +91,15 @@ async def start_benchmarking(
     with benchmarker.lock:
         timestamp = time.time_ns()
 
-        if timestamp - benchmarker.start_timestamp < 10_000_000:
+        if timestamp - benchmarker.start_timestamp < 10_000_000_000:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Started recently",
             )
 
     if not keypair.verify(str(x_nonce), signature):
+        logger.info(f"Got invalid signature for nonce {x_nonce}: {signature}")
+
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid signature",
