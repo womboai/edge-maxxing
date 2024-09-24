@@ -12,14 +12,15 @@ def make_submission(
     subtensor: bt.subtensor,
     metagraph: bt.metagraph,
     wallet: bt.wallet,
-    submission: CheckpointSubmission,
+    submissions: list[CheckpointSubmission],
 ):
 
     encoder = Encoder()
 
     encoder.write_uint16(SPEC_VERSION)
 
-    submission.encode(encoder)
+    for submission in submissions:
+        submission.encode(encoder)
 
     data = encoder.finish()
 
@@ -56,16 +57,19 @@ def get_submission(
         if spec_version != SPEC_VERSION:
             return None
 
-        info = CheckpointSubmission.decode(decoder)
+        while not decoder.eof:
+            info = CheckpointSubmission.decode(decoder)
 
-        if (
-            info.contest != CURRENT_CONTEST.id or
-            info.repository == CURRENT_CONTEST.baseline_repository or
-            info.revision == CURRENT_CONTEST.baseline_revision
-        ):
-            return None
+            if (
+                info.contest != CURRENT_CONTEST.id or
+                info.repository == CURRENT_CONTEST.baseline_repository or
+                info.revision == CURRENT_CONTEST.baseline_revision
+            ):
+                continue
 
-        return info, block
+            return info, block
+
+        return None
     except Exception as e:
         bt.logging.error(f"Failed to get submission from miner {hotkey}")
         bt.logging.debug(f"Submission parsing error", exc_info=e)
