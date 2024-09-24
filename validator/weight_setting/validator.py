@@ -301,8 +301,6 @@ class Validator:
                 "5CCefwu4fFXkBorK4ETJpaijXTG3LD5J2kBb7U5aEP4eABny",
                 "5GWCF5UR9nhbEXdWifRL8xiMTUJ4XV4o23L7stbptaDRHMDr",
                 "5DhxiGN4MfzTbyBh7gE3ABvvp5ZavZm97RWYeJMbKjMLCg3q",
-                "5FkN3MAW2Grht2wCBgLm5XjSjMwQADQiZyhaxnGSyiT56d9u",
-                "5En9uTvBzDyU3Dmd2GfJzBNDB4kq9MQQnW864xKbHa8ypfSP",
                 "5HQc3J7DoFAo54Luhh39TFmnvKQcXGfW2btQiG8VzJyUc1fj",
             ],
         )
