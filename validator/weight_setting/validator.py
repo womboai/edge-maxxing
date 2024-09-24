@@ -47,7 +47,7 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.4.0"
+VALIDATOR_VERSION = "2.4.1"
 WEIGHTS_VERSION = 28
 
 WINNER_PERCENTAGE = 0.8
