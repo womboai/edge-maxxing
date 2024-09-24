@@ -10,6 +10,9 @@ services:
     ports:
       - 127.0.0.1:8000:8000
 
+    environment:
+      VALIDATOR_HOTKEY_SS58_ADDRESS: $VALIDATOR_HOTKEY_SS58_ADDRESS
+
     deploy:
       resources:
         reservations:
