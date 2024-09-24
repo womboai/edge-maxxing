@@ -12,6 +12,7 @@ from neuron import (
     CURRENT_CONTEST,
     CONTESTS,
     ContestId,
+    REVISION_LENGTH,
 )
 
 from neuron.submissions import make_submission
@@ -23,7 +24,7 @@ VALID_REVISION_REGEX = r"^[a-f0-9]{7}$"
 
 def add_extra_args(argument_parser: ArgumentParser):
     argument_parser.add_argument(
-        "--provier",
+        "--provider",
         type=str,
         help="The git provider containing the repository",
     )
@@ -71,7 +72,7 @@ def validate(provider: str, repository: str, revision: str, contest: Contest):
 
 def get_latest_revision(provider: str, repository: str):
     git = cmd.Git()
-    return git.ls_remote(f"https://{provider}/{repository}").split()[0][:7]
+    return git.ls_remote(f"https://{provider}/{repository}").split()[0][:REVISION_LENGTH]
 
 
 def main():
