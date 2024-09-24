@@ -712,9 +712,17 @@ class Validator:
 
         submissions_json = RootModel[dict[Key, CheckpointSubmission]](submissions).model_dump_json()
 
+        nonce = str(time.time_ns())
+
+        signature = f"0x{self.wallet.hotkey.sign(nonce).hex()}"
+
         state_response = requests.post(
             f"{self.config.benchmarker_api}/start",
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "X-Nonce": nonce,
+                "Signature": signature,
+            },
             data=submissions_json,
         )
 

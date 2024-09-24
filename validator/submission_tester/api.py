@@ -1,16 +1,29 @@
 import asyncio
 import logging
+import os
 import sys
+import time
 from contextlib import asynccontextmanager
 from io import TextIOWrapper
 from queue import Queue
+from typing import Annotated
 
 from base_validator import API_VERSION
 from base_validator.metrics import BenchmarkState, BenchmarkResults
-from fastapi import FastAPI, WebSocket, Request
+from fastapi import FastAPI, WebSocket, Request, Header, HTTPException
+from starlette import status
+from substrateinterface import Keypair
+
 from neuron import CURRENT_CONTEST, CheckpointSubmission, Key
 
 from .benchmarker import Benchmarker
+
+hotkey = os.getenv("VALIDATOR_HOTKEY_SS58_ADDRESS")
+
+if not hotkey:
+    raise ValueError("Header VALIDATOR_HOTKEY_SS58_ADDRESS was not specified")
+
+keypair = Keypair(ss58_address=hotkey)
 
 logs = Queue()
 
@@ -57,8 +70,34 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.post("/start")
-async def start_benchmarking(submissions: dict[Key, CheckpointSubmission], request: Request):
+async def start_benchmarking(
+    submissions: dict[Key, CheckpointSubmission],
+    x_nonce: Annotated[int, Header()],
+    signature: Annotated[str, Header()],
+    request: Request,
+):
     benchmarker: Benchmarker = request.state.benchmarker
+
+    if time.time_ns() - x_nonce > 1_000_000:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid nonce",
+        )
+
+    with benchmarker.lock:
+        timestamp = time.time_ns()
+
+        if timestamp - benchmarker.start_timestamp < 10_000_000:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Started recently",
+            )
+
+    if not keypair.verify(str(x_nonce), signature):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid signature",
+        )
 
     await benchmarker.start_benchmarking(submissions)
 
