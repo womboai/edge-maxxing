@@ -297,7 +297,11 @@ class Validator:
             "--blacklist.coldkeys",
             type=str,
             nargs="*",
-            default=["5CCefwu4fFXkBorK4ETJpaijXTG3LD5J2kBb7U5aEP4eABny"],
+            default=[
+                "5CCefwu4fFXkBorK4ETJpaijXTG3LD5J2kBb7U5aEP4eABny",
+                "5GWCF5UR9nhbEXdWifRL8xiMTUJ4XV4o23L7stbptaDRHMDr",
+                "5DhxiGN4MfzTbyBh7gE3ABvvp5ZavZm97RWYeJMbKjMLCg3q",
+            ],
         )
 
         argument_parser.add_argument(
