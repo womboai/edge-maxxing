@@ -2,7 +2,7 @@ import re
 from argparse import ArgumentParser
 
 from fiber.chain.chain_utils import load_hotkey_keypair
-from fiber.chain.interface import get_substrate_interface
+from fiber.chain.interface import get_substrate
 from fiber.logging_utils import get_logger
 from git import GitCommandError, cmd
 
@@ -75,7 +75,7 @@ def get_latest_revision(repository: str):
 def main():
     config = get_config(add_extra_args)
 
-    substrate = get_substrate_interface(
+    substrate = get_substrate(
         subtensor_network=config["subtensor.network"],
         subtensor_address=config["subtensor.chain_address"]
     )

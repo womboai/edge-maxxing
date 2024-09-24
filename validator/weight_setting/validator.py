@@ -17,7 +17,7 @@ import numpy
 import requests
 import wandb
 from fiber.chain.chain_utils import load_hotkey_keypair
-from fiber.chain.interface import get_substrate_interface
+from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
 from fiber.chain.weights import set_node_weights
 from fiber.logging_utils import get_logger
@@ -149,12 +149,17 @@ class Validator:
 
         logger.info("Setting up bittensor objects")
 
-        self.substrate = get_substrate_interface(
+        self.substrate = get_substrate(
             subtensor_network=self.config["subtensor.network"],
             subtensor_address=self.config["subtensor.chain_address"]
         )
 
-        self.metagraph = Metagraph(substrate_interface=self.substrate, netuid=self.config["netuid"])
+        self.metagraph = Metagraph(
+            self.substrate,
+
+            netuid=self.config["netuid"],
+            load_old_nodes=False,
+        )
 
         self.metagraph.sync_nodes()
 
