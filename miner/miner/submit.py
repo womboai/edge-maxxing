@@ -77,7 +77,7 @@ def main():
 
     substrate = get_substrate(
         subtensor_network=config["subtensor.network"],
-        subtensor_address=config["subtensor.chain_address"]
+        subtensor_address=config["subtensor.chain_endpoint"]
     )
 
     keypair = load_hotkey_keypair(wallet_name=config["wallet.name"], hotkey_name=config["wallet.hotkey"])

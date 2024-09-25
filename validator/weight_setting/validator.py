@@ -151,7 +151,7 @@ class Validator:
 
         self.substrate = get_substrate(
             subtensor_network=self.config["subtensor.network"],
-            subtensor_address=self.config["subtensor.chain_address"]
+            subtensor_address=self.config["subtensor.chain_endpoint"]
         )
 
         self.metagraph = Metagraph(
