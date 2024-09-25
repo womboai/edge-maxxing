@@ -38,10 +38,9 @@ def get_submission(
     subtensor: bt.subtensor,
     metagraph: bt.metagraph,
     hotkey: Key,
-    block: int | None = None
 ) -> tuple[CheckpointSubmission, int] | None:
     try:
-        metadata = cast(dict[str, Any], get_metadata(subtensor, metagraph.netuid, hotkey, block))
+        metadata = cast(dict[str, Any], get_metadata(subtensor, metagraph.netuid, hotkey))
 
         if not metadata:
             return None

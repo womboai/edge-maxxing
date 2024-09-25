@@ -614,8 +614,6 @@ class Validator:
 
         miner_info: list[CheckpointSubmission | None] = []
 
-        block = self.block
-
         for uid in tqdm(range(self.metagraph.n.item())):
             hotkey = self.metagraph.hotkeys[uid]
 
