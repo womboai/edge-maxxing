@@ -1,12 +1,11 @@
 import os
+import sys
 from multiprocessing.connection import Client
 from os.path import abspath
 from pathlib import Path
 from subprocess import run, Popen
 from time import sleep, perf_counter
 
-import git
-from git import InvalidGitRepositoryError
 from pipelines.models import TextToImageRequest
 
 from neuron import (
@@ -20,29 +19,9 @@ from neuron import (
 from submission_tester import generate_random_prompt, VRamMonitor
 
 MODEL_DIRECTORY = Path("model")
+SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent.parent.parent / "validator/submission_tester/setup_inference_sandbox.sh")
 SAMPLE_COUNT = 10
 SOCKET_TIMEOUT = 300
-
-
-def clone_repository(submission: CheckpointSubmission):
-    try:
-        repo = git.Repo(MODEL_DIRECTORY)
-    except InvalidGitRepositoryError:
-        repo = git.Repo.clone_from(submission.get_repo_link(), MODEL_DIRECTORY, no_checkout=True, progress=bt.logging.info)
-
-    repo.git.checkout(submission.revision)
-
-
-def setup_venv():
-    venv = Path(MODEL_DIRECTORY) / "venv"
-    if not venv.exists():
-        run(["python3.10", "-m", venv], check=True)
-
-    requirements_file = Path(MODEL_DIRECTORY) / "requirements.txt"
-    if requirements_file.exists():
-        run(["pip", "install", "-r", requirements_file], check=True)
-    else:
-        run(["pip", "install", "-q", "-r", "requirements.txt"], check=True)
 
 
 def wait_for_socket(socket_path: str, process: Popen):
@@ -78,7 +57,7 @@ def test(contest: Contest, client: Client):
     watts_used = max(output.watts_used for output in outputs)
 
     bt.logging.info(
-        f"Tested {SAMPLE_COUNT} Samples\n"
+        f"\n\nTested {SAMPLE_COUNT} Samples\n"
         f"Average Generation Time: {average_time}s\n"
         f"Model Size: {size}b\n"
         f"Max VRAM Usage: {vram_used}b\n"
@@ -100,7 +79,8 @@ def benchmark(contest: Contest, client: Client):
     )
 
     data = request.model_dump_json().encode("utf-8")
-    output = client.send_bytes(data)
+    client.send_bytes(data)
+    output = client.recv_bytes()
 
     generation_time = perf_counter() - start
     joules_used = contest.get_joules() - start_joules
@@ -120,17 +100,23 @@ def benchmark(contest: Contest, client: Client):
 def start_benchmarking(submission: CheckpointSubmission):
     contest = find_contest(submission.contest)
     contest.validate()
+    bt.logging.info(f"Benchmarking '{submission.get_repo_link()}' with revision '{submission.revision}'")
 
     if not MODEL_DIRECTORY.exists():
         MODEL_DIRECTORY.mkdir()
 
-    bt.logging.info("Cloning repository")
-    clone_repository(submission)
-
-    bt.logging.info("Installing requirements")
-    setup_venv()
-
-    bt.logging.info("Running benchmarking")
+    run(
+        [
+            SETUP_INFERENCE_SANDBOX_SCRIPT,
+            MODEL_DIRECTORY.absolute(),
+            submission.provider,
+            submission.repository,
+            submission.revision,
+            "true",
+        ],
+        stdout=sys.stdout,
+        stderr=sys.stderr,
+    ).check_returncode()
 
     socket_path = abspath(MODEL_DIRECTORY / "inferences.sock")
 
