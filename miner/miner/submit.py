@@ -14,8 +14,8 @@ from neuron import (
     ContestId,
     REVISION_LENGTH,
 )
-
 from neuron.submissions import make_submission
+from .benchmarker import start_benchmarking
 
 VALID_PROVIDER_REGEX = r'^[a-zA-Z0-9-.]+$'
 VALID_REPO_REGEX = r'^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$'
@@ -47,6 +47,13 @@ def add_extra_args(argument_parser: ArgumentParser):
         help="The contest to submit to",
     )
 
+    argument_parser.add_argument(
+        "--benchmarking.on",
+        action="store_true",
+        help="Turn on benchmarking.",
+        default=False,
+    )
+
 
 def validate(provider: str, repository: str, revision: str, contest: Contest):
     if not re.match(VALID_REPO_REGEX, repository):
@@ -75,13 +82,7 @@ def get_latest_revision(provider: str, repository: str):
     return git.ls_remote(f"https://{provider}/{repository}").split()[0][:REVISION_LENGTH]
 
 
-def main():
-    config = get_config(add_extra_args)
-
-    subtensor = bt.subtensor(config=config)
-    metagraph = subtensor.metagraph(netuid=config.netuid)
-    wallet = bt.wallet(config=config)
-
+def get_submission(config: bt.config) -> CheckpointSubmission:
     provider = config.provider
     repository = config.repository
     revision = config.revision
@@ -139,19 +140,32 @@ def main():
     except ValueError as e:
         exit(f"Validation failed: {e}")
 
-    checkpoint_info = CheckpointSubmission(
+    return CheckpointSubmission(
         provider=provider,
         repository=repository,
         revision=revision,
         contest=contest.id,
     )
 
+
+def main():
+    config = get_config(add_extra_args)
+    subtensor = bt.subtensor(config=config)
+    metagraph = subtensor.metagraph(netuid=config.netuid)
+    wallet = bt.wallet(config=config)
+    enable_benchmarking = config.benchmarking_on
+
+    submission = get_submission(config)
+
+    if enable_benchmarking or input("Benchmark submission before submitting? (y/N): ").strip().lower() in ("yes", "y"):
+        start_benchmarking(submission)
+
     print(
         "\nSubmission info:\n"
-        f"Git Provider: {checkpoint_info.provider}\n"
-        f"Repository:   {checkpoint_info.repository}\n"
-        f"Revision:     {checkpoint_info.revision}\n"
-        f"Contest:      {checkpoint_info.contest.name}\n"
+        f"Git Provider: {submission.provider}\n"
+        f"Repository:   {submission.repository}\n"
+        f"Revision:     {submission.revision}\n"
+        f"Contest:      {submission.contest.name}\n"
     )
     if input("Confirm submission? (Y/n): ").strip().lower() not in ("yes", "y", ""):
         exit("Submission cancelled.")
@@ -160,10 +174,10 @@ def main():
         subtensor,
         metagraph,
         wallet,
-        [checkpoint_info],
+        [submission],
     )
 
-    bt.logging.info(f"Submitted {checkpoint_info} as the info for this miner")
+    bt.logging.info(f"Submitted {submission} as the info for this miner")
 
 
 if __name__ == '__main__':

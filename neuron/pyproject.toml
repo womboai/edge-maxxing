@@ -36,6 +36,7 @@ python = ">=3.10,<3.13"
 bittensor = "7.4.0"
 loguru = "0.7.2"
 GitPython = "3.1.43"
+nltk = "3.9.1"
 
 [tool.poetry.dev-dependencies]
 pytype = "2024.4.11"

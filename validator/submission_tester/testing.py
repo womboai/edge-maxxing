@@ -1,28 +1,16 @@
 import logging
-from dataclasses import dataclass
 from os import urandom
 from time import perf_counter
 
-from neuron import Contest, CheckpointSubmission
+from neuron import Contest, CheckpointSubmission, GenerationOutput
 from pipelines.models import TextToImageRequest
 from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
-from .random_inputs import generate_random_prompt
-from .vram_monitor import VRamMonitor
+from submission_tester import generate_random_prompt, VRamMonitor
 from base_validator.metrics import CheckpointBenchmark, MetricData
 
 SAMPLE_COUNT = 5
 
 logger = logging.getLogger(__file__)
-
-
-@dataclass
-class GenerationOutput:
-    prompt: str
-    seed: int
-    output: bytes
-    generation_time: float
-    vram_used: float
-    watts_used: float
 
 
 def generate(contest: Contest, container: InferenceSandbox, prompt: str, seed: int) -> GenerationOutput:
