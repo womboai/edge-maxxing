@@ -241,7 +241,13 @@ class Validator:
 
         bt.logging.info("Uploading benchmarks to wandb")
 
-        log_data = {}
+        benchmark_data = {}
+
+        submission_data = {
+            str(uid): info.model_dump(exclude={"contest"})
+            for uid, info in enumerate(self.contest_state.miner_info)
+            if info
+        }
 
         for uid, benchmark in enumerate(self.benchmarks):
             if not benchmark:
@@ -267,15 +273,19 @@ class Validator:
             }
 
             if ranks and uid in ranks:
-                rank, multiday_winner = ranks.get(uid)
+                rank, multiday_winner = ranks[uid]
                 data["rank"] = rank
                 data["multiday_winner"] = multiday_winner
 
-            log_data[str(uid)] = data
+            benchmark_data[str(uid)] = data
 
-        self.wandb_run.log(data=log_data)
+        self.wandb_run.log(data={
+            "benchmarks": benchmark_data,
+            "invalid": list(self.failed),
+            "submissions": submission_data,
+        })
 
-        bt.logging.info(log_data)
+        bt.logging.info(benchmark_data)
         bt.logging.info("Benchmarks uploaded to wandb")
 
     @classmethod

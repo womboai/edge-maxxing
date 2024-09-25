@@ -76,9 +76,16 @@ def state(request: Request) -> BenchmarkResults:
     else:
         benchmark_state = BenchmarkState.IN_PROGRESS
 
+    average_benchmark_time = (
+        sum(benchmarker.submission_times) / len(benchmarker.submission_times)
+        if benchmarker.submission_times
+        else float('inf')
+    )
+
     return BenchmarkResults(
         state=benchmark_state,
         results=benchmarker.benchmarks,
+        average_benchmark_time=average_benchmark_time,
     )
 
 
