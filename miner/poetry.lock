@@ -457,7 +457,7 @@ files = []
 develop = true
 
 [package.dependencies]
-fiber = {git = "https://github.com/womboai/fiber", rev = "349c04d7047dd322df0b58a6930194730eabb38c"}
+fiber = {git = "https://github.com/womboai/fiber", rev = "62f7eb4c5217f48ddfa80ab692f170efa9575fe9"}
 GitPython = "3.1.43"
 
 [package.source]
@@ -603,8 +603,8 @@ uvicorn = "0.30.5"
 [package.source]
 type = "git"
 url = "https://github.com/womboai/fiber"
-reference = "349c04d7047dd322df0b58a6930194730eabb38c"
-resolved_reference = "349c04d7047dd322df0b58a6930194730eabb38c"
+reference = "62f7eb4c5217f48ddfa80ab692f170efa9575fe9"
+resolved_reference = "62f7eb4c5217f48ddfa80ab692f170efa9575fe9"
 
 [[package]]
 name = "gitdb"
