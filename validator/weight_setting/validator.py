@@ -52,7 +52,7 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.4.2"
+VALIDATOR_VERSION = "2.4.3"
 WEIGHTS_VERSION = 28
 
 WINNER_PERCENTAGE = 0.8
@@ -595,8 +595,6 @@ class Validator:
 
         miner_info: list[CheckpointSubmission | None] = []
 
-        block = self.block
-
         for hotkey, node in tqdm(self.metagraph.nodes.items()):
             if (
                 hotkey in self.config["blacklist.hotkeys"] or
@@ -611,7 +609,6 @@ class Validator:
                 self.substrate,
                 self.metagraph.netuid,
                 hotkey,
-                self.current_block,
             )
 
             if not submission:

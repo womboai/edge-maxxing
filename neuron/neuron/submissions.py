@@ -38,10 +38,9 @@ def get_submission(
     substrate: SubstrateInterface,
     netuid: int,
     hotkey: Key,
-    block: int | None = None
 ) -> tuple[CheckpointSubmission, int] | None:
     try:
-        commitment = get_raw_commitment(substrate, netuid, hotkey, block)
+        commitment = get_raw_commitment(substrate, netuid, hotkey)
 
         if not commitment:
             return None
