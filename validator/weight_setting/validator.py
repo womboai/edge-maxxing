@@ -52,7 +52,7 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.5.0"
+VALIDATOR_VERSION = "2.6.0"
 WEIGHTS_VERSION = 28
 
 WINNER_PERCENTAGE = 0.8
@@ -676,9 +676,17 @@ class Validator:
 
         api = self.config["benchmarker_api"]
 
+        nonce = str(time.time_ns())
+
+        signature = f"0x{self.wallet.hotkey.sign(nonce).hex()}"
+
         state_response = requests.post(
             f"{api}/start",
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "X-Nonce": nonce,
+                "Signature": signature,
+            },
             data=submissions_json,
         )
 

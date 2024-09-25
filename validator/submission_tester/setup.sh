@@ -27,3 +27,4 @@ su - api -c "cd /api/validator && poetry install"
 
 echo "api ALL = (sandbox) NOPASSWD: ALL" >> /etc/sudoers
 echo "api ALL = (baseline-sandbox) NOPASSWD: ALL" >> /etc/sudoers
+echo "Defaults env_keep += \"VALIDATOR_HOTKEY_SS58_ADDRESS\"" >> /etc/sudoers

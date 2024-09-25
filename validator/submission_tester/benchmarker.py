@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import time
+from threading import Lock
 from time import perf_counter
 import traceback
 from asyncio import Task
@@ -8,6 +10,7 @@ from random import choice
 from zoneinfo import ZoneInfo
 
 from base_validator.metrics import CheckpointBenchmark
+
 from neuron import CURRENT_CONTEST, CheckpointSubmission, Key
 from submission_tester.testing import compare_checkpoints
 
@@ -19,14 +22,18 @@ class Benchmarker:
     benchmarks: dict[Key, CheckpointBenchmark | None]
     started: bool
     done: bool
-    benchmark_task: Task | None
+    start_timestamp: int
     submission_times: list[float]
+    lock: Lock
+    benchmark_task: Task | None
 
     def __init__(self):
         self.submissions = {}
         self.benchmarks = {}
         self.started = False
         self.done = True
+        self.start_timestamp = 0
+        self.lock = Lock()
         self.submission_times = []
 
     def _benchmark_key(self, hotkey: Key):
@@ -51,6 +58,7 @@ class Benchmarker:
         self.submission_times = []
         self.started = True
         self.done = False
+        self.start_timestamp = time.time_ns()
 
         while len(self.benchmarks) != len(self.submissions):
             hotkey = choice(list(self.submissions.keys() - self.benchmarks.keys()))
