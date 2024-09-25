@@ -1,3 +1,4 @@
+import asyncio
 import json
 import random
 import sys
@@ -130,6 +131,7 @@ class Validator:
     contest_state: ContestState | None
     previous_day_winners: WinnerList
     benchmarking: bool
+    benchmarking_apis: list[str]
 
     wandb_run: Run | None
     wandb_run_date: date | None
@@ -182,6 +184,7 @@ class Validator:
         self.contest_state = None
         self.previous_day_winners = []
         self.benchmarking = False
+        self.benchmarking_apis = self.config["benchmarker_api"]
 
         self.wandb_run = None
         self.wandb_run_date = None
@@ -194,8 +197,13 @@ class Validator:
 
         self.contest = find_contest(self.contest_state.id) if self.contest_state else CURRENT_CONTEST
 
-        self.websocket = self.connect_to_api()
-        Thread(target=self.api_logs).start()
+        self.websockets = [
+            self.connect_to_api(api)
+            for api in self.benchmarking_apis
+        ]
+
+        for api in self.benchmarking_apis:
+            Thread(target=self.api_logs, args=[api]).start()
 
     def new_wandb_run(self):
         """Creates a new wandb run to save information to."""
@@ -307,6 +315,7 @@ class Validator:
         argument_parser.add_argument(
             "--benchmarker_api",
             type=str,
+            nargs="*",
             help="The API route to the validator benchmarking API.",
             required=True,
         )
@@ -642,8 +651,8 @@ class Validator:
 
         return miner_info
 
-    def connect_to_api(self):
-        url: str = self.config["benchmarker_api"].replace("http", "ws")
+    def connect_to_api(self, api: str):
+        url = api.replace("http", "ws")
 
         websocket = connect(f"{url}/logs")
 
@@ -659,15 +668,17 @@ class Validator:
 
         return websocket
 
-    def api_logs(self):
+    def api_logs(self, api: str):
+        index = self.benchmarking_apis.index(api)
+
         while True:
             try:
                 for line in self.websocket:
                     output = sys.stderr if line.startswith("err:") else sys.stdout
 
-                    print(f"[API] -{line[4:]}", file=output)
+                    print(f"[API - {index + 1}] - {line[4:]}", file=output)
             except ConnectionClosedError:
-                self.websocket = self.connect_to_api()
+                self.websockets[index] = self.connect_to_api(api)
 
     def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
         logger.info(f"Sending {submissions} for testing")
@@ -696,7 +707,7 @@ class Validator:
             }
         )
 
-    def do_step(self, block: int):
+    async def do_step(self, block: int):
         now = self.current_time()
 
         if (not self.last_day or self.last_day < now.date()) and now.hour >= 12:
@@ -828,6 +839,7 @@ class Validator:
 
             return
 
+        self.benchmarking_apis
         api = self.config["benchmarker_api"]
 
         state_response = requests.get(f"{api}/state")
@@ -894,14 +906,14 @@ class Validator:
 
         return self.current_block
 
-    def run(self):
+    async def run(self):
         while True:
             current_block = self.block
 
             try:
                 logger.info(f"Step {self.step}, block {current_block}")
 
-                self.do_step(current_block)
+                await self.do_step(current_block)
             except Exception as e:
                 if not isinstance(e, ContestDeviceValidationError):
                     logger.error(f"Error during validation step {self.step}", exc_info=e)
@@ -911,7 +923,7 @@ class Validator:
 
 
 def main():
-    Validator().run()
+    asyncio.run(Validator().run())
 
 
 if __name__ == '__main__':
