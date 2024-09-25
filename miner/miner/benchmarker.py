@@ -121,6 +121,9 @@ def start_benchmarking(submission: CheckpointSubmission):
     contest = find_contest(submission.contest)
     contest.validate()
 
+    if not MODEL_DIRECTORY.exists():
+        MODEL_DIRECTORY.mkdir()
+
     bt.logging.info("Cloning repository")
     clone_repository(submission)
 
