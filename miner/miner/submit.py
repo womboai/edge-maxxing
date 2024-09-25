@@ -16,13 +16,12 @@ from neuron import (
     ContestId,
     REVISION_LENGTH,
 )
-
 from neuron.submissions import make_submission
+from .benchmarker import start_benchmarking
 
 VALID_PROVIDER_REGEX = r'^[a-zA-Z0-9-.]+$'
 VALID_REPO_REGEX = r'^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$'
 VALID_REVISION_REGEX = r"^[a-f0-9]{7}$"
-
 
 logger = get_logger(__name__)
 
@@ -50,6 +49,13 @@ def add_extra_args(argument_parser: ArgumentParser):
         "--contest",
         type=str,
         help="The contest to submit to",
+    )
+
+    argument_parser.add_argument(
+        "--benchmarking.on",
+        action="store_true",
+        help="Turn on benchmarking.",
+        default=False,
     )
 
 
@@ -80,16 +86,7 @@ def get_latest_revision(provider: str, repository: str):
     return git.ls_remote(f"https://{provider}/{repository}").split()[0][:REVISION_LENGTH]
 
 
-def main():
-    config = get_config(add_extra_args)
-
-    substrate = get_substrate(
-        subtensor_network=config["subtensor.network"],
-        subtensor_address=config["subtensor.chain_endpoint"]
-    )
-
-    keypair = load_hotkey_keypair(wallet_name=config["wallet.name"], hotkey_name=config["wallet.hotkey"])
-
+def get_submission(config) -> CheckpointSubmission:
     provider = config["provider"]
     repository = config["repository"]
     revision = config["revision"]
@@ -148,19 +145,36 @@ def main():
     except ValueError as e:
         exit(f"Validation failed: {e}")
 
-    checkpoint_info = CheckpointSubmission(
+    return CheckpointSubmission(
         provider=provider,
         repository=repository,
         revision=revision,
         contest=contest.id,
     )
 
+
+def main():
+    config = get_config(add_extra_args)
+
+    substrate = get_substrate(
+        subtensor_network=config["subtensor.network"],
+        subtensor_address=config["subtensor.chain_endpoint"]
+    )
+
+    keypair = load_hotkey_keypair(wallet_name=config["wallet.name"], hotkey_name=config["wallet.hotkey"])
+
+    submission = get_submission(config)
+    enable_benchmarking = config["benchmarking.on"]
+
+    if enable_benchmarking or input("Benchmark submission before submitting? (y/N): ").strip().lower() in ("yes", "y"):
+        start_benchmarking(submission)
+
     print(
         "\nSubmission info:\n"
-        f"Git Provider: {checkpoint_info.provider}\n"
-        f"Repository:   {checkpoint_info.repository}\n"
-        f"Revision:     {checkpoint_info.revision}\n"
-        f"Contest:      {checkpoint_info.contest.name}\n"
+        f"Git Provider: {submission.provider}\n"
+        f"Repository:   {submission.repository}\n"
+        f"Revision:     {submission.revision}\n"
+        f"Contest:      {submission.contest.name}\n"
     )
     if input("Confirm submission? (Y/n): ").strip().lower() not in ("yes", "y", ""):
         exit("Submission cancelled.")
@@ -169,10 +183,10 @@ def main():
         substrate,
         config["netuid"],
         keypair,
-        [checkpoint_info],
+        [submission],
     )
 
-    logger.info(f"Submitted {checkpoint_info} as the info for this miner")
+    logger.info(f"Submitted {submission} as the info for this miner")
 
 
 if __name__ == '__main__':

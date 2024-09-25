@@ -144,7 +144,8 @@ poetry run submit_model \
     --logging.debug
 ```
 6. Follow the interactive prompts to submit the repository link, revision, and contest to participate in
-7. Validators will collect your submission on 12PM New York time and test it in the remainder of the day
+7. Optionally, benchmark your submission locally before submitting (make sure you have the right hardware e.g. NVIDIA GeForce RTX 4090).
+8. Validators will collect your submission on 12PM New York time and test it in the remainder of the day
 
 ### Validator setup
 The validator setup requires two components, an API container and a scoring validator
