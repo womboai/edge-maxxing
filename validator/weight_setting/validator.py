@@ -678,7 +678,7 @@ class Validator:
 
         nonce = str(time.time_ns())
 
-        signature = f"0x{self.wallet.hotkey.sign(nonce).hex()}"
+        signature = f"0x{self.keypair.sign(nonce).hex()}"
 
         state_response = requests.post(
             f"{api}/start",
