@@ -1,20 +1,21 @@
-from typing import cast, Any
-
-import neuron.bt as bt
-from bittensor.extrinsics.serving import get_metadata, publish_metadata
+from fiber.chain.commitments import publish_raw_commitment, get_raw_commitment
+from fiber.logging_utils import get_logger
+from substrateinterface import SubstrateInterface, Keypair
 
 from .checkpoint import CheckpointSubmission, SPEC_VERSION, Key
 from .contest import CURRENT_CONTEST
 from .network_commitments import Encoder, Decoder
 
 
+logger = get_logger(__name__)
+
+
 def make_submission(
-    subtensor: bt.subtensor,
-    metagraph: bt.metagraph,
-    wallet: bt.wallet,
+    substrate: SubstrateInterface,
+    netuid: int,
+    keypair: Keypair,
     submissions: list[CheckpointSubmission],
 ):
-
     encoder = Encoder()
 
     encoder.write_uint16(SPEC_VERSION)
@@ -24,32 +25,27 @@ def make_submission(
 
     data = encoder.finish()
 
-    publish_metadata(
-        subtensor,
-        wallet,
-        metagraph.netuid,
-        f"Raw{len(data)}",
+    publish_raw_commitment(
+        substrate,
+        keypair,
+        netuid,
         data,
         wait_for_finalization=False,
     )
 
 
 def get_submission(
-    subtensor: bt.subtensor,
-    metagraph: bt.metagraph,
+    substrate: SubstrateInterface,
+    netuid: int,
     hotkey: Key,
 ) -> tuple[CheckpointSubmission, int] | None:
     try:
-        metadata = cast(dict[str, Any], get_metadata(subtensor, metagraph.netuid, hotkey))
+        commitment = get_raw_commitment(substrate, netuid, hotkey)
 
-        if not metadata:
+        if not commitment:
             return None
 
-        block: int = metadata["block"]
-        commitment: dict[str, str] = metadata["info"]["fields"][0]
-        hex_data = commitment.values().__iter__().__next__()
-        data = bytes.fromhex(hex_data[2:])
-        decoder = Decoder(data)
+        decoder = Decoder(commitment.data)
 
         spec_version = decoder.read_uint16()
 
@@ -66,10 +62,10 @@ def get_submission(
             ):
                 continue
 
-            return info, block
+            return info, commitment.block
 
         return None
     except Exception as e:
-        bt.logging.error(f"Failed to get submission from miner {hotkey}")
-        bt.logging.debug(f"Submission parsing error", exc_info=e)
+        logger.error(f"Failed to get submission from miner {hotkey}")
+        logger.debug(f"Submission parsing error", exc_info=e)
         return None
