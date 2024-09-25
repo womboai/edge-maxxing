@@ -17,8 +17,8 @@ services:
       resources:
         reservations:
           devices:
-            - capabilities:
-                - gpu
+            - driver: nvidia
+              capabilities: [ gpu ]
 
   validator:
     build:
