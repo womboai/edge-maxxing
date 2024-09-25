@@ -90,16 +90,17 @@ def main():
 
     keypair = load_hotkey_keypair(wallet_name=config["wallet.name"], hotkey_name=config["wallet.hotkey"])
 
-    provider = config.provider
-    repository = config.repository
-    revision = config.revision
+    provider = config["provider"]
+    repository = config["repository"]
+    revision = config["revision"]
+    contest_name = config["contest"]
     contest: Contest | None = None
 
-    if config.contest:
+    if contest_name:
         try:
-            contest = find_contest(ContestId[config.contest])
+            contest = find_contest(ContestId[contest_name])
         except ValueError:
-            exit(f"Unknown contest: {config.contest}")
+            exit(f"Unknown contest: {contest_name}")
 
     if not provider:
         while True:
