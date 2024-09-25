@@ -2,10 +2,15 @@ import logging
 from os import urandom
 from time import perf_counter
 
-from neuron import Contest, CheckpointSubmission, GenerationOutput
+from neuron import (
+    Contest,
+    CheckpointSubmission,
+    GenerationOutput,
+    generate_random_prompt,
+    VRamMonitor,
+)
 from pipelines.models import TextToImageRequest
 from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
-from submission_tester import generate_random_prompt, VRamMonitor
 from base_validator.metrics import CheckpointBenchmark, MetricData
 
 SAMPLE_COUNT = 5
@@ -93,7 +98,8 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
 
     average_similarity = 1.0
 
-    with InferenceSandbox("github.com", contest.baseline_repository, contest.baseline_revision, True) as baseline_sandbox:
+    with InferenceSandbox("github.com", contest.baseline_repository, contest.baseline_revision,
+                          True) as baseline_sandbox:
         baseline_size = baseline_sandbox.model_size
 
         for i, output in enumerate(outputs):
