@@ -21,8 +21,8 @@ from neuron import (
 
 MODEL_DIRECTORY = Path("model")
 SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent.parent.parent / "validator/submission_tester/setup_inference_sandbox.sh")
-SAMPLE_COUNT = 10
-SOCKET_TIMEOUT = 300
+SAMPLE_COUNT = 5
+SOCKET_TIMEOUT = 120
 
 logger = get_logger(__name__)
 
@@ -37,7 +37,7 @@ def wait_for_socket(socket_path: str, process: Popen):
         if process.returncode:
             raise RuntimeError(f"Model crashed with exit code {process.returncode}")
     else:
-        raise RuntimeError(f"Socket file '{socket_path}' not found after {SOCKET_TIMEOUT} seconds.")
+        raise RuntimeError(f"Socket file '{socket_path}' not found after {SOCKET_TIMEOUT} seconds. Your pipeline is taking too long to load. Please optimize and and make sure to precompile anything.")
 
 
 def test(contest: Contest, client: Client):
