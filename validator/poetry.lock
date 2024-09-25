@@ -542,7 +542,7 @@ files = []
 develop = true
 
 [package.dependencies]
-fiber = {git = "https://github.com/womboai/fiber", rev = "62f7eb4c5217f48ddfa80ab692f170efa9575fe9"}
+fiber = {git = "https://github.com/womboai/fiber", rev = "89482ee189f79663f08d4f0cf817a2c2cc495f5c"}
 GitPython = "3.1.43"
 
 [package.source]
@@ -704,8 +704,8 @@ uvicorn = "0.30.5"
 [package.source]
 type = "git"
 url = "https://github.com/womboai/fiber"
-reference = "62f7eb4c5217f48ddfa80ab692f170efa9575fe9"
-resolved_reference = "62f7eb4c5217f48ddfa80ab692f170efa9575fe9"
+reference = "89482ee189f79663f08d4f0cf817a2c2cc495f5c"
+resolved_reference = "89482ee189f79663f08d4f0cf817a2c2cc495f5c"
 
 [[package]]
 name = "filelock"
