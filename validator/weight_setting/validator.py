@@ -235,7 +235,7 @@ class Validator:
 
         self.new_wandb_run()
 
-    def send_wandb_metrics(self, ranks: dict[Uid, tuple[int, bool]] | None = None):
+    def send_wandb_metrics(self, average_time: float | None = None, ranks: dict[Uid, tuple[int, bool]] | None = None):
         if not self.wandb_run:
             return
 
@@ -280,9 +280,10 @@ class Validator:
             benchmark_data[str(uid)] = data
 
         self.wandb_run.log(data={
+            "average_benchmark_time": average_time,
+            "submissions": submission_data,
             "benchmarks": benchmark_data,
             "invalid": list(self.failed),
-            "submissions": submission_data,
         })
 
         bt.logging.info(benchmark_data)
@@ -539,7 +540,7 @@ class Validator:
             for uid, _ in bucket.scores:
                 ranks[uid] = (bucket_rank, bucket.previous_day_winners)
 
-        self.send_wandb_metrics(ranks)
+        self.send_wandb_metrics(ranks=ranks)
 
         sequence_ratio = _winner_percentage_sequence_ratio(len(buckets))
 
@@ -898,7 +899,7 @@ class Validator:
             if hotkey in self.metagraph.hotkeys:
                 self.set_miner_benchmarks(self.metagraph.hotkeys.index(hotkey), benchmark)
 
-        self.send_wandb_metrics()
+        self.send_wandb_metrics(average_time=result.average_benchmark_time)
 
         if result.state == BenchmarkState.FINISHED:
             bt.logging.info(

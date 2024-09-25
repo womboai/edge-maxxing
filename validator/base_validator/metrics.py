@@ -18,7 +18,7 @@ class CheckpointBenchmark(BaseModel):
     similarity_score: float
 
     def calculate_score(self) -> float:
-        return max(0.0, self.baseline.generation_time - self.model.generation_time) * self.similarity_score
+        return (self.baseline.generation_time - self.model.generation_time) * self.similarity_score
 
 
 class BenchmarkState(Enum):
