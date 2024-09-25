@@ -518,7 +518,7 @@ class Validator:
 
         sequence_ratio = _winner_percentage_sequence_ratio(len(buckets))
 
-        weights = numpy.zeros_like(self.metagraph.nodes)
+        weights = numpy.zeros(len(self.metagraph.nodes))
 
         for index, bucket in enumerate(buckets):
             bucket_incentive = _get_incentive(highest_bucket - index, sequence_ratio)
