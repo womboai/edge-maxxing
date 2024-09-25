@@ -14,13 +14,14 @@ def make_submission(
     substrate: SubstrateInterface,
     netuid: int,
     keypair: Keypair,
-    submission: CheckpointSubmission,
+    submissions: list[CheckpointSubmission],
 ):
     encoder = Encoder()
 
     encoder.write_uint16(SPEC_VERSION)
 
-    submission.encode(encoder)
+    for submission in submissions:
+        submission.encode(encoder)
 
     data = encoder.finish()
 
@@ -52,16 +53,19 @@ def get_submission(
         if spec_version != SPEC_VERSION:
             return None
 
-        info = CheckpointSubmission.decode(decoder)
+        while not decoder.eof:
+            info = CheckpointSubmission.decode(decoder)
 
-        if (
-            info.contest != CURRENT_CONTEST.id or
-            info.repository == CURRENT_CONTEST.baseline_repository or
-            info.revision == CURRENT_CONTEST.baseline_revision
-        ):
-            return None
+            if (
+                info.contest != CURRENT_CONTEST.id or
+                info.repository == CURRENT_CONTEST.baseline_repository or
+                info.revision == CURRENT_CONTEST.baseline_revision
+            ):
+                continue
 
-        return info, commitment.block
+            return info, commitment.block
+
+        return None
     except Exception as e:
         logger.error(f"Failed to get submission from miner {hotkey}")
         logger.debug(f"Submission parsing error", exc_info=e)

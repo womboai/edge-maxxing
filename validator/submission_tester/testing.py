@@ -58,7 +58,7 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
     outputs: list[GenerationOutput] = []
 
     try:
-        with InferenceSandbox(submission.repository, submission.revision, False) as sandbox:
+        with InferenceSandbox(submission.provider, submission.repository, submission.revision, False) as sandbox:
             size = sandbox.model_size
 
             f"Take {SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been"
@@ -105,7 +105,7 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
 
     average_similarity = 1.0
 
-    with InferenceSandbox(contest.baseline_repository, contest.baseline_revision, True) as baseline_sandbox:
+    with InferenceSandbox("github.com", contest.baseline_repository, contest.baseline_revision, True) as baseline_sandbox:
         baseline_size = baseline_sandbox.model_size
 
         for i, output in enumerate(outputs):

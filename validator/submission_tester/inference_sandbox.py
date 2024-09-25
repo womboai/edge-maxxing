@@ -14,7 +14,7 @@ SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "setup_inferenc
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
-SOCKET_TIMEOUT = 180
+SOCKET_TIMEOUT = 120
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class InferenceSandbox(Generic[RequestT]):
     _client: Client
     _process: Popen
 
-    def __init__(self, repository: str, revision: str, baseline: bool):
+    def __init__(self, provider: str, repository: str, revision: str, baseline: bool):
         logger.info(f"Downloading {repository} with revision {revision}")
 
         self._repository = repository
@@ -50,6 +50,7 @@ class InferenceSandbox(Generic[RequestT]):
                     *sandbox_args(self._user),
                     SETUP_INFERENCE_SANDBOX_SCRIPT,
                     self._sandbox_directory,
+                    provider,
                     repository,
                     revision,
                     str(baseline).lower(),
@@ -70,7 +71,7 @@ class InferenceSandbox(Generic[RequestT]):
 
         self._file_size = sum(file.stat().st_size for file in self._sandbox_directory.rglob("*"))
 
-        logger.info(f"Repository {repository} had size {self._file_size}")
+        logger.info(f"Repository {provider}/{repository} had size {self._file_size}")
 
         self._process = Popen(
             [

@@ -42,7 +42,7 @@ from neuron import (
     Contest,
     Key,
     Uid,
-    should_update,
+    should_update, SPEC_VERSION,
 )
 
 from neuron.submissions import get_submission
@@ -52,11 +52,12 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.3.6"
-WEIGHTS_VERSION = 27
+VALIDATOR_VERSION = "2.4.2"
+WEIGHTS_VERSION = 28
 
 WINNER_PERCENTAGE = 0.8
-IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.05
+BUCKET_STEP_THRESHOLD = 1.01
+IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.10
 
 WinnerList: TypeAlias = list[tuple[Uid, float]]
 
@@ -90,6 +91,7 @@ def _winner_percentage_sequence_ratio(sample_count: int):
 class ContestState:
     id: ContestId
     miner_score_version: int
+    submission_spec_version: int
     miner_info: list[CheckpointSubmission | None]
 
     def __init__(
@@ -106,7 +108,8 @@ class ContestState:
         if "miner_score_versions" in state:
             del state["miner_score_versions"]
 
-        self.miner_score_version = state.get("miner_score_version", WEIGHTS_VERSION)
+        self.miner_score_version = state.get("miner_score_version", 0)
+        self.submission_spec_version = state.get("submission_spec_version", 0)
         self.__dict__.update(state)
 
     def __repr__(self):
@@ -312,7 +315,12 @@ class Validator:
             "--blacklist.coldkeys",
             type=str,
             nargs="*",
-            default=["5CCefwu4fFXkBorK4ETJpaijXTG3LD5J2kBb7U5aEP4eABny"],
+            default=[
+                "5CCefwu4fFXkBorK4ETJpaijXTG3LD5J2kBb7U5aEP4eABny",
+                "5GWCF5UR9nhbEXdWifRL8xiMTUJ4XV4o23L7stbptaDRHMDr",
+                "5DhxiGN4MfzTbyBh7gE3ABvvp5ZavZm97RWYeJMbKjMLCg3q",
+                "5HQc3J7DoFAo54Luhh39TFmnvKQcXGfW2btQiG8VzJyUc1fj",
+            ],
         )
 
         argument_parser.add_argument(
@@ -385,11 +393,29 @@ class Validator:
         )
         self.benchmarking = state.get("benchmarking", self.benchmarking)
 
-        if self.contest_state and self.contest_state.miner_score_version != WEIGHTS_VERSION:
-            logger.warning(f"Contest state has outdated weights version: {self.contest_state.miner_score_version}, current version: {WEIGHTS_VERSION}. Resetting benchmarks.")
-            self.benchmarks = self.clear_benchmarks()
-            self.failed.clear()
-            self.contest_state.miner_score_version = WEIGHTS_VERSION
+        if self.contest_state:
+            if self.contest_state.miner_score_version != WEIGHTS_VERSION:
+                logger.warning(
+                    f"Contest state has outdated weights version: {self.contest_state.miner_score_version}, "
+                    f"current version: {WEIGHTS_VERSION}. Resetting benchmarks."
+                )
+
+                self.benchmarks = self.clear_benchmarks()
+                self.failed.clear()
+                self.contest_state.miner_score_version = WEIGHTS_VERSION
+
+            if self.contest_state.submission_spec_version != SPEC_VERSION:
+                logger.warning(
+                    f"Contest state has outdated spec version: {self.contest_state.submission_spec_version}, "
+                    f"current version: {SPEC_VERSION}. Resetting benchmarks."
+                )
+
+                self.benchmarks = self.clear_benchmarks()
+                self.failed.clear()
+
+                self.benchmarking = True
+                self.contest_state.miner_info = self.get_miner_submissions()
+                self.contest_state.submission_spec_version = SPEC_VERSION
 
     def clear_benchmarks(self) -> list[CheckpointSubmission | None]:
         return [None] * len(self.metagraph.nodes)
@@ -426,11 +452,7 @@ class Validator:
         if hotkey not in self.hotkeys:
             logger.error(
                 f"Wallet: {self.keypair} is not registered on netuid {self.metagraph.netuid}."
-                f" Please register the hotkey using `btcli subnets register` before trying again"
             )
-
-            exit(1)
-
     def metagraph_nodes(self):
         return sorted(self.metagraph.nodes.values(), key=attrgetter("node_id"))
 
@@ -471,6 +493,10 @@ class Validator:
 
         try:
             self.set_weights()
+
+            self.attempted_set_weights = True
+
+            self.metagraph.sync_nodes()
         except Exception as e:
             logger.error(f"Failed to set weights", exc_info=e)
 
@@ -538,8 +564,6 @@ class Validator:
             version_key=WEIGHTS_VERSION,
         )
 
-        self.attempted_set_weights = True
-
         self.metagraph.sync_nodes()
 
     def get_score_buckets(self) -> list[WinnerList]:
@@ -552,7 +576,7 @@ class Validator:
         for contestant in sorted_contestants:
             _, score = contestant
 
-            if last_score and score > last_score * IMPROVEMENT_BENCHMARK_PERCENTAGE:
+            if last_score and score > last_score * BUCKET_STEP_THRESHOLD:
                 # New bucket
                 buckets.append([contestant])
             else:
@@ -570,6 +594,8 @@ class Validator:
         visited_revisions: dict[str, tuple[Uid, int]] = {}
 
         miner_info: list[CheckpointSubmission | None] = []
+
+        block = self.block
 
         for hotkey, node in tqdm(self.metagraph.nodes.items()):
             if (
@@ -778,7 +804,7 @@ class Validator:
             if self.contest_state:
                 remaining = self.non_tested_miners()
 
-                if not remaining:
+                if len(remaining):
                     nodes = self.metagraph_nodes()
 
                     submissions = {
@@ -856,23 +882,29 @@ class Validator:
 
         self.save_state()
 
-        blocks_to_wait = epoch_length * 3
-        logger.info(f"Benchmarking in progress, sleeping for {blocks_to_wait} blocks")
-        time.sleep(blocks_to_wait * 12)
+        blocks = epoch_length / 4
+        logger.info(f"Benchmarking in progress, sleeping for {blocks} blocks")
+        time.sleep(blocks * 12)
 
         self.step += 1
 
+    @property
+    def block(self):
+        if not self.last_block_fetch or (datetime.now() - self.last_block_fetch).seconds >= 12:
+            self.current_block = self.substrate.get_block_number(None)  # type: ignore
+            self.last_block_fetch = datetime.now()
+            self.attempted_set_weights = False
+
+        return self.current_block
+
     def run(self):
         while True:
-            if not self.last_block_fetch or (datetime.now() - self.last_block_fetch).seconds >= 12:
-                self.current_block = self.substrate.get_block_number(None)  # type: ignore
-                self.last_block_fetch = datetime.now()
-                self.attempted_set_weights = False
+            current_block = self.block
 
             try:
-                logger.info(f"Step {self.step}, block {self.current_block}")
+                logger.info(f"Step {self.step}, block {current_block}")
 
-                self.do_step(self.current_block)
+                self.do_step(current_block)
             except Exception as e:
                 if not isinstance(e, ContestDeviceValidationError):
                     logger.error(f"Error during validation step {self.step}", exc_info=e)

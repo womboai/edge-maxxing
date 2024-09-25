@@ -78,11 +78,7 @@ def state(request: Request) -> BenchmarkResults:
 
     return BenchmarkResults(
         state=benchmark_state,
-        results={
-            hotkey: submission
-            for hotkey, submission in benchmarker.benchmarks.items()
-            if submission
-        },
+        results=benchmarker.benchmarks,
     )
 
 

@@ -29,4 +29,4 @@ class BenchmarkState(Enum):
 
 class BenchmarkResults(BaseModel):
     state: BenchmarkState
-    results: dict[Key, CheckpointBenchmark]
+    results: dict[Key, CheckpointBenchmark | None]

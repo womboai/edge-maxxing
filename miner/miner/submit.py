@@ -14,11 +14,13 @@ from neuron import (
     CURRENT_CONTEST,
     CONTESTS,
     ContestId,
+    REVISION_LENGTH,
 )
 
 from neuron.submissions import make_submission
 
-VALID_REPO_REGEX = r'^https:\/\/[a-zA-Z0-9.-]+\/[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$'
+VALID_PROVIDER_REGEX = r'^[a-zA-Z0-9-.]+$'
+VALID_REPO_REGEX = r'^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$'
 VALID_REVISION_REGEX = r"^[a-f0-9]{7}$"
 
 
@@ -26,6 +28,12 @@ logger = get_logger(__name__)
 
 
 def add_extra_args(argument_parser: ArgumentParser):
+    argument_parser.add_argument(
+        "--provider",
+        type=str,
+        help="The git provider containing the repository",
+    )
+
     argument_parser.add_argument(
         "--repository",
         type=str,
@@ -45,7 +53,7 @@ def add_extra_args(argument_parser: ArgumentParser):
     )
 
 
-def validate(repository: str, revision: str, contest: Contest):
+def validate(provider: str, repository: str, revision: str, contest: Contest):
     if not re.match(VALID_REPO_REGEX, repository):
         raise ValueError(f"Invalid repository URL: {repository}")
 
@@ -62,14 +70,14 @@ def validate(repository: str, revision: str, contest: Contest):
 
     git = cmd.Git()
     try:
-        git.ls_remote(repository, revision)
+        git.ls_remote(f"https://{provider}/{repository}", revision)
     except GitCommandError as e:
         raise ValueError(f"Invalid repository or revision: {e}")
 
 
-def get_latest_revision(repository: str):
+def get_latest_revision(provider: str, repository: str):
     git = cmd.Git()
-    return git.ls_remote(repository).split()[0][:7]
+    return git.ls_remote(f"https://{provider}/{repository}").split()[0][:REVISION_LENGTH]
 
 
 def main():
@@ -82,6 +90,7 @@ def main():
 
     keypair = load_hotkey_keypair(wallet_name=config["wallet.name"], hotkey_name=config["wallet.hotkey"])
 
+    provider = config.provider
     repository = config.repository
     revision = config.revision
     contest: Contest | None = None
@@ -92,9 +101,17 @@ def main():
         except ValueError:
             exit(f"Unknown contest: {config.contest}")
 
+    if not provider:
+        while True:
+            provider = input("Enter git provider (such as github.com or huggingface.co): ")
+            if re.match(VALID_PROVIDER_REGEX, provider):
+                break
+            else:
+                print("Invalid git provider.")
+
     if not repository:
         while True:
-            repository = input("Enter repository URL (format: https://<git-provider>/<username>/<repo>): ")
+            repository = input("Enter repository URL (format: <username>/<repo>): ")
             if re.match(VALID_REPO_REGEX, repository):
                 break
             else:
@@ -103,7 +120,7 @@ def main():
     if not revision:
         while True:
             try:
-                revision = input("Enter short revision hash (leave blank to fetch latest): ") or get_latest_revision(repository)
+                revision = input("Enter short revision hash (leave blank to fetch latest): ") or get_latest_revision(provider, repository)
             except GitCommandError as e:
                 exit(f"Failed to get latest revision: {e}")
             if re.match(VALID_REVISION_REGEX, revision):
@@ -126,17 +143,23 @@ def main():
                 print(f"Invalid contest: {contest_id}")
 
     try:
-        validate(repository, revision, contest)
+        validate(provider, repository, revision, contest)
     except ValueError as e:
         exit(f"Validation failed: {e}")
 
-    checkpoint_info = CheckpointSubmission(repository=repository, revision=revision, contest=contest.id)
+    checkpoint_info = CheckpointSubmission(
+        provider=provider,
+        repository=repository,
+        revision=revision,
+        contest=contest.id,
+    )
 
     print(
         "\nSubmission info:\n"
-        f"Repository: {checkpoint_info.repository}\n"
-        f"Revision:   {checkpoint_info.revision}\n"
-        f"Contest:    {checkpoint_info.contest.name}\n"
+        f"Git Provider: {checkpoint_info.provider}\n"
+        f"Repository:   {checkpoint_info.repository}\n"
+        f"Revision:     {checkpoint_info.revision}\n"
+        f"Contest:      {checkpoint_info.contest.name}\n"
     )
     if input("Confirm submission? (Y/n): ").strip().lower() not in ("yes", "y", ""):
         exit("Submission cancelled.")
@@ -145,7 +168,7 @@ def main():
         substrate,
         config["netuid"],
         keypair,
-        checkpoint_info,
+        [checkpoint_info],
     )
 
     logger.info(f"Submitted {checkpoint_info} as the info for this miner")

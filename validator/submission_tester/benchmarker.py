@@ -1,12 +1,17 @@
 import asyncio
+import logging
+from time import perf_counter
 import traceback
 from asyncio import Task
+from datetime import timedelta, datetime
 from random import choice
+from zoneinfo import ZoneInfo
 
 from base_validator.metrics import CheckpointBenchmark
-
 from neuron import CURRENT_CONTEST, CheckpointSubmission, Key
 from submission_tester.testing import compare_checkpoints
+
+logger = logging.getLogger(__name__)
 
 
 class Benchmarker:
@@ -15,18 +20,22 @@ class Benchmarker:
     started: bool
     done: bool
     benchmark_task: Task | None
+    submission_times: list[float]
 
     def __init__(self):
         self.submissions = {}
         self.benchmarks = {}
         self.started = False
         self.done = True
+        self.submission_times = []
 
     def _benchmark_key(self, hotkey: Key):
         submission = self.submissions[hotkey]
 
         try:
+            start_time = perf_counter()
             benchmark = compare_checkpoints(CURRENT_CONTEST, submission)
+            self.submission_times.append(perf_counter() - start_time)
             self.benchmarks[hotkey] = benchmark
         except:
             traceback.print_exc()
@@ -39,6 +48,7 @@ class Benchmarker:
     async def _start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
         self.submissions = submissions
         self.benchmarks = {}
+        self.submission_times = []
         self.started = True
         self.done = False
 
@@ -49,6 +59,19 @@ class Benchmarker:
                 await self._benchmark_key_async(hotkey)
             except (asyncio.CancelledError, asyncio.TimeoutError):
                 return
+
+            valid_submissions = len([benchmark for benchmark in self.benchmarks.values() if benchmark])
+            logger.info(f"{len(self.benchmarks)}/{len(self.submissions)} submissions benchmarked. {valid_submissions} valid.")
+
+            if self.submission_times:
+                average_time = sum(self.submission_times) / len(self.submission_times)
+                eta = int(average_time * (len(self.submissions) - len(self.benchmarks)))
+                if eta > 0:
+                    time_left = timedelta(seconds=eta)
+                    eta_date = datetime.now(tz=ZoneInfo("America/New_York")) + time_left
+                    eta_time = eta_date.strftime("%Y-%m-%d %I:%M:%S %p")
+
+                    logger.info(f"ETA: {eta_time} EST. Time remaining: {time_left}")
 
         self.done = True
 
