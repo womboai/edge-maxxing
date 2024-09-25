@@ -49,6 +49,9 @@ class CheckpointSubmission(BaseModel):
             contest=contest_id,
         )
 
+    def get_repo_link(self):
+        return f"https://{self.provider}/{self.repository}"
+
 
 def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
     if old_info is None and new_info is None:

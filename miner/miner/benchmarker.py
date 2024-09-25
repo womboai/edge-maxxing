@@ -28,7 +28,7 @@ def clone_repository(submission: CheckpointSubmission):
     try:
         repo = git.Repo(MODEL_DIRECTORY)
     except InvalidGitRepositoryError:
-        repo = git.Repo.clone_from(submission.repository, MODEL_DIRECTORY, no_checkout=True, progress=bt.logging.info)
+        repo = git.Repo.clone_from(submission.get_repo_link(), MODEL_DIRECTORY, no_checkout=True, progress=bt.logging.info)
 
     repo.git.checkout(submission.revision)
 
