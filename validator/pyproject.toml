@@ -35,7 +35,6 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 wandb = "0.18.1"
-torch = "2.4.1"
 diffusers = "0.30.3"
 transformers = "4.44.2"
 accelerate = "0.34.2"
@@ -43,7 +42,6 @@ omegaconf = "2.3.0"
 pynvml = "11.5.3"
 torchvision = "0.19.1"
 websockets = "13.1"
-edge-maxxing-pipelines = { path = "../pipelines", develop = true }
 edge-maxxing-neuron = { path = "../neuron", develop = true }
 
 [tool.poetry.scripts]

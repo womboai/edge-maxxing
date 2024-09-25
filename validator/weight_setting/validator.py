@@ -5,29 +5,34 @@ import time
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from datetime import date, datetime
-from operator import itemgetter
+from operator import itemgetter, attrgetter
 from os import makedirs
-from os.path import isfile, expanduser, join
+from os.path import isfile
+from pathlib import Path
 from threading import Thread
-from typing import cast, TypeAlias
+from typing import cast, TypeAlias, Any
 from zoneinfo import ZoneInfo
 
 import numpy
 import requests
 import wandb
-from bittensor.utils.weight_utils import process_weights_for_netuid, convert_weights_and_uids_for_emit
+from fiber.chain.chain_utils import load_hotkey_keypair
+from fiber.chain.interface import get_substrate
+from fiber.chain.metagraph import Metagraph
+from fiber.chain.weights import set_node_weights
+from fiber.logging_utils import get_logger
 from numpy import real, isreal
 from numpy.polynomial import Polynomial
 from pickle import dump, load
 
 from pydantic import RootModel
+from substrateinterface import SubstrateInterface, Keypair
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
 from websockets import ConnectionClosedError
 from websockets.sync.client import connect, ClientConnection
 
 from neuron import (
-    bt,
     CheckpointSubmission,
     get_config,
     ContestId,
@@ -47,7 +52,7 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.4.2"
+VALIDATOR_VERSION = "2.5.0"
 WEIGHTS_VERSION = 28
 
 WINNER_PERCENTAGE = 0.8
@@ -55,6 +60,9 @@ BUCKET_STEP_THRESHOLD = 1.01
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.10
 
 WinnerList: TypeAlias = list[tuple[Uid, float]]
+
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -109,10 +117,10 @@ class ContestState:
 
 
 class Validator:
-    config: bt.config
-    subtensor: bt.subtensor
-    metagraph: bt.metagraph
-    wallet: bt.wallet
+    config: dict[str, Any]
+    substrate: SubstrateInterface
+    metagraph: Metagraph
+    keypair: Keypair
     uid: Uid
 
     hotkeys: list[Key]
@@ -139,23 +147,33 @@ class Validator:
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
 
-        if not self.config.benchmarker_api:
-            raise ValueError("--benchmarker_api required")
-
         from .diagnostics import save_validator_diagnostics
         save_validator_diagnostics(self.config)
 
-        bt.logging.info("Setting up bittensor objects")
+        logger.info("Setting up bittensor objects")
 
-        self.subtensor = bt.subtensor(config=self.config)
-        self.metagraph = self.subtensor.metagraph(netuid=self.config.netuid)
-        self.wallet = bt.wallet(config=self.config)
+        self.substrate = get_substrate(
+            subtensor_network=self.config["subtensor.network"],
+            subtensor_address=self.config["subtensor.chain_endpoint"]
+        )
 
-        self.hotkeys = self.metagraph.hotkeys
-        hotkey = self.wallet.hotkey.ss58_address
-        if hotkey not in self.hotkeys:
-            bt.logging.error(f"Hotkey '{hotkey}' has not been registered in SN{self.config.netuid}!")
-            exit(1)
+        self.metagraph = Metagraph(
+            self.substrate,
+
+            netuid=self.config["netuid"],
+            load_old_nodes=False,
+        )
+
+        self.metagraph.sync_nodes()
+
+        self.keypair = load_hotkey_keypair(
+            wallet_name=self.config["wallet.name"],
+            hotkey_name=self.config["wallet.hotkey"],
+        )
+
+        self.hotkeys = list(self.metagraph.nodes.keys())
+
+        hotkey = self.keypair.ss58_address
 
         self.uid = self.hotkeys.index(hotkey)
         self.step = 0
@@ -186,29 +204,28 @@ class Validator:
         if self.wandb_run and self.wandb_run_date == day:
             return
 
-        hotkey = self.wallet.hotkey.ss58_address
-        uid = self.metagraph.hotkeys.index(hotkey)
+        hotkey = self.keypair.ss58_address
         netuid = self.metagraph.netuid
 
-        name = f"validator-{uid}-{day.year}-{day.month}-{day.day}"
+        name = f"validator-{self.uid}-{day.year}-{day.month}-{day.day}"
 
         contest_id = self.contest_state.id if self.contest_state else CURRENT_CONTEST.id
 
-        signing_message = f"{uid}:{hotkey}:{contest_id.name}"
-        signature = f"0x{self.wallet.hotkey.sign(signing_message).hex()}"
+        signing_message = f"{self.uid}:{hotkey}:{contest_id.name}"
+        signature = f"0x{self.keypair.sign(signing_message).hex()}"
 
         self.wandb_run = wandb.init(
             name=name,
             id=name,
             resume="allow",
-            mode="offline" if self.config.wandb.offline else "online",
-            project=self.config.wandb.project_name,
-            entity=self.config.wandb.entity,
-            notes=self.config.wandb.notes,
+            mode="offline" if self.config["wandb.offline"] else "online",
+            project=self.config["wandb.project_name"],
+            entity=self.config["wandb.entity"],
+            notes=self.config["wandb.notes"],
             config={
                 "hotkey": hotkey,
                 "type": "validator",
-                "uid": uid,
+                "uid": self.uid,
                 "contest": contest_id.name,
                 "signature": signature,
             },
@@ -222,14 +239,14 @@ class Validator:
 
         self.wandb_run_date = day
 
-        bt.logging.debug(f"Started a new wandb run: {name}")
+        logger.debug(f"Started a new wandb run: {name}")
 
     def start_wandb_run(self):
-        if self.config.wandb.off:
+        if self.config["wandb.off"]:
             return
 
         if self.wandb_run:
-            bt.logging.info("New contest day, starting a new wandb run.")
+            logger.info("New contest day, starting a new wandb run.")
 
             self.wandb_run.finish()
 
@@ -239,7 +256,7 @@ class Validator:
         if not self.wandb_run:
             return
 
-        bt.logging.info("Uploading benchmarks to wandb")
+        logger.info("Uploading benchmarks to wandb")
 
         log_data = {}
 
@@ -275,8 +292,8 @@ class Validator:
 
         self.wandb_run.log(data=log_data)
 
-        bt.logging.info(log_data)
-        bt.logging.info("Benchmarks uploaded to wandb")
+        logger.info(log_data)
+        logger.info("Benchmarks uploaded to wandb")
 
     @classmethod
     def add_extra_args(cls, argument_parser: ArgumentParser):
@@ -291,6 +308,7 @@ class Validator:
             "--benchmarker_api",
             type=str,
             help="The API route to the validator benchmarking API.",
+            required=True,
         )
 
         argument_parser.add_argument(
@@ -314,27 +332,28 @@ class Validator:
 
         add_wandb_args(argument_parser)
 
+    @property
     def state_path(self):
-        full_path = expanduser(
-            "{}/{}/{}/netuid{}/{}".format(
-                self.config.logging.logging_dir,
-                self.config.wallet.name,
-                self.config.wallet.hotkey,
-                self.config.netuid,
-                "validator",
-            )
+        full_path = (
+            Path.home() /
+            ".bittensor" /
+            "miners" /
+            self.config["wallet.name"] /
+            self.config["wallet.hotkey"] /
+            f"netuid{self.metagraph.netuid}" /
+            "validator"
         )
 
         makedirs(full_path, exist_ok=True)
 
-        return join(full_path, "state.bin")
+        return full_path / "state.bin"
 
     def save_state(self):
         """Saves the state of the validator to a file."""
-        bt.logging.info("Saving validator state.")
+        logger.info("Saving validator state.")
 
         # Save the state of the validator to file.
-        with open(self.state_path(), "wb") as file:
+        with open(self.state_path, "wb") as file:
             dump(
                 {
                     "step": self.step,
@@ -351,9 +370,9 @@ class Validator:
 
     def load_state(self):
         """Loads the state of the validator from a file."""
-        bt.logging.info("Loading validator state.")
+        logger.info("Loading validator state.")
 
-        path = self.state_path()
+        path = self.state_path
 
         if not isfile(path):
             return
@@ -376,7 +395,7 @@ class Validator:
 
         if self.contest_state:
             if self.contest_state.miner_score_version != WEIGHTS_VERSION:
-                bt.logging.warning(
+                logger.warning(
                     f"Contest state has outdated weights version: {self.contest_state.miner_score_version}, "
                     f"current version: {WEIGHTS_VERSION}. Resetting benchmarks."
                 )
@@ -386,7 +405,7 @@ class Validator:
                 self.contest_state.miner_score_version = WEIGHTS_VERSION
 
             if self.contest_state.submission_spec_version != SPEC_VERSION:
-                bt.logging.warning(
+                logger.warning(
                     f"Contest state has outdated spec version: {self.contest_state.submission_spec_version}, "
                     f"current version: {SPEC_VERSION}. Resetting benchmarks."
                 )
@@ -399,7 +418,7 @@ class Validator:
                 self.contest_state.submission_spec_version = SPEC_VERSION
 
     def clear_benchmarks(self) -> list[CheckpointSubmission | None]:
-        return [None] * self.metagraph.n.item()
+        return [None] * len(self.metagraph.nodes)
 
     def reset_miner(self, uid: Uid):
         self.benchmarks[uid] = None
@@ -415,7 +434,7 @@ class Validator:
 
     def resize(self):
         new_data = self.clear_benchmarks()
-        length = len(self.metagraph.hotkeys)
+        length = len(self.metagraph.nodes)
         new_data[:length] = self.benchmarks[:length]
         self.benchmarks = new_data
 
@@ -428,39 +447,34 @@ class Validator:
 
         return sorted(contestants, key=itemgetter(1))
 
-    def sync(self):
-        block = self.block
-
-        # --- Check for registration.
-        if not self.subtensor.is_hotkey_registered(
-            netuid=self.config.netuid,
-            hotkey_ss58=self.wallet.hotkey.ss58_address,
-            block=block,
-        ):
-            bt.logging.error(
-                f"Wallet: {self.wallet} is not registered on netuid {self.config.netuid}."
-                f" Please register the hotkey using `btcli subnets register` before trying again"
+    def check_registration(self):
+        hotkey = self.keypair.ss58_address
+        if hotkey not in self.hotkeys:
+            logger.error(
+                f"Wallet: {self.keypair} is not registered on netuid {self.metagraph.netuid}."
             )
+    def metagraph_nodes(self):
+        return sorted(self.metagraph.nodes.values(), key=attrgetter("node_id"))
 
-            exit()
+    def sync(self):
+        self.metagraph.sync_nodes()
 
-        self.metagraph.sync(
-            subtensor=self.subtensor,
-            block=block,
-        )
+        self.check_registration()
 
-        if len(self.hotkeys) != len(self.metagraph.hotkeys):
+        if len(self.hotkeys) != len(self.metagraph.nodes):
             self.resize()
 
             if self.contest_state:
-                new_miner_info = [None] * self.metagraph.n.item()
+                new_miner_info = [None] * len(self.metagraph.nodes)
                 length = len(self.hotkeys)
                 new_miner_info[:length] = self.contest_state.miner_info[:length]
 
                 self.contest_state.miner_info = new_miner_info
 
+        nodes = self.metagraph_nodes()
+
         for uid, hotkey in enumerate(self.hotkeys):
-            if hotkey != self.metagraph.hotkeys[uid]:
+            if hotkey != nodes[uid].hotkey:
                 # hotkey has been replaced
                 self.reset_miner(uid)
 
@@ -475,33 +489,30 @@ class Validator:
                 if self.contest_state:
                     self.contest_state.miner_info[uid] = None
 
-        self.hotkeys = self.metagraph.hotkeys
+        self.hotkeys = list(self.metagraph.nodes.keys())
 
         try:
             self.set_weights()
 
             self.attempted_set_weights = True
 
-            self.metagraph.sync(
-                subtensor=self.subtensor,
-                block=block,
-            )
+            self.metagraph.sync_nodes()
         except Exception as e:
-            bt.logging.error(f"Failed to set weights", exc_info=e)
+            logger.error(f"Failed to set weights", exc_info=e)
 
     def set_weights(self):
         if self.attempted_set_weights:
             return
 
         if not self.contest_state:
-            bt.logging.info("Will not set weights as the contest state has not been set")
+            logger.info("Will not set weights as the contest state has not been set")
             return
 
         if self.benchmarking:
-            bt.logging.info("Will not set weights as benchmarking is not done")
+            logger.info("Will not set weights as benchmarking is not done")
             return
 
-        bt.logging.info("Setting weights")
+        logger.info("Setting weights")
 
         buckets = [ContestSubmissionsBucket(scores) for scores in self.get_score_buckets()]
 
@@ -533,7 +544,7 @@ class Validator:
 
         sequence_ratio = _winner_percentage_sequence_ratio(len(buckets))
 
-        weights = numpy.zeros(self.metagraph.n)
+        weights = numpy.zeros(len(self.metagraph.nodes))
 
         for index, bucket in enumerate(buckets):
             bucket_incentive = _get_incentive(highest_bucket - index, sequence_ratio)
@@ -543,47 +554,17 @@ class Validator:
 
         uids = numpy.indices(weights.shape)[0]
 
-        bt.logging.debug("raw_weights", weights)
-        bt.logging.debug("raw_weight_uids", uids)
-        # Process the raw weights to final_weights via subtensor limitations.
-
-        (
-            processed_weight_uids,
-            processed_weights,
-        ) = process_weights_for_netuid(
-            uids=uids,
-            weights=weights,
-            netuid=self.config.netuid,
-            subtensor=self.subtensor,
-            metagraph=self.metagraph,
+        set_node_weights(
+            self.substrate,
+            self.keypair,
+            node_ids=list(uids),
+            node_weights=list(weights),
+            netuid=self.metagraph.netuid,
+            validator_node_id=self.uid,
+            version_key=WEIGHTS_VERSION,
         )
 
-        bt.logging.debug("processed_weights", processed_weights)
-        bt.logging.debug("processed_weight_uids", processed_weight_uids)
-
-        # Convert to uint16 weights and uids.
-        (
-            uint_uids,
-            uint_weights,
-        ) = convert_weights_and_uids_for_emit(
-            uids=processed_weight_uids, weights=processed_weights
-        )
-
-        bt.logging.debug("uint_weights", uint_weights)
-        bt.logging.debug("uint_uids", uint_uids)
-
-        result, message = self.subtensor.set_weights(
-            self.wallet,
-            self.metagraph.netuid,
-            uint_uids,
-            uint_weights,
-            WEIGHTS_VERSION,
-        )
-
-        if result:
-            bt.logging.info(f"set_weights successful, {message}")
-        else:
-            bt.logging.warning(f"set_weights failed, {message}")
+        self.metagraph.sync_nodes()
 
     def get_score_buckets(self) -> list[WinnerList]:
         sorted_contestants = cast(list[tuple[Uid, float]], self.get_sorted_contestants())
@@ -614,41 +595,21 @@ class Validator:
 
         miner_info: list[CheckpointSubmission | None] = []
 
-        block = self.block
-
-        for uid in tqdm(range(self.metagraph.n.item())):
-            hotkey = self.metagraph.hotkeys[uid]
-
+        for hotkey, node in tqdm(self.metagraph.nodes.items()):
             if (
-                hotkey in self.config.blacklist.hotkeys or
-                self.metagraph.coldkeys[uid] in self.config.blacklist.coldkeys
+                hotkey in self.config["blacklist.hotkeys"] or
+                node.coldkey in self.config["blacklist.coldkeys"]
             ):
                 miner_info.append(None)
                 continue
 
-            error: Exception | None = None
+            logger.info(f"Getting submission for hotkey {hotkey}")
 
-            for attempt in range(3):
-                try:
-                    if attempt:
-                        bt.logging.warning(f"Failed to get submission, attempt #{attempt + 1}")
-                    else:
-                        bt.logging.info(f"Getting submission for hotkey {hotkey}")
-
-                    submission = get_submission(
-                        self.subtensor,
-                        self.metagraph,
-                        hotkey,
-                        block,
-                    )
-
-                    break
-                except Exception as e:
-                    error = e
-                    time.sleep(0.1)
-                    continue
-            else:
-                raise error
+            submission = get_submission(
+                self.substrate,
+                self.metagraph.netuid,
+                hotkey,
+            )
 
             if not submission:
                 miner_info.append(None)
@@ -674,15 +635,15 @@ class Validator:
                 miner_info[existing_uid] = None
 
             miner_info.append(info)
-            visited_repositories[info.repository] = uid, block
-            visited_revisions[info.revision] = uid, block
+            visited_repositories[info.repository] = node.node_id, block
+            visited_revisions[info.revision] = node.node_id, block
 
             time.sleep(0.2)
 
         return miner_info
 
     def connect_to_api(self):
-        url: str = self.config.benchmarker_api.replace("http", "ws")
+        url: str = self.config["benchmarker_api"].replace("http", "ws")
 
         websocket = connect(f"{url}/logs")
 
@@ -709,12 +670,14 @@ class Validator:
                 self.websocket = self.connect_to_api()
 
     def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
-        bt.logging.info(f"Sending {submissions} for testing")
+        logger.info(f"Sending {submissions} for testing")
 
         submissions_json = RootModel[dict[Key, CheckpointSubmission]](submissions).model_dump_json()
 
+        api = self.config["benchmarker_api"]
+
         state_response = requests.post(
-            f"{self.config.benchmarker_api}/start",
+            f"{api}/start",
             headers={"Content-Type": "application/json"},
             data=submissions_json,
         )
@@ -738,18 +701,20 @@ class Validator:
 
         if (not self.last_day or self.last_day < now.date()) and now.hour >= 12:
             # Past noon, should start collecting submissions
-            bt.logging.info("Collecting all submissions")
+            logger.info("Collecting all submissions")
 
             miner_info = self.get_miner_submissions()
 
-            bt.logging.info(f"Got {miner_info} submissions")
+            logger.info(f"Got {miner_info} submissions")
 
             if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
                 # New contest, restart
-                bt.logging.info(f"Working on contest {self.contest.id.name} today's submissions")
+                logger.info(f"Working on contest {self.contest.id.name} today's submissions")
+
+                nodes = self.metagraph_nodes()
 
                 submissions = {
-                    self.metagraph.hotkeys[uid]: submission
+                    nodes[uid].hotkey: submission
                     for uid, submission in enumerate(miner_info)
                     if submission
                 }
@@ -766,19 +731,21 @@ class Validator:
             else:
                 updated_uids = [
                     uid
-                    for uid in range(self.metagraph.n.item())
+                    for uid in range(len(self.metagraph.nodes))
                     if should_update(self.contest_state.miner_info[uid], miner_info[uid])
                 ] + self.non_tested_miners()
 
+                nodes = self.metagraph_nodes()
+
                 submissions = {
-                    self.metagraph.hotkeys[uid]: miner_info[uid]
+                    nodes[uid].hotkey: miner_info[uid]
                     for uid in set(updated_uids)
                     if miner_info[uid]
                 }
 
                 self.start_benchmarking(submissions)
 
-                bt.logging.info(f"Miners {updated_uids} changed their submissions or have not been tested yet")
+                logger.info(f"Miners {updated_uids} changed their submissions or have not been tested yet")
 
                 for uid in updated_uids:
                     self.reset_miner(uid)
@@ -812,19 +779,20 @@ class Validator:
             self.step += 1
             return
 
-        last_update = self.metagraph.last_update[self.uid]
+        last_update = self.metagraph.nodes[self.keypair.ss58_address].last_updated
         blocks_elapsed = block - last_update
+        epoch_length = self.config["epoch_length"]
 
-        if blocks_elapsed >= self.config.epoch_length:
-            bt.logging.info(f"{blocks_elapsed} blocks since last update, resyncing metagraph")
+        if blocks_elapsed >= epoch_length:
+            logger.info(f"{blocks_elapsed} blocks since last update, resyncing metagraph")
             self.sync()
 
             # Recalculate in-case weights were set
-            blocks_elapsed = block - self.metagraph.last_update[self.uid]
+            blocks_elapsed = block - self.metagraph.nodes[self.keypair.ss58_address].last_updated
         else:
-            bt.logging.info(
+            logger.info(
                 f"{blocks_elapsed} since last update, "
-                f"{self.config.epoch_length - blocks_elapsed} blocks remaining until metagraph sync"
+                f"{epoch_length - blocks_elapsed} blocks remaining until metagraph sync"
             )
 
         if not self.benchmarking:
@@ -834,8 +802,10 @@ class Validator:
                 remaining = self.non_tested_miners()
 
                 if len(remaining):
+                    nodes = self.metagraph_nodes()
+
                     submissions = {
-                        self.metagraph.hotkeys[uid]: self.contest_state.miner_info[uid]
+                        nodes[uid].hotkey: self.contest_state.miner_info[uid]
                         for uid in remaining
                     }
 
@@ -846,19 +816,21 @@ class Validator:
 
                     return
 
-            blocks_to_wait = self.config.epoch_length - blocks_elapsed
+            blocks_to_wait = epoch_length - blocks_elapsed
 
             if blocks_to_wait <= 0:
                 # Randomize in case multiple validators are in this same state,
                 # to avoid multiple validators setting weights all in the same block
                 blocks_to_wait = random.randint(1, 10)
 
-            bt.logging.info(f"Nothing to do in this step, sleeping for {blocks_to_wait} blocks")
+            logger.info(f"Nothing to do in this step, sleeping for {blocks_to_wait} blocks")
             time.sleep(blocks_to_wait * 12)
 
             return
 
-        state_response = requests.get(f"{self.config.benchmarker_api}/state")
+        api = self.config["benchmarker_api"]
+
+        state_response = requests.get(f"{api}/state")
 
         state_response.raise_for_status()
 
@@ -866,13 +838,15 @@ class Validator:
 
         if result.state == BenchmarkState.NOT_STARTED:
             # API likely crashed or got restarted, need to re-benchmark any submissions sent to API
-            bt.logging.info(
+            logger.info(
                 "API in different state than expected, likely restarted. "
                 "Sending submissions again for testing"
             )
 
+            nodes = self.metagraph_nodes()
+
             submissions = {
-                self.metagraph.hotkeys[uid]: self.contest_state.miner_info[uid]
+                nodes[uid].hotkey: self.contest_state.miner_info[uid]
                 for uid in self.non_tested_miners()
             }
 
@@ -884,18 +858,18 @@ class Validator:
             return
 
         for hotkey, benchmark in result.results.items():
-            bt.logging.info(f"Updating {hotkey}'s benchmarks to {benchmark}")
-            if hotkey in self.metagraph.hotkeys:
-                self.set_miner_benchmarks(self.metagraph.hotkeys.index(hotkey), benchmark)
+            logger.info(f"Updating {hotkey}'s benchmarks to {benchmark}")
+            if hotkey in self.hotkeys:
+                self.set_miner_benchmarks(self.hotkeys.index(hotkey), benchmark)
 
         self.send_wandb_metrics()
 
         if result.state == BenchmarkState.FINISHED:
-            bt.logging.info(
+            logger.info(
                 "Benchmarking API has reported submission testing as done. "
                 "Miner metrics updated:"
             )
-            bt.logging.info(self.benchmarks)
+            logger.info(self.benchmarks)
 
             self.benchmarking = False
             self.step += 1
@@ -905,8 +879,8 @@ class Validator:
 
         self.save_state()
 
-        blocks = self.config.epoch_length / 4
-        bt.logging.info(f"Benchmarking in progress, sleeping for {blocks} blocks")
+        blocks = epoch_length / 4
+        logger.info(f"Benchmarking in progress, sleeping for {blocks} blocks")
         time.sleep(blocks * 12)
 
         self.step += 1
@@ -914,7 +888,7 @@ class Validator:
     @property
     def block(self):
         if not self.last_block_fetch or (datetime.now() - self.last_block_fetch).seconds >= 12:
-            self.current_block = self.subtensor.get_current_block()
+            self.current_block = self.substrate.get_block_number(None)  # type: ignore
             self.last_block_fetch = datetime.now()
             self.attempted_set_weights = False
 
@@ -925,12 +899,12 @@ class Validator:
             current_block = self.block
 
             try:
-                bt.logging.info(f"Step {self.step}, block {current_block}")
+                logger.info(f"Step {self.step}, block {current_block}")
 
                 self.do_step(current_block)
             except Exception as e:
                 if not isinstance(e, ContestDeviceValidationError):
-                    bt.logging.error(f"Error during validation step {self.step}", exc_info=e)
+                    logger.error(f"Error during validation step {self.step}", exc_info=e)
                     continue
 
                 raise

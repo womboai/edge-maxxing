@@ -6,10 +6,10 @@ from pathlib import Path
 from subprocess import run, Popen
 from time import sleep, perf_counter
 
+from fiber.logging_utils import get_logger
 from pipelines.models import TextToImageRequest
 
 from neuron import (
-    bt,
     CheckpointSubmission,
     find_contest,
     Contest,
@@ -22,6 +22,8 @@ MODEL_DIRECTORY = Path("model")
 SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent.parent.parent / "validator/submission_tester/setup_inference_sandbox.sh")
 SAMPLE_COUNT = 10
 SOCKET_TIMEOUT = 300
+
+logger = get_logger(__name__)
 
 
 def wait_for_socket(socket_path: str, process: Popen):
@@ -42,7 +44,7 @@ def test(contest: Contest, client: Client):
     for i in range(SAMPLE_COUNT):
         output = benchmark(contest, client)
 
-        bt.logging.info(
+        logger.info(
             f"Sample {i} Generated\n"
             f"Generation Time: {output.generation_time}s\n"
             f"VRAM Usage: {output.vram_used}b\n"
@@ -56,7 +58,7 @@ def test(contest: Contest, client: Client):
     vram_used = max(output.vram_used for output in outputs)
     watts_used = max(output.watts_used for output in outputs)
 
-    bt.logging.info(
+    logger.info(
         f"\n\nTested {SAMPLE_COUNT} Samples\n"
         f"Average Generation Time: {average_time}s\n"
         f"Model Size: {size}b\n"
@@ -100,7 +102,7 @@ def benchmark(contest: Contest, client: Client):
 def start_benchmarking(submission: CheckpointSubmission):
     contest = find_contest(submission.contest)
     contest.validate()
-    bt.logging.info(f"Benchmarking '{submission.get_repo_link()}' with revision '{submission.revision}'")
+    logger.info(f"Benchmarking '{submission.get_repo_link()}' with revision '{submission.revision}'")
 
     if not MODEL_DIRECTORY.exists():
         MODEL_DIRECTORY.mkdir()
@@ -121,10 +123,10 @@ def start_benchmarking(submission: CheckpointSubmission):
     socket_path = abspath(MODEL_DIRECTORY / "inferences.sock")
 
     with Popen([abspath(MODEL_DIRECTORY / ".venv" / "bin" / "start_inference")], cwd=MODEL_DIRECTORY) as process:
-        bt.logging.info(f"Inference process starting")
+        logger.info(f"Inference process starting")
         wait_for_socket(socket_path, process)
 
-        bt.logging.info("Connecting to socket")
+        logger.info("Connecting to socket")
         with Client(socket_path) as client:
             test(contest, client)
 

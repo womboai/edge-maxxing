@@ -1,10 +1,12 @@
 import re
 from argparse import ArgumentParser
 
+from fiber.chain.chain_utils import load_hotkey_keypair
+from fiber.chain.interface import get_substrate
+from fiber.logging_utils import get_logger
 from git import GitCommandError, cmd
 
 from neuron import (
-    bt,
     CheckpointSubmission,
     get_config,
     find_contest,
@@ -20,6 +22,8 @@ from .benchmarker import start_benchmarking
 VALID_PROVIDER_REGEX = r'^[a-zA-Z0-9-.]+$'
 VALID_REPO_REGEX = r'^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$'
 VALID_REVISION_REGEX = r"^[a-f0-9]{7}$"
+
+logger = get_logger(__name__)
 
 
 def add_extra_args(argument_parser: ArgumentParser):
@@ -82,17 +86,18 @@ def get_latest_revision(provider: str, repository: str):
     return git.ls_remote(f"https://{provider}/{repository}").split()[0][:REVISION_LENGTH]
 
 
-def get_submission(config: bt.config) -> CheckpointSubmission:
-    provider = config.provider
-    repository = config.repository
-    revision = config.revision
+def get_submission(config) -> CheckpointSubmission:
+    provider = config["provider"]
+    repository = config["repository"]
+    revision = config["revision"]
+    contest_name = config["contest"]
     contest: Contest | None = None
 
-    if config.contest:
+    if contest_name:
         try:
-            contest = find_contest(ContestId[config.contest])
+            contest = find_contest(ContestId[contest_name])
         except ValueError:
-            exit(f"Unknown contest: {config.contest}")
+            exit(f"Unknown contest: {contest_name}")
 
     if not provider:
         while True:
@@ -150,12 +155,16 @@ def get_submission(config: bt.config) -> CheckpointSubmission:
 
 def main():
     config = get_config(add_extra_args)
-    subtensor = bt.subtensor(config=config)
-    metagraph = subtensor.metagraph(netuid=config.netuid)
-    wallet = bt.wallet(config=config)
-    enable_benchmarking = config.benchmarking_on
+
+    substrate = get_substrate(
+        subtensor_network=config["subtensor.network"],
+        subtensor_address=config["subtensor.chain_endpoint"]
+    )
+
+    keypair = load_hotkey_keypair(wallet_name=config["wallet.name"], hotkey_name=config["wallet.hotkey"])
 
     submission = get_submission(config)
+    enable_benchmarking = config["benchmarking.on"]
 
     if enable_benchmarking or input("Benchmark submission before submitting? (y/N): ").strip().lower() in ("yes", "y"):
         start_benchmarking(submission)
@@ -171,13 +180,13 @@ def main():
         exit("Submission cancelled.")
 
     make_submission(
-        subtensor,
-        metagraph,
-        wallet,
+        substrate,
+        config["netuid"],
+        keypair,
         [submission],
     )
 
-    bt.logging.info(f"Submitted {submission} as the info for this miner")
+    logger.info(f"Submitted {submission} as the info for this miner")
 
 
 if __name__ == '__main__':
