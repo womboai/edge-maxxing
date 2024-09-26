@@ -37,6 +37,7 @@ fiber = { git = "https://github.com/rayonlabs/fiber", tag = "0.2.0" }
 GitPython = "3.1.43"
 nltk = "3.9.1"
 torch = "2.4.1"
+pynvml = "11.5.3"
 edge-maxxing-pipelines = { path = "../pipelines", develop = true }
 
 [tool.poetry.dev-dependencies]

@@ -546,6 +546,7 @@ edge-maxxing-pipelines = {path = "../pipelines", develop = true}
 fiber = {git = "https://github.com/rayonlabs/fiber", tag = "0.2.0"}
 GitPython = "3.1.43"
 nltk = "3.9.1"
+pynvml = "11.5.3"
 torch = "2.4.1"
 
 [package.source]
@@ -3257,4 +3258,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "8f413cd67aeef8622f111e97c3bcc34ee874476cfdbfe0043a855edb84cee88f"
+content-hash = "fc7dba6753c296fd724946503aef32ba12adc9b28f62fb3bb9c1ac3c436892fc"
