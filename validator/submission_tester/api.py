@@ -124,7 +124,7 @@ def state(request: Request) -> BenchmarkResults:
     average_benchmark_time = (
         sum(benchmarker.submission_times) / len(benchmarker.submission_times)
         if benchmarker.submission_times
-        else float('inf')
+        else None
     )
 
     return BenchmarkResults(
