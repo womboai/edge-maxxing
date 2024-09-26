@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import TypeAlias, Annotated
 
 from pydantic import BaseModel, Field
@@ -10,6 +11,16 @@ Key: TypeAlias = str
 
 SPEC_VERSION = 5
 REVISION_LENGTH = 7
+
+
+@dataclass
+class GenerationOutput:
+    prompt: str
+    seed: int
+    output: bytes
+    generation_time: float
+    vram_used: float
+    watts_used: float
 
 
 class CheckpointSubmission(BaseModel):
@@ -37,6 +48,9 @@ class CheckpointSubmission(BaseModel):
             revision=revision,
             contest=contest_id,
         )
+
+    def get_repo_link(self):
+        return f"https://{self.provider}/{self.repository}"
 
 
 def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):

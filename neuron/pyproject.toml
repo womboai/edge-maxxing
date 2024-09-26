@@ -33,9 +33,11 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
-bittensor = "7.4.0"
-loguru = "0.7.2"
+fiber = { git = "https://github.com/rayonlabs/fiber", tag = "0.2.0" }
 GitPython = "3.1.43"
+nltk = "3.9.1"
+torch = "2.4.1"
+edge-maxxing-pipelines = { path = "../pipelines", develop = true }
 
 [tool.poetry.dev-dependencies]
 pytype = "2024.4.11"
