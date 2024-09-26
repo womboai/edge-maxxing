@@ -297,11 +297,13 @@ class Validator:
             benchmark_data[str(uid)] = data
 
         log_data = {
-            "average_benchmark_time": average_time,
             "submissions": submission_data,
             "benchmarks": benchmark_data,
             "invalid": list(self.failed),
         }
+
+        if average_time:
+            log_data["average_benchmark_time"] = average_time
 
         self.wandb_run.log(data=log_data)
 
