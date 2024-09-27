@@ -144,7 +144,8 @@ poetry run submit_model \
     --logging.debug
 ```
 6. Follow the interactive prompts to submit the repository link, revision, and contest to participate in
-7. Validators will collect your submission on 12PM New York time and test it in the remainder of the day
+7. Optionally, benchmark your submission locally before submitting (make sure you have the right hardware e.g. NVIDIA GeForce RTX 4090).
+8. Validators will collect your submission on 12PM New York time and test it in the remainder of the day
 
 ### Validator setup
 The validator setup requires two components, an API container and a scoring validator
@@ -155,6 +156,7 @@ If your hardware is not accessed within a container(as in, can use Docker), then
 To get started, go to the `validator`, and create a `.env` file with the following contents:
 ```
 VALIDATOR_ARGS=--netuid {netuid} --subtensor.network {network} --wallet.name {wallet} --wallet.hotkey {hotkey} --logging.trace --logging.debug
+VALIDATOR_HOTKEY_SS58_ADDRESS={ss58-address}
 ```
 
 And then start docker compose
@@ -181,6 +183,10 @@ In one pod/container with a GPU, we'll set up the API component, start as follow
 
 And then run as follows:
 ```bash
+    su api
+
+    export VALIDATOR_HOTKEY_SS58_ADDRESS={ss58-address}
+
     pm2 start /home/api/.local/bin/poetry --name edge-maxxing-submission-tester --interpreter none -- \
       run uvicorn \
       --host 0.0.0.0 \

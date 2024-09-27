@@ -53,7 +53,7 @@ from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointB
 
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.5.0"
+VALIDATOR_VERSION = "2.6.1"
 WEIGHTS_VERSION = 28
 
 WINNER_PERCENTAGE = 0.8
@@ -260,13 +260,19 @@ class Validator:
 
         self.new_wandb_run()
 
-    def send_wandb_metrics(self, ranks: dict[Uid, tuple[int, bool]] | None = None):
+    def send_wandb_metrics(self, average_time: float | None = None, ranks: dict[Uid, tuple[int, bool]] | None = None):
         if not self.wandb_run:
             return
 
         logger.info("Uploading benchmarks to wandb")
 
-        log_data = {}
+        benchmark_data = {}
+
+        submission_data = {
+            str(uid): info.model_dump(exclude={"contest"})
+            for uid, info in enumerate(self.contest_state.miner_info)
+            if info
+        }
 
         for uid, benchmark in enumerate(self.benchmarks):
             if not benchmark:
@@ -292,11 +298,20 @@ class Validator:
             }
 
             if ranks and uid in ranks:
-                rank, multiday_winner = ranks.get(uid)
+                rank, multiday_winner = ranks[uid]
                 data["rank"] = rank
                 data["multiday_winner"] = multiday_winner
 
-            log_data[str(uid)] = data
+            benchmark_data[str(uid)] = data
+
+        log_data = {
+            "submissions": submission_data,
+            "benchmarks": benchmark_data,
+            "invalid": list(self.failed),
+        }
+
+        if average_time:
+            log_data["average_benchmark_time"] = average_time
 
         self.wandb_run.log(data=log_data)
 
@@ -549,7 +564,7 @@ class Validator:
             for uid, _ in bucket.scores:
                 ranks[uid] = (bucket_rank, bucket.previous_day_winners)
 
-        self.send_wandb_metrics(ranks)
+        self.send_wandb_metrics(ranks=ranks)
 
         sequence_ratio = _winner_percentage_sequence_ratio(len(buckets))
 
@@ -687,9 +702,17 @@ class Validator:
 
         api = self.config["benchmarker_api"]
 
+        nonce = str(time.time_ns())
+
+        signature = f"0x{self.keypair.sign(nonce).hex()}"
+
         state_response = requests.post(
             f"{api}/start",
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "X-Nonce": nonce,
+                "Signature": signature,
+            },
             data=submissions_json,
         )
 
@@ -874,7 +897,7 @@ class Validator:
             if hotkey in self.hotkeys:
                 self.set_miner_benchmarks(self.hotkeys.index(hotkey), benchmark)
 
-        self.send_wandb_metrics()
+        self.send_wandb_metrics(average_time=result.average_benchmark_time)
 
         if result.state == BenchmarkState.FINISHED:
             logger.info(
