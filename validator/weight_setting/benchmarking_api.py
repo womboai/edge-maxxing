@@ -95,7 +95,7 @@ class BenchmarkingApi:
         await self._websocket.close()
 
 
-class BenchmarkingApiContextManager:
+class BenchmarkingApiContextManager(Awaitable):
     _keypair: Keypair
     _api: str
     _index: int
