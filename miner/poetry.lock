@@ -458,7 +458,7 @@ develop = true
 
 [package.dependencies]
 edge-maxxing-pipelines = {path = "../pipelines", develop = true}
-fiber = {git = "https://github.com/rayonlabs/fiber", tag = "0.2.0"}
+fiber = {git = "https://github.com/womboai/fiber", branch = "weights"}
 GitPython = "3.1.43"
 nltk = "3.9.1"
 pynvml = "11.5.3"
@@ -601,7 +601,7 @@ standard = ["email_validator (>=2.0.0)", "fastapi-cli[standard] (>=0.0.5)", "htt
 
 [[package]]
 name = "fiber"
-version = "0.0.3"
+version = "0.0.4"
 description = "The ultra lightweight network for miner-validator communication"
 optional = false
 python-versions = ">=3.10"
@@ -622,9 +622,9 @@ uvicorn = "0.30.5"
 
 [package.source]
 type = "git"
-url = "https://github.com/rayonlabs/fiber"
-reference = "0.2.0"
-resolved_reference = "a64ce9fe43d4a4455ecc9f7cec91b037d5ceb783"
+url = "https://github.com/womboai/fiber"
+reference = "weights"
+resolved_reference = "30a92d75a199ff78797f2001016f30051ed65596"
 
 [[package]]
 name = "filelock"
