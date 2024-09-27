@@ -519,6 +519,9 @@ class Validator:
 
             zipped_weights = get_node_weights(self.substrate, self.metagraph.netuid, self.uid, self.block)
 
+            if not zipped_weights:
+                return
+
             uids = map(itemgetter(0), zipped_weights)
             weights = map(itemgetter(1), zipped_weights)
             weights = map(float, weights)
