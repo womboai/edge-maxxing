@@ -25,7 +25,7 @@ class BenchmarkingApi:
 
     _task: Task
 
-    _stream_logs: Callable[[], Awaitable[Task]]
+    _stream_logs: Callable[[], Task]
 
     _session: ClientSession
 
@@ -35,17 +35,13 @@ class BenchmarkingApi:
         api: str,
         index: int,
 
-        task: Task,
-
-        stream_logs: Callable[[], Awaitable[Task]],
+        stream_logs: Callable[[], Task],
     ):
         self._keypair = keypair
         self._api = api
         self._index = index
 
-        self._task = task
-
-        self._stream_logs = stream_logs
+        self._task = stream_logs()
 
         self._session = ClientSession()
 
@@ -53,11 +49,11 @@ class BenchmarkingApi:
         if self._task.done() and self._task.exception():
             logger.error("Error in log streaming", exc_info=self._task.exception())
 
-            self._task = await self._stream_logs()
+            self._task = self._stream_logs()
         elif self._task.cancelled():
             logger.error("Log streaming task was cancelled, restarting it")
 
-            self._task = await self._stream_logs()
+            self._task = self._stream_logs()
 
         logger.info(f"Sending {submissions} for testing")
 
@@ -121,14 +117,10 @@ class BenchmarkingApiContextManager(Awaitable[BenchmarkingApi]):
         return asyncio.create_task(self._api_logs())
 
     async def _create_connection(self):
-        task = await self._stream_logs()
-
         return BenchmarkingApi(
             self._keypair,
             self._api,
             self._index,
-
-            task,
 
             self._stream_logs,
         )
