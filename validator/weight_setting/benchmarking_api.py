@@ -87,7 +87,7 @@ class BenchmarkingApi:
         async with self._session.get(f"{self._api}/state") as state_response:
             state_response.raise_for_status()
 
-            return BenchmarkResults.model_validate(state_response.json())
+            return BenchmarkResults.model_validate(await state_response.json())
 
     async def close(self):
         self._task.cancel()
