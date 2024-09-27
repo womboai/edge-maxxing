@@ -837,16 +837,17 @@ class Validator:
             for api in self.benchmarking_apis
         ])
 
-        by_state = dict(
-            groupby(
+        by_state = {
+            state: list(group)
+            for state, group in groupby(
                 enumerate(states),
                 key=lambda result: result[1].state,
             )
-        )
+        }
 
-        not_started = list(by_state.get(BenchmarkState.NOT_STARTED, []))
-        in_progress = list(by_state.get(BenchmarkState.IN_PROGRESS, []))
-        finished = list(by_state.get(BenchmarkState.FINISHED, []))
+        not_started = by_state.get(BenchmarkState.NOT_STARTED, [])
+        in_progress = by_state.get(BenchmarkState.IN_PROGRESS, [])
+        finished = by_state.get(BenchmarkState.FINISHED, [])
 
         with_results = in_progress + finished
 
