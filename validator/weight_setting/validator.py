@@ -851,9 +851,11 @@ class Validator:
         with_results = in_progress + finished
 
         if not_started:
+            api_indices = list(map(itemgetter(0), not_started))
+
             api_names = ",".join(
                 str(index + 1)
-                for index, _ in not_started
+                for index in api_indices
             )
 
             # API likely crashed or got restarted, need to re-benchmark any submissions sent to API
@@ -869,7 +871,11 @@ class Validator:
                 for uid in self.non_tested_miners()
             }
 
-            apis = list(map(itemgetter(1), not_started))
+            apis = [
+                self.benchmarking_apis[index]
+                for index in api_indices
+            ]
+
             await self.send_submissions_to_api(apis, submissions)
 
             if not with_results:
