@@ -19,7 +19,7 @@ import wandb
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
-from fiber.chain.weights import set_node_weights
+from fiber.chain.weights import set_node_weights, get_node_weights
 from fiber.logging_utils import get_logger
 from numpy import real, isreal
 from numpy.polynomial import Polynomial
@@ -468,6 +468,7 @@ class Validator:
             logger.error(
                 f"Wallet: {self.keypair} is not registered on netuid {self.metagraph.netuid}."
             )
+
     def metagraph_nodes(self):
         return sorted(self.metagraph.nodes.values(), key=attrgetter("node_id"))
 
@@ -524,7 +525,24 @@ class Validator:
             return
 
         if self.benchmarking:
-            logger.info("Will not set weights as benchmarking is not done")
+            logger.info("Not setting new weights as benchmarking is not done, reusing old ones")
+
+            zipped_weights = get_node_weights(self.substrate, self.metagraph.netuid, self.uid, self.block)
+
+            uids = map(itemgetter(0), zipped_weights)
+            weights = map(itemgetter(1), zipped_weights)
+            weights = map(float, weights)
+
+            set_node_weights(
+                self.substrate,
+                self.keypair,
+                node_ids=list(uids),
+                node_weights=list(weights),
+                netuid=self.metagraph.netuid,
+                validator_node_id=self.uid,
+                version_key=WEIGHTS_VERSION,
+            )
+
             return
 
         logger.info("Setting weights")
@@ -564,7 +582,7 @@ class Validator:
         for index, bucket in enumerate(buckets):
             bucket_incentive = _get_incentive(highest_bucket - index, sequence_ratio)
 
-            for uid, score in bucket.scores:
+            for uid, _ in bucket.scores:
                 weights[uid] = bucket_incentive / len(bucket.scores)
 
         uids = numpy.indices(weights.shape)[0]
