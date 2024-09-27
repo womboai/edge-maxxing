@@ -44,7 +44,7 @@ from neuron import (
 from neuron.submissions import get_submission
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.6.1"
+VALIDATOR_VERSION = "2.7.0"
 WEIGHTS_VERSION = 28
 
 WINNER_PERCENTAGE = 0.8
