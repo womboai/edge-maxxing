@@ -1,21 +1,22 @@
-import json
+import asyncio
 import random
-import sys
 import time
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from datetime import date, datetime
+from itertools import islice, groupby
+from math import ceil
 from operator import itemgetter, attrgetter
 from os import makedirs
 from os.path import isfile
 from pathlib import Path
-from threading import Thread
+from pickle import dump, load
 from typing import cast, TypeAlias, Any
 from zoneinfo import ZoneInfo
 
 import numpy
-import requests
 import wandb
+from base_validator.metrics import BenchmarkState, CheckpointBenchmark
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
@@ -23,14 +24,10 @@ from fiber.chain.weights import set_node_weights, get_node_weights
 from fiber.logging_utils import get_logger
 from numpy import real, isreal
 from numpy.polynomial import Polynomial
-from pickle import dump, load
-
-from pydantic import RootModel
 from substrateinterface import SubstrateInterface, Keypair
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
-from websockets import ConnectionClosedError
-from websockets.sync.client import connect, ClientConnection
+from weight_setting.benchmarking_api import BenchmarkingApi, benchmarking_api
 
 from neuron import (
     CheckpointSubmission,
@@ -44,15 +41,10 @@ from neuron import (
     Uid,
     should_update, SPEC_VERSION,
 )
-
 from neuron.submissions import get_submission
-
-from base_validator import API_VERSION
-from base_validator.metrics import BenchmarkResults, BenchmarkState, CheckpointBenchmark
-
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.6.1"
+VALIDATOR_VERSION = "2.7.0"
 WEIGHTS_VERSION = 28
 
 WINNER_PERCENTAGE = 0.8
@@ -60,7 +52,6 @@ BUCKET_STEP_THRESHOLD = 1.01
 IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.10
 
 WinnerList: TypeAlias = list[tuple[Uid, float]]
-
 
 logger = get_logger(__name__)
 
@@ -130,6 +121,8 @@ class Validator:
     contest_state: ContestState | None
     previous_day_winners: WinnerList
     benchmarking: bool
+    benchmarking_api_urls: list[str]
+    benchmarking_apis: list[BenchmarkingApi]
 
     wandb_run: Run | None
     wandb_run_date: date | None
@@ -141,8 +134,6 @@ class Validator:
     benchmarks: list[CheckpointBenchmark | None]
     failed: set[int]
     contest: Contest
-
-    websocket: ClientConnection
 
     def __init__(self):
         self.config = get_config(Validator.add_extra_args)
@@ -182,6 +173,7 @@ class Validator:
         self.contest_state = None
         self.previous_day_winners = []
         self.benchmarking = False
+        self.benchmarking_api_urls = self.config["benchmarker_api"]
 
         self.wandb_run = None
         self.wandb_run_date = None
@@ -193,9 +185,6 @@ class Validator:
         self.start_wandb_run()
 
         self.contest = find_contest(self.contest_state.id) if self.contest_state else CURRENT_CONTEST
-
-        self.websocket = self.connect_to_api()
-        Thread(target=self.api_logs).start()
 
     def new_wandb_run(self):
         """Creates a new wandb run to save information to."""
@@ -322,6 +311,7 @@ class Validator:
         argument_parser.add_argument(
             "--benchmarker_api",
             type=str,
+            nargs="*",
             help="The API route to the validator benchmarking API.",
             required=True,
         )
@@ -529,6 +519,9 @@ class Validator:
 
             zipped_weights = get_node_weights(self.substrate, self.metagraph.netuid, self.uid, self.block)
 
+            if not zipped_weights:
+                return
+
             uids = map(itemgetter(0), zipped_weights)
             weights = map(itemgetter(1), zipped_weights)
             weights = map(float, weights)
@@ -654,7 +647,9 @@ class Validator:
             existing_revision_submission = visited_revisions.get(info.revision)
 
             if existing_repository_submission and existing_revision_submission:
-                existing_submission = min(existing_repository_submission, existing_revision_submission, key=itemgetter(1))
+                existing_submission = min(
+                    existing_repository_submission, existing_revision_submission, key=itemgetter(1)
+                )
             else:
                 existing_submission = existing_repository_submission or existing_revision_submission
 
@@ -675,55 +670,23 @@ class Validator:
 
         return miner_info
 
-    def connect_to_api(self):
-        url: str = self.config["benchmarker_api"].replace("http", "ws")
+    async def send_submissions_to_api(self, apis: list[BenchmarkingApi], submissions: dict[Key, CheckpointSubmission]):
+        iterator = iter(submissions.items())
 
-        websocket = connect(f"{url}/logs")
+        chunk_size = ceil(len(submissions) / len(apis))
 
-        try:
-            version = json.loads(websocket.recv())["version"]
-        except:
-            raise RuntimeError("Validator API out of date")
+        chunks = [
+             (api, list(islice(iterator, chunk_size)))
+             for api in apis
+        ]
 
-        if version != API_VERSION:
-            raise RuntimeError(
-                f"Validator API has mismatched version, received {version} but expected {API_VERSION}"
-            )
-
-        return websocket
-
-    def api_logs(self):
-        while True:
-            try:
-                for line in self.websocket:
-                    output = sys.stderr if line.startswith("err:") else sys.stdout
-
-                    print(f"[API] -{line[4:]}", file=output)
-            except ConnectionClosedError:
-                self.websocket = self.connect_to_api()
+        await asyncio.gather(*[
+            api.start_benchmarking(dict(chunk))
+            for api, chunk in chunks
+        ])
 
     def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
-        logger.info(f"Sending {submissions} for testing")
-
-        submissions_json = RootModel[dict[Key, CheckpointSubmission]](submissions).model_dump_json()
-
-        api = self.config["benchmarker_api"]
-
-        nonce = str(time.time_ns())
-
-        signature = f"0x{self.keypair.sign(nonce).hex()}"
-
-        state_response = requests.post(
-            f"{api}/start",
-            headers={
-                "Content-Type": "application/json",
-                "X-Nonce": nonce,
-                "Signature": signature,
-            },
-            data=submissions_json,
-        )
-
-        state_response.raise_for_status()
+        return self.send_submissions_to_api(self.benchmarking_apis, submissions)
 
     def current_time(self):
         return datetime.now(tz=ZoneInfo("America/New_York"))
@@ -737,7 +700,7 @@ class Validator:
             }
         )
 
-    def do_step(self, block: int):
+    async def do_step(self, block: int):
         now = self.current_time()
 
         if (not self.last_day or self.last_day < now.date()) and now.hour >= 12:
@@ -760,7 +723,7 @@ class Validator:
                     if submission
                 }
 
-                self.start_benchmarking(submissions)
+                await self.start_benchmarking(submissions)
 
                 self.contest = CURRENT_CONTEST
 
@@ -771,10 +734,10 @@ class Validator:
                 self.previous_day_winners = []
             else:
                 updated_uids = [
-                    uid
-                    for uid in range(len(self.metagraph.nodes))
-                    if should_update(self.contest_state.miner_info[uid], miner_info[uid])
-                ] + self.non_tested_miners()
+                                   uid
+                                   for uid in range(len(self.metagraph.nodes))
+                                   if should_update(self.contest_state.miner_info[uid], miner_info[uid])
+                               ] + self.non_tested_miners()
 
                 nodes = self.metagraph_nodes()
 
@@ -784,7 +747,7 @@ class Validator:
                     if miner_info[uid]
                 }
 
-                self.start_benchmarking(submissions)
+                await self.start_benchmarking(submissions)
 
                 logger.info(f"Miners {updated_uids} changed their submissions or have not been tested yet")
 
@@ -850,7 +813,7 @@ class Validator:
                         for uid in remaining
                     }
 
-                    self.start_benchmarking(submissions)
+                    await self.start_benchmarking(submissions)
                     self.benchmarking = True
 
                     self.save_state()
@@ -869,18 +832,36 @@ class Validator:
 
             return
 
-        api = self.config["benchmarker_api"]
+        states = await asyncio.gather(*[
+            api.state()
+            for api in self.benchmarking_apis
+        ])
 
-        state_response = requests.get(f"{api}/state")
+        by_state = {
+            state: list(group)
+            for state, group in groupby(
+                enumerate(states),
+                key=lambda result: result[1].state,
+            )
+        }
 
-        state_response.raise_for_status()
+        not_started = by_state.get(BenchmarkState.NOT_STARTED, [])
+        in_progress = by_state.get(BenchmarkState.IN_PROGRESS, [])
+        finished = by_state.get(BenchmarkState.FINISHED, [])
 
-        result = BenchmarkResults.model_validate(state_response.json())
+        with_results = in_progress + finished
 
-        if result.state == BenchmarkState.NOT_STARTED:
+        if not_started:
+            api_indices = list(map(itemgetter(0), not_started))
+
+            api_names = ",".join(
+                str(index + 1)
+                for index in api_indices
+            )
+
             # API likely crashed or got restarted, need to re-benchmark any submissions sent to API
             logger.info(
-                "API in different state than expected, likely restarted. "
+                f"APIs {api_names} are in a different state than expected, likely restarted. "
                 "Sending submissions again for testing"
             )
 
@@ -891,23 +872,38 @@ class Validator:
                 for uid in self.non_tested_miners()
             }
 
-            self.start_benchmarking(submissions)
+            apis = [
+                self.benchmarking_apis[index]
+                for index in api_indices
+            ]
 
-            self.step += 1
+            await self.send_submissions_to_api(apis, submissions)
 
-            self.save_state()
-            return
+            if not with_results:
+                self.step += 1
+                self.save_state()
 
-        for hotkey, benchmark in result.results.items():
-            logger.info(f"Updating {hotkey}'s benchmarks to {benchmark}")
-            if hotkey in self.hotkeys:
-                self.set_miner_benchmarks(self.hotkeys.index(hotkey), benchmark)
+                return
 
-        self.send_wandb_metrics(average_time=result.average_benchmark_time)
+        benchmark_times = [
+            result.average_benchmark_time
+            for _, result in with_results
+            if result.average_benchmark_time
+        ]
 
-        if result.state == BenchmarkState.FINISHED:
+        for _, result in with_results:
+            for hotkey, benchmark in result.results.items():
+                logger.info(f"Updating {hotkey}'s benchmarks to {benchmark}")
+                if hotkey in self.hotkeys:
+                    self.set_miner_benchmarks(self.hotkeys.index(hotkey), benchmark)
+
+        average_time = sum(benchmark_times) / len(benchmark_times) if benchmark_times else None
+
+        self.send_wandb_metrics(average_time=average_time)
+
+        if not not_started and not in_progress:
             logger.info(
-                "Benchmarking API has reported submission testing as done. "
+                "Benchmarking APIs have reported submission testing as done. "
                 "Miner metrics updated:"
             )
             logger.info(self.benchmarks)
@@ -918,13 +914,13 @@ class Validator:
             self.save_state()
             return
 
+        self.step += 1
+
         self.save_state()
 
         blocks = epoch_length / 4
         logger.info(f"Benchmarking in progress, sleeping for {blocks} blocks")
         time.sleep(blocks * 12)
-
-        self.step += 1
 
     @property
     def block(self):
@@ -935,24 +931,34 @@ class Validator:
 
         return self.current_block
 
-    def run(self):
+    async def run(self):
+        self.benchmarking_apis = list(
+            await asyncio.gather(*[
+                benchmarking_api(self.keypair, api, index)
+                for index, api in enumerate(self.benchmarking_api_urls)
+            ])
+        )
+
         while True:
             current_block = self.block
 
             try:
                 logger.info(f"Step {self.step}, block {current_block}")
 
-                self.do_step(current_block)
+                await self.do_step(current_block)
             except Exception as e:
                 if not isinstance(e, ContestDeviceValidationError):
                     logger.error(f"Error during validation step {self.step}", exc_info=e)
                     continue
 
+                for api in self.benchmarking_apis:
+                    await api.close()
+
                 raise
 
 
 def main():
-    Validator().run()
+    asyncio.run(Validator().run())
 
 
 if __name__ == '__main__':
