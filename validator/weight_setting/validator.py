@@ -680,10 +680,10 @@ class Validator:
              for api in apis
         ]
 
-        await asyncio.gather(
+        await asyncio.gather(*[
             api.start_benchmarking(dict(chunk))
             for api, chunk in chunks
-        )
+        ])
 
     def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
         return self.send_submissions_to_api(self.benchmarking_apis, submissions)
@@ -832,10 +832,10 @@ class Validator:
 
             return
 
-        states = await asyncio.gather(
+        states = await asyncio.gather(*[
             api.state()
             for api in self.benchmarking_apis
-        )
+        ])
 
         by_state = dict(
             groupby(
@@ -926,10 +926,10 @@ class Validator:
 
     async def run(self):
         self.benchmarking_apis = list(
-            await asyncio.gather(
+            await asyncio.gather(*[
                 benchmarking_api(self.keypair, api, index)
                 for index, api in enumerate(self.benchmarking_api_urls)
-            )
+            ])
         )
 
         while True:
