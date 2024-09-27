@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import time
 from threading import Lock
 from time import perf_counter
 import traceback
@@ -58,7 +57,6 @@ class Benchmarker:
         self.submission_times = []
         self.started = True
         self.done = False
-        self.start_timestamp = time.time_ns()
 
         while len(self.benchmarks) != len(self.submissions):
             hotkey = choice(list(self.submissions.keys() - self.benchmarks.keys()))

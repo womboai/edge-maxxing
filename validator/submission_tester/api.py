@@ -88,6 +88,14 @@ async def start_benchmarking(
             detail="Invalid nonce",
         )
 
+    if not keypair.verify(str(x_nonce), signature):
+        logger.info(f"Got invalid signature for nonce {x_nonce}: {signature}")
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid signature",
+        )
+
     with benchmarker.lock:
         timestamp = time.time_ns()
 
@@ -97,13 +105,7 @@ async def start_benchmarking(
                 detail="Started recently",
             )
 
-    if not keypair.verify(str(x_nonce), signature):
-        logger.info(f"Got invalid signature for nonce {x_nonce}: {signature}")
-
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid signature",
-        )
+        benchmarker.start_timestamp = timestamp
 
     await benchmarker.start_benchmarking(submissions)
 
