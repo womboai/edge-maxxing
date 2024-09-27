@@ -828,6 +828,8 @@ class Validator:
         in_progress = by_state.get(BenchmarkState.IN_PROGRESS, [])
         finished = by_state.get(BenchmarkState.FINISHED, [])
 
+        with_results = in_progress + finished
+
         if not_started:
             api_names = ",".join(
                 str(index + 1)
@@ -850,7 +852,11 @@ class Validator:
             apis = list(map(itemgetter(1), not_started))
             await self.send_submissions_to_api(apis, submissions)
 
-        with_results = in_progress + finished
+            if not with_results:
+                self.step += 1
+                self.save_state()
+
+                return
 
         benchmark_times = [
             result.average_benchmark_time
