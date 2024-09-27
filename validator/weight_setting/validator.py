@@ -844,9 +844,9 @@ class Validator:
             )
         )
 
-        not_started = by_state.get(BenchmarkState.NOT_STARTED, [])
-        in_progress = by_state.get(BenchmarkState.IN_PROGRESS, [])
-        finished = by_state.get(BenchmarkState.FINISHED, [])
+        not_started = list(by_state.get(BenchmarkState.NOT_STARTED, []))
+        in_progress = list(by_state.get(BenchmarkState.IN_PROGRESS, []))
+        finished = list(by_state.get(BenchmarkState.FINISHED, []))
 
         with_results = in_progress + finished
 

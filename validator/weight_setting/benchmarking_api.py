@@ -6,14 +6,14 @@ from asyncio import Task
 from collections.abc import Callable, Awaitable
 
 from aiohttp import ClientSession
+from base_validator import API_VERSION
+from base_validator.metrics import BenchmarkResults
 from fiber.logging_utils import get_logger
 from pydantic import RootModel
 from substrateinterface import Keypair
-from websockets import connect, WebSocketClientProtocol, ConnectionClosedError
+from websockets import connect, ConnectionClosedError
 
 from neuron import Key, CheckpointSubmission
-from base_validator import API_VERSION
-from base_validator.metrics import BenchmarkResults
 
 logger = get_logger(__name__)
 
@@ -23,10 +23,9 @@ class BenchmarkingApi:
     _api: str
     _index: int
 
-    _websocket: WebSocketClientProtocol
     _task: Task
 
-    _stream_logs: Callable[[], Awaitable[tuple[WebSocketClientProtocol, Task]]]
+    _stream_logs: Callable[[], Awaitable[Task]]
 
     _session: ClientSession
 
@@ -36,16 +35,14 @@ class BenchmarkingApi:
         api: str,
         index: int,
 
-        websocket: WebSocketClientProtocol,
         task: Task,
 
-        stream_logs: Callable[[], Awaitable[tuple[WebSocketClientProtocol, Task]]],
+        stream_logs: Callable[[], Awaitable[Task]],
     ):
         self._keypair = keypair
         self._api = api
         self._index = index
 
-        self._websocket = websocket
         self._task = task
 
         self._stream_logs = stream_logs
@@ -56,11 +53,11 @@ class BenchmarkingApi:
         if self._task.done() and self._task.exception():
             logger.error("Error in log streaming", exc_info=self._task.exception())
 
-            self._websocket, self._task = await self._stream_logs()
+            self._task = await self._stream_logs()
         elif self._task.cancelled():
             logger.error("Log streaming task was cancelled, restarting it")
 
-            self._websocket, self._task = await self._stream_logs()
+            self._task = await self._stream_logs()
 
         logger.info(f"Sending {submissions} for testing")
 
@@ -92,8 +89,6 @@ class BenchmarkingApi:
     async def close(self):
         self._task.cancel()
 
-        await self._websocket.close()
-
 
 class BenchmarkingApiContextManager(Awaitable[BenchmarkingApi]):
     _keypair: Keypair
@@ -122,36 +117,36 @@ class BenchmarkingApiContextManager(Awaitable[BenchmarkingApi]):
 
         return websocket
 
-    async def _stream_logs(self):
-        websocket = await self._connect_to_api()
-
-        task = asyncio.create_task(self._api_logs())
-
-        return websocket, task
+    def _stream_logs(self):
+        return asyncio.create_task(self._api_logs())
 
     async def _create_connection(self):
-        websocket, task = await self._stream_logs()
+        task = await self._stream_logs()
 
         return BenchmarkingApi(
             self._keypair,
             self._api,
             self._index,
 
-            websocket,
             task,
 
             self._stream_logs,
         )
 
     async def _api_logs(self):
-        while True:
-            try:
-                async for line in self._websocket:
-                    output = sys.stderr if line.startswith("err:") else sys.stdout
+        websocket = await self._connect_to_api()
 
-                    print(f"[API - {self._index + 1}] - {line[4:]}", file=output)
-            except ConnectionClosedError:
-                self._websocket = await self._connect_to_api()
+        try:
+            while True:
+                try:
+                    async for line in websocket:
+                        output = sys.stderr if line.startswith("err:") else sys.stdout
+
+                        print(f"[API - {self._index + 1}] - {line[4:]}", file=output)
+                except ConnectionClosedError:
+                    websocket = await self._connect_to_api()
+        finally:
+            await websocket.close()
 
     def __await__(self):
         return self._create_connection().__await__()
