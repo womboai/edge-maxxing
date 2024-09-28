@@ -159,9 +159,14 @@ VALIDATOR_ARGS=--netuid {netuid} --subtensor.network {network} --wallet.name {wa
 VALIDATOR_HOTKEY_SS58_ADDRESS={ss58-address}
 ```
 
+Generate the compose file for the GPUs you have by editing `compose-gpu-layout.json` to include all CUDA device IDs and then running:
+```bash
+python3 ./generate_compose.py
+```
+
 And then start docker compose
 ```bash
-env docker compose up --detach
+docker compose up -d --build
 ```
 
 To setup auto-updating, simply run
@@ -183,7 +188,9 @@ In one pod/container with a GPU, we'll set up the API component, start as follow
 
 And then run as follows:
 ```bash
-    su api
+    su api -s /bin/bash
+
+    export CUDA_VISIBLE_DEVICES=0
 
     export VALIDATOR_HOTKEY_SS58_ADDRESS={ss58-address}
 
@@ -202,6 +209,9 @@ If you want this to auto-update(which is recommended), start another pm2 process
 
 The argument at the end is the name of the main PM2 process. This will keep your PM2 validator instance up to date as long as it is running.
 
+You can run more APIs(and are recommended to do so) and link the scoring validator to them.
+You can set which CUDA devices or ports to use along with that.
+
 #### Scoring Validator
 In the another pod/container without a GPU, to run the scoring validator, clone the repository as per the common instructions, then do as follows
 ```bash
@@ -217,10 +227,10 @@ In the another pod/container without a GPU, to run the scoring validator, clone 
         --wallet.hotkey {hotkey} \
         --logging.trace \
         --logging.debug \
-        --benchmarker_api {API component route}
+        --benchmarker_api {API component routes, space separated if multiple}
 ```
 
-Make sure to replace the API component route with the route to the API container(which can be something in the format of `http://ip:port`), refer to the instructions above at [API Component](#api-component)
+Make sure to replace the API component route with the routes to the API containers(which can be something in the format of `http://ip:port`), refer to the instructions above at [API Component](#api-component)
 
 Additionally, the auto-updating script can be used here
 ```bash
