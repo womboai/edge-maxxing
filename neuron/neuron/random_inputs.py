@@ -11,7 +11,7 @@ from nltk.corpus import words
 from nltk import pos_tag
 
 BENCHMARK_SAMPLE_COUNT = 10
-INFERENCE_SOCKET_TIMEOUT = 180
+INFERENCE_SOCKET_TIMEOUT = 200
 
 AVAILABLE_WORDS = [word for word, tag in pos_tag(words.words(), tagset='universal') if tag == "ADJ" or tag == "NOUN"]
 
