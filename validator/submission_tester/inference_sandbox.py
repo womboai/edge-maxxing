@@ -8,13 +8,12 @@ from pathlib import Path
 from subprocess import Popen, run, TimeoutExpired, CalledProcessError
 from typing import Generic
 
-from neuron import RequestT
+from neuron import RequestT, INFERENCE_SOCKET_TIMEOUT
 
 SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "setup_inference_sandbox.sh")
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
-SOCKET_TIMEOUT = 120
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +83,7 @@ class InferenceSandbox(Generic[RequestT]):
         logger.info(f"Inference process starting")
         socket_path = abspath(self._sandbox_directory / "inferences.sock")
 
-        for _ in range(SOCKET_TIMEOUT):
+        for _ in range(INFERENCE_SOCKET_TIMEOUT):
             if os.path.exists(socket_path):
                 break
 
@@ -92,7 +91,7 @@ class InferenceSandbox(Generic[RequestT]):
 
             self._check_exit()
         else:
-            raise InvalidSubmissionError(f"Socket file '{socket_path}' not found after {SOCKET_TIMEOUT} seconds.")
+            raise InvalidSubmissionError(f"Socket file '{socket_path}' not found after {INFERENCE_SOCKET_TIMEOUT} seconds.")
 
         logger.info(f"Connecting to socket")
         self._client = Client(socket_path)

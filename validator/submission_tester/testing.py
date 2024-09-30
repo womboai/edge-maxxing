@@ -7,13 +7,11 @@ from neuron import (
     CheckpointSubmission,
     GenerationOutput,
     generate_random_prompt,
-    VRamMonitor,
+    VRamMonitor, BENCHMARK_SAMPLE_COUNT,
 )
 from pipelines.models import TextToImageRequest
 from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
 from base_validator.metrics import CheckpointBenchmark, MetricData
-
-SAMPLE_COUNT = 5
 
 logger = logging.getLogger(__name__)
 
@@ -54,8 +52,8 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
         with InferenceSandbox(submission.provider, submission.repository, submission.revision, False) as sandbox:
             size = sandbox.model_size
 
-            f"Take {SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been"
-            for i in range(SAMPLE_COUNT):
+            f"Take {BENCHMARK_SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been"
+            for i in range(BENCHMARK_SAMPLE_COUNT):
                 prompt = generate_random_prompt()
                 seed = int.from_bytes(urandom(4), "little")
 
@@ -85,7 +83,7 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
     watts_used = max(output.watts_used for output in outputs)
 
     logger.info(
-        f"Tested {SAMPLE_COUNT} Samples\n"
+        f"Tested {BENCHMARK_SAMPLE_COUNT} Samples\n"
         f"Average Generation Time: {average_time}s\n"
         f"Model Size: {size}b\n"
         f"Max VRAM Usage: {vram_used}b\n"

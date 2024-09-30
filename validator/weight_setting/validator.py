@@ -48,8 +48,7 @@ VALIDATOR_VERSION = "2.7.1"
 WEIGHTS_VERSION = 28
 
 WINNER_PERCENTAGE = 0.8
-BUCKET_STEP_THRESHOLD = 1.01
-IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.10
+BUCKET_STEP_THRESHOLD = 1.05
 
 WinnerList: TypeAlias = list[tuple[Uid, float]]
 
@@ -119,7 +118,6 @@ class Validator:
 
     last_day: date | None
     contest_state: ContestState | None
-    previous_day_winners: WinnerList
     benchmarking: bool
     benchmarking_api_urls: list[str]
     benchmarking_apis: list[BenchmarkingApi]
@@ -171,7 +169,6 @@ class Validator:
 
         self.last_day = None
         self.contest_state = None
-        self.previous_day_winners = []
         self.benchmarking = False
         self.benchmarking_api_urls = self.config["benchmarker_api"]
 
@@ -241,7 +238,7 @@ class Validator:
 
         self.new_wandb_run()
 
-    def send_wandb_metrics(self, average_time: float | None = None, ranks: dict[Uid, tuple[int, bool]] | None = None):
+    def send_wandb_metrics(self, average_time: float | None = None, ranks: dict[Uid, bool] | None = None):
         if not self.wandb_run:
             return
 
@@ -281,7 +278,6 @@ class Validator:
             if ranks and uid in ranks:
                 rank, multiday_winner = ranks[uid]
                 data["rank"] = rank
-                data["multiday_winner"] = multiday_winner
 
             benchmark_data[str(uid)] = data
 
@@ -367,7 +363,6 @@ class Validator:
                     "failed": self.failed,
                     "last_day": self.last_day,
                     "contest_state": self.contest_state,
-                    "previous_day_winners": self.previous_day_winners,
                     "benchmarking": self.benchmarking,
                 },
                 file,
@@ -392,10 +387,6 @@ class Validator:
         self.failed = state.get("failed", self.failed)
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
-        self.previous_day_winners = (
-            state.get("previous_day_winners", self.previous_day_winners) or
-            self.previous_day_winners
-        )
         self.benchmarking = state.get("benchmarking", self.benchmarking)
 
         if self.contest_state:
@@ -484,14 +475,6 @@ class Validator:
                 # hotkey has been replaced
                 self.reset_miner(uid)
 
-                filtered_winners = [
-                    (winner_uid, score)
-                    for winner_uid, score in self.previous_day_winners
-                    if uid != winner_uid
-                ]
-
-                self.previous_day_winners = filtered_winners
-
                 if self.contest_state:
                     self.contest_state.miner_info[uid] = None
 
@@ -542,29 +525,14 @@ class Validator:
 
         buckets = [ContestSubmissionsBucket(scores) for scores in self.get_score_buckets()]
 
-        if len(self.previous_day_winners):
-            winners = self.current_winners()
-
-            if len(winners):
-                highest_score = max([score for _, score in winners])
-
-                winner_overrides = [
-                    (uid, score)
-                    for uid, score in self.previous_day_winners
-                    if highest_score <= score * IMPROVEMENT_BENCHMARK_PERCENTAGE
-                ]
-
-                if len(winner_overrides):
-                    buckets.append(ContestSubmissionsBucket(winner_overrides, previous_day_winners=True))
-
         highest_bucket = len(buckets) - 1
 
-        ranks: dict[Uid, tuple[int, bool]] = {}
+        ranks: dict[Uid, int] = {}
 
         for index, bucket in enumerate(buckets):
             bucket_rank = highest_bucket - index
             for uid, _ in bucket.scores:
-                ranks[uid] = (bucket_rank, bucket.previous_day_winners)
+                ranks[uid] = bucket_rank
 
         self.send_wandb_metrics(ranks=ranks)
 
@@ -731,7 +699,6 @@ class Validator:
                 self.failed.clear()
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
-                self.previous_day_winners = []
             else:
                 updated_uids = [
                                    uid
@@ -755,24 +722,6 @@ class Validator:
                     self.reset_miner(uid)
 
                 self.contest_state.miner_info = miner_info
-
-                winners = self.current_winners()
-
-                if len(winners):
-                    if len(self.previous_day_winners):
-                        bucket_score = min([score for _, score in self.previous_day_winners])
-
-                        new_winners = [
-                            (uid, score)
-                            for uid, score in winners
-                            if bucket_score <= score * IMPROVEMENT_BENCHMARK_PERCENTAGE
-                        ]
-
-                        if len(new_winners):
-                            # New winner
-                            self.previous_day_winners = new_winners
-                    else:
-                        self.previous_day_winners = winners
 
             self.last_day = now.date()
 
