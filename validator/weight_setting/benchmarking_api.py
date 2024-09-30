@@ -13,7 +13,7 @@ from pydantic import RootModel
 from substrateinterface import Keypair
 from websockets import connect, ConnectionClosedError
 
-from neuron import Key, CheckpointSubmission
+from neuron import Key, MinerSubmissionRepositoryInfo
 
 logger = get_logger(__name__)
 
@@ -46,7 +46,7 @@ class BenchmarkingApi:
 
         self._session = ClientSession()
 
-    async def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
+    async def start_benchmarking(self, submissions: dict[Key, MinerSubmissionRepositoryInfo]):
         if self._task.done() and self._task.exception():
             logger.error("Error in log streaming", exc_info=self._task.exception())
 
@@ -58,7 +58,7 @@ class BenchmarkingApi:
 
         logger.info(f"Sending {submissions} for testing")
 
-        submissions_json = RootModel[dict[Key, CheckpointSubmission]](submissions).model_dump_json()
+        submissions_json = RootModel[dict[Key, MinerSubmissionRepositoryInfo]](submissions).model_dump_json()
 
         nonce = str(time.time_ns())
 

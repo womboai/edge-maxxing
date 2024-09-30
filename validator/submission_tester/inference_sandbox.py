@@ -8,7 +8,7 @@ from pathlib import Path
 from subprocess import Popen, run, TimeoutExpired, CalledProcessError
 from typing import Generic
 
-from neuron import RequestT, INFERENCE_SOCKET_TIMEOUT
+from neuron import RequestT, INFERENCE_SOCKET_TIMEOUT, MinerSubmissionRepositoryInfo
 
 SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "setup_inference_sandbox.sh")
 
@@ -31,15 +31,15 @@ class InvalidSubmissionError(Exception):
 
 
 class InferenceSandbox(Generic[RequestT]):
-    _repository: str
+    _repository: MinerSubmissionRepositoryInfo
 
     _client: Client
     _process: Popen
 
-    def __init__(self, provider: str, repository: str, revision: str, baseline: bool):
-        logger.info(f"Downloading {repository} with revision {revision}")
+    def __init__(self, repository_info: MinerSubmissionRepositoryInfo, baseline: bool):
+        logger.info(f"Downloading {repository_info}")
 
-        self._repository = repository
+        self._repository = repository_info
 
         self._baseline = baseline
 
@@ -49,9 +49,8 @@ class InferenceSandbox(Generic[RequestT]):
                     *sandbox_args(self._user),
                     SETUP_INFERENCE_SANDBOX_SCRIPT,
                     self._sandbox_directory,
-                    provider,
-                    repository,
-                    revision,
+                    repository_info.url,
+                    repository_info.revision,
                     str(baseline).lower(),
                 ],
                 capture_output=True,
@@ -70,7 +69,7 @@ class InferenceSandbox(Generic[RequestT]):
 
         self._file_size = sum(file.stat().st_size for file in self._sandbox_directory.rglob("*"))
 
-        logger.info(f"Repository {provider}/{repository} had size {self._file_size}")
+        logger.info(f"Repository {repository_info} had size {self._file_size}")
 
         self._process = Popen(
             [

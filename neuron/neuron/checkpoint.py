@@ -52,6 +52,23 @@ class CheckpointSubmission(BaseModel):
     def get_repo_link(self):
         return f"https://{self.provider}/{self.repository}"
 
+    def repository_info(self):
+        return MinerSubmissionRepositoryInfo(url=self.get_repo_link(), revision=self.revision)
+
+
+class MinerSubmissionRepositoryInfo(BaseModel):
+    url: str
+    revision: str
+
+
+class MinerModelInfo:
+    repository: MinerSubmissionRepositoryInfo
+    block: int
+
+    def __init__(self, submission: CheckpointSubmission, block: int):
+        self.repository = submission.repository_info()
+        self.block = block
+
 
 def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
     if old_info is None and new_info is None:

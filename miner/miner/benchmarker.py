@@ -111,8 +111,7 @@ def start_benchmarking(submission: CheckpointSubmission):
         [
             SETUP_INFERENCE_SANDBOX_SCRIPT,
             MODEL_DIRECTORY.absolute(),
-            submission.provider,
-            submission.repository,
+            submission.get_repo_link(),
             submission.revision,
             "true",
         ],

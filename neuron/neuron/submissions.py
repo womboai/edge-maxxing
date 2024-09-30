@@ -2,7 +2,7 @@ from fiber.chain.commitments import publish_raw_commitment, get_raw_commitment
 from fiber.logging_utils import get_logger
 from substrateinterface import SubstrateInterface, Keypair
 
-from .checkpoint import CheckpointSubmission, SPEC_VERSION, Key
+from .checkpoint import CheckpointSubmission, SPEC_VERSION, Key, MinerModelInfo
 from .contest import CURRENT_CONTEST
 from .network_commitments import Encoder, Decoder
 
@@ -38,7 +38,7 @@ def get_submission(
     substrate: SubstrateInterface,
     netuid: int,
     hotkey: Key,
-) -> tuple[CheckpointSubmission, int] | None:
+) -> MinerModelInfo | None:
     try:
         commitment = get_raw_commitment(substrate, netuid, hotkey)
 
@@ -62,7 +62,7 @@ def get_submission(
             ):
                 continue
 
-            return info, commitment.block
+            return MinerModelInfo(info, commitment.block)
 
         return None
     except Exception as e:

@@ -39,13 +39,16 @@ from neuron import (
     Contest,
     Key,
     Uid,
-    should_update, SPEC_VERSION,
+    should_update,
+    MinerModelInfo, MinerSubmissionRepositoryInfo,
 )
 from neuron.submissions import get_submission
 from .wandb_args import add_wandb_args
 
 VALIDATOR_VERSION = "2.7.1"
-WEIGHTS_VERSION = 28
+WEIGHTS_VERSION = 29
+
+COLLECTED_SUBMISSIONS_VERSION = 1
 
 WINNER_PERCENTAGE = 0.8
 BUCKET_STEP_THRESHOLD = 1.05
@@ -82,12 +85,12 @@ class ContestState:
     id: ContestId
     miner_score_version: int
     submission_spec_version: int
-    miner_info: list[CheckpointSubmission | None]
+    miner_info: list[MinerModelInfo | None]
 
     def __init__(
         self,
         contest_id: ContestId,
-        miner_info: list[CheckpointSubmission | None],
+        miner_info: list[MinerModelInfo | None],
     ):
         self.id = contest_id
         self.miner_score_version = WEIGHTS_VERSION
@@ -238,7 +241,7 @@ class Validator:
 
         self.new_wandb_run()
 
-    def send_wandb_metrics(self, average_time: float | None = None, ranks: dict[Uid, bool] | None = None):
+    def send_wandb_metrics(self, average_time: float | None = None, ranks: dict[Uid, int] | None = None):
         if not self.wandb_run:
             return
 
@@ -247,7 +250,11 @@ class Validator:
         benchmark_data = {}
 
         submission_data = {
-            str(uid): info.model_dump(exclude={"contest"})
+            str(uid): {
+                "repository": info.repository.url,
+                "revision": info.repository.revision,
+                "block": info.block,
+            }
             for uid, info in enumerate(self.contest_state.miner_info)
             if info
         }
@@ -261,8 +268,6 @@ class Validator:
                 continue
 
             data = {
-                "model": miner_info.repository,
-                "revision": miner_info.revision,
                 "baseline_generation_time": benchmark.baseline.generation_time,
                 "generation_time": benchmark.model.generation_time,
                 "similarity": benchmark.similarity_score,
@@ -400,10 +405,10 @@ class Validator:
                 self.failed.clear()
                 self.contest_state.miner_score_version = WEIGHTS_VERSION
 
-            if self.contest_state.submission_spec_version != SPEC_VERSION:
+            if self.contest_state.submission_spec_version != COLLECTED_SUBMISSIONS_VERSION:
                 logger.warning(
                     f"Contest state has outdated spec version: {self.contest_state.submission_spec_version}, "
-                    f"current version: {SPEC_VERSION}. Resetting benchmarks."
+                    f"current version: {COLLECTED_SUBMISSIONS_VERSION}. Resetting benchmarks."
                 )
 
                 self.benchmarks = self.clear_benchmarks()
@@ -411,9 +416,9 @@ class Validator:
 
                 self.benchmarking = True
                 self.contest_state.miner_info = self.get_miner_submissions()
-                self.contest_state.submission_spec_version = SPEC_VERSION
+                self.contest_state.submission_spec_version = COLLECTED_SUBMISSIONS_VERSION
 
-    def clear_benchmarks(self) -> list[CheckpointSubmission | None]:
+    def clear_benchmarks(self) -> list[CheckpointBenchmark | None]:
         return [None] * len(self.metagraph.nodes)
 
     def reset_miner(self, uid: Uid):
@@ -587,7 +592,7 @@ class Validator:
         visited_repositories: dict[str, tuple[Uid, int]] = {}
         visited_revisions: dict[str, tuple[Uid, int]] = {}
 
-        miner_info: list[CheckpointSubmission | None] = []
+        miner_info: list[MinerModelInfo | None] = []
 
         for hotkey, node in tqdm(self.metagraph.nodes.items()):
             if (
@@ -599,20 +604,18 @@ class Validator:
 
             logger.info(f"Getting submission for hotkey {hotkey}")
 
-            submission = get_submission(
+            info = get_submission(
                 self.substrate,
                 self.metagraph.netuid,
                 hotkey,
             )
 
-            if not submission:
+            if not info:
                 miner_info.append(None)
                 continue
 
-            info, block = submission
-
-            existing_repository_submission = visited_repositories.get(info.repository)
-            existing_revision_submission = visited_revisions.get(info.revision)
+            existing_repository_submission = visited_repositories.get(info.repository.url)
+            existing_revision_submission = visited_revisions.get(info.repository.revision)
 
             if existing_repository_submission and existing_revision_submission:
                 existing_submission = min(
@@ -624,21 +627,21 @@ class Validator:
             if existing_submission:
                 existing_uid, existing_block = existing_submission
 
-                if block > existing_block:
+                if info.block > existing_block:
                     miner_info.append(None)
                     continue
 
                 miner_info[existing_uid] = None
 
             miner_info.append(info)
-            visited_repositories[info.repository] = node.node_id, block
-            visited_revisions[info.revision] = node.node_id, block
+            visited_repositories[info.repository.url] = node.node_id, info.block
+            visited_revisions[info.repository.revision] = node.node_id, info.block
 
             time.sleep(0.2)
 
         return miner_info
 
-    async def send_submissions_to_api(self, apis: list[BenchmarkingApi], submissions: dict[Key, CheckpointSubmission]):
+    async def send_submissions_to_api(self, apis: list[BenchmarkingApi], submissions: dict[Key, MinerSubmissionRepositoryInfo]):
         iterator = iter(submissions.items())
 
         chunk_size = ceil(len(submissions) / len(apis))
@@ -653,7 +656,7 @@ class Validator:
             for api, chunk in chunks
         ])
 
-    def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
+    def start_benchmarking(self, submissions: dict[Key, MinerSubmissionRepositoryInfo]):
         return self.send_submissions_to_api(self.benchmarking_apis, submissions)
 
     def current_time(self):
@@ -686,7 +689,7 @@ class Validator:
                 nodes = self.metagraph_nodes()
 
                 submissions = {
-                    nodes[uid].hotkey: submission
+                    nodes[uid].hotkey: submission.repository
                     for uid, submission in enumerate(miner_info)
                     if submission
                 }
@@ -709,7 +712,7 @@ class Validator:
                 nodes = self.metagraph_nodes()
 
                 submissions = {
-                    nodes[uid].hotkey: miner_info[uid]
+                    nodes[uid].hotkey: miner_info[uid].repository
                     for uid in set(updated_uids)
                     if miner_info[uid]
                 }
@@ -758,7 +761,7 @@ class Validator:
                     nodes = self.metagraph_nodes()
 
                     submissions = {
-                        nodes[uid].hotkey: self.contest_state.miner_info[uid]
+                        nodes[uid].hotkey: self.contest_state.miner_info[uid].repository
                         for uid in remaining
                     }
 
@@ -817,7 +820,7 @@ class Validator:
             nodes = self.metagraph_nodes()
 
             submissions = {
-                nodes[uid].hotkey: self.contest_state.miner_info[uid]
+                nodes[uid].hotkey: self.contest_state.miner_info[uid].repository
                 for uid in self.non_tested_miners()
             }
 

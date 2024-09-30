@@ -2,16 +2,18 @@ import logging
 from os import urandom
 from time import perf_counter
 
+from base_validator.metrics import CheckpointBenchmark, MetricData
+from pipelines.models import TextToImageRequest
+
 from neuron import (
     Contest,
-    CheckpointSubmission,
     GenerationOutput,
     generate_random_prompt,
-    VRamMonitor, BENCHMARK_SAMPLE_COUNT,
+    VRamMonitor,
+    BENCHMARK_SAMPLE_COUNT,
+    MinerSubmissionRepositoryInfo,
 )
-from pipelines.models import TextToImageRequest
 from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
-from base_validator.metrics import CheckpointBenchmark, MetricData
 
 logger = logging.getLogger(__name__)
 
@@ -43,13 +45,13 @@ def generate(contest: Contest, container: InferenceSandbox, prompt: str, seed: i
     )
 
 
-def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> CheckpointBenchmark | None:
+def compare_checkpoints(contest: Contest, submission: MinerSubmissionRepositoryInfo) -> CheckpointBenchmark | None:
     logger.info("Generating model samples")
 
     outputs: list[GenerationOutput] = []
 
     try:
-        with InferenceSandbox(submission.provider, submission.repository, submission.revision, False) as sandbox:
+        with InferenceSandbox(submission, False) as sandbox:
             size = sandbox.model_size
 
             f"Take {BENCHMARK_SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been"
@@ -75,7 +77,7 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
 
                 outputs.append(output)
     except InvalidSubmissionError as e:
-        logger.error(f"Skipping invalid submission '{submission.repository}': '{e}'")
+        logger.error(f"Skipping invalid submission '{submission}': '{e}'")
         return None
 
     average_time = sum(output.generation_time for output in outputs) / len(outputs)
@@ -96,8 +98,7 @@ def compare_checkpoints(contest: Contest, submission: CheckpointSubmission) -> C
 
     average_similarity = 1.0
 
-    with InferenceSandbox("github.com", contest.baseline_repository, contest.baseline_revision,
-                          True) as baseline_sandbox:
+    with InferenceSandbox(contest.baseline_repository, True) as baseline_sandbox:
         baseline_size = baseline_sandbox.model_size
 
         for i, output in enumerate(outputs):

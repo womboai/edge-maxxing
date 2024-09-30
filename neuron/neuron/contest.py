@@ -5,6 +5,8 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
+from neuron import MinerSubmissionRepositoryInfo
+
 RequestT = TypeVar("RequestT", bound=BaseModel)
 ResponseT = TypeVar("ResponseT")
 
@@ -17,14 +19,13 @@ class ContestId(Enum):
 
 class Contest(ABC):
     id: ContestId
-    baseline_repository: str
-    baseline_revision: str
+    baseline_repository: MinerSubmissionRepositoryInfo
     device_name: str | None
 
     def __init__(
         self,
         contest_id: ContestId,
-        baseline_repository: str,
+        baseline_repository: MinerSubmissionRepositoryInfo,
         baseline_revision: str,
     ):
         self.id = contest_id
@@ -97,11 +98,10 @@ class CudaContest(ImageContestMixIn, Contest):
     def __init__(
         self,
         contest_id: ContestId,
-        baseline_repository: str,
-        baseline_revision: str,
+        baseline_repository: MinerSubmissionRepositoryInfo,
         expected_device_name: str,
     ):
-        super().__init__(contest_id, baseline_repository, baseline_revision)
+        super().__init__(contest_id, baseline_repository)
 
         self.expected_device_name = expected_device_name
 
@@ -164,8 +164,7 @@ class ContestDeviceValidationError(Exception):
 CONTESTS = [
     CudaContest(
         ContestId.SDXL_NEWDREAM_NVIDIA_4090,
-        "womboai/sdxl-newdream-20-inference",
-        "3e5710d8",
+        MinerSubmissionRepositoryInfo(url="https://womboai/sdxl-newdream-20-inference", revision="3e5710d8"),
         "NVIDIA GeForce RTX 4090",
     ),
 ]
