@@ -42,6 +42,7 @@ class BenchmarkingApi:
         self._index = index
 
         self._task = stream_logs()
+        self._stream_logs = stream_logs
 
         self._session = ClientSession()
 
