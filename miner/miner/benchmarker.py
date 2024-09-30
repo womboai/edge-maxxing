@@ -16,7 +16,9 @@ from neuron import (
     GenerationOutput,
     get_config,
     generate_random_prompt,
-    VRamMonitor, INFERENCE_SOCKET_TIMEOUT, BENCHMARK_SAMPLE_COUNT,
+    VRamMonitor,
+    INFERENCE_SOCKET_TIMEOUT,
+    BENCHMARK_SAMPLE_COUNT,
 )
 
 MODEL_DIRECTORY = Path("model")
