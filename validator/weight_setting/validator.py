@@ -58,12 +58,6 @@ WinnerList: TypeAlias = list[tuple[Uid, float]]
 logger = get_logger(__name__)
 
 
-@dataclass
-class ContestSubmissionsBucket:
-    scores: WinnerList
-    previous_day_winners: bool = False
-
-
 def _get_incentive(rank: int, sequence_ratio: float):
     return WINNER_PERCENTAGE * (sequence_ratio ** rank)
 
@@ -528,7 +522,7 @@ class Validator:
 
         logger.info("Setting weights")
 
-        buckets = [ContestSubmissionsBucket(scores) for scores in self.get_score_buckets()]
+        buckets = self.get_score_buckets()
 
         highest_bucket = len(buckets) - 1
 
@@ -536,8 +530,10 @@ class Validator:
 
         for index, bucket in enumerate(buckets):
             bucket_rank = highest_bucket - index
-            for uid, _ in bucket.scores:
-                ranks[uid] = bucket_rank
+
+            first_submitter = min(map(itemgetter(0), bucket), key=lambda uid: self.contest_state.miner_info[uid].block)
+
+            ranks[first_submitter] = bucket_rank
 
         self.send_wandb_metrics(ranks=ranks)
 
@@ -545,11 +541,8 @@ class Validator:
 
         weights = numpy.zeros(len(self.metagraph.nodes))
 
-        for index, bucket in enumerate(buckets):
-            bucket_incentive = _get_incentive(highest_bucket - index, sequence_ratio)
-
-            for uid, _ in bucket.scores:
-                weights[uid] = bucket_incentive / len(bucket.scores)
+        for uid, rank in ranks.items():
+            weights[uid] = _get_incentive(rank, sequence_ratio)
 
         uids = numpy.indices(weights.shape)[0]
 
