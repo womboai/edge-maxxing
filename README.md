@@ -190,11 +190,13 @@ And then run as follows:
 ```bash
     su api -s /bin/bash
 
+    pipx ensurepath
+
     export CUDA_VISIBLE_DEVICES=0
 
     export VALIDATOR_HOTKEY_SS58_ADDRESS={ss58-address}
 
-    pm2 start /home/api/.local/bin/poetry --name edge-maxxing-submission-tester --interpreter none -- \
+    pm2 start poetry --name edge-maxxing-submission-tester --interpreter none -- \
       run uvicorn \
       --host 0.0.0.0 \
       --port 8000 \
