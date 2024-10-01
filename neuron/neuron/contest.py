@@ -5,7 +5,7 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
-from neuron import MinerSubmissionRepositoryInfo
+from .checkpoint import MinerSubmissionRepositoryInfo
 
 RequestT = TypeVar("RequestT", bound=BaseModel)
 ResponseT = TypeVar("ResponseT")
