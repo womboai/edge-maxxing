@@ -8,10 +8,10 @@ from threading import Lock
 from time import perf_counter
 from zoneinfo import ZoneInfo
 
+from base_validator.metrics import CheckpointBenchmark
 from submission_tester.testing import compare_checkpoints
 
 from neuron import CURRENT_CONTEST, Key, ModelRepositoryInfo
-from validator.base_validator.metrics import CheckpointBenchmark
 
 logger = logging.getLogger(__name__)
 
