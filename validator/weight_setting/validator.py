@@ -422,6 +422,8 @@ class Validator:
         return sorted(self.metagraph.nodes.values(), key=attrgetter("node_id"))
 
     def sync_chain_nodes(self, block: int):
+        logger.info("Syncing metagraph")
+
         self.metagraph.sync_nodes()
 
         self.check_registration()
@@ -708,7 +710,7 @@ class Validator:
         epoch_length = self.config["epoch_length"]
 
         if blocks_elapsed >= epoch_length:
-            logger.info(f"{blocks_elapsed} blocks since last update, resyncing metagraph")
+            logger.info(f"{blocks_elapsed} blocks since weight setting, attempting to set weights")
             self.sync(block)
 
             # Recalculate in-case weights were set
@@ -716,7 +718,7 @@ class Validator:
         else:
             logger.info(
                 f"{blocks_elapsed} since last update, "
-                f"{epoch_length - blocks_elapsed} blocks remaining until metagraph sync"
+                f"{epoch_length - blocks_elapsed} blocks remaining until weight setting"
             )
 
         if not self.benchmarking:
