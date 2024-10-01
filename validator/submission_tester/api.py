@@ -59,7 +59,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    CURRENT_CONTEST.validate()
+    # CURRENT_CONTEST.validate()
 
     yield {
         "benchmarker": Benchmarker(),
@@ -143,10 +143,11 @@ def state(request: Request) -> BenchmarkResults:
 @app.websocket("/logs")
 async def stream_logs(
     websocket: WebSocket,
-    x_nonce: Annotated[int, Header()],
-    signature: Annotated[str, Header()],
 ):
-    _authenticate_request(x_nonce, signature)
+    nonce = int(websocket.headers["x-nonce"])
+    signature = websocket.headers["signature"]
+
+    _authenticate_request(nonce, signature)
 
     await websocket.accept()
 
