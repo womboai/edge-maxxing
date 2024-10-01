@@ -17,7 +17,6 @@ if $($BASELINE) && [ -f "$READY_MARKER" ]; then
 else
   find "$SANDBOX_DIRECTORY" -mindepth 1 -delete
 
-  git config --global advice.detachedHead false
   git clone --shallow-submodules --no-checkout "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
   if $($BASELINE); then
     touch "$READY_MARKER"

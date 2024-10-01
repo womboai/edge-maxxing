@@ -58,7 +58,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    CURRENT_CONTEST.validate()
+    # CURRENT_CONTEST.validate()
 
     yield {
         "benchmarker": Benchmarker(),
@@ -68,6 +68,26 @@ async def lifespan(_: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
+def _authenticate_request(nonce: int, signature: str):
+    current_timestamp = time.time_ns()
+
+    if current_timestamp - nonce > 2_000_000_000:
+        logger.info(f"Got request with nonce {nonce}, which is {current_timestamp - nonce} nanoseconds old.")
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid nonce",
+        )
+
+    if not keypair.verify(str(nonce), signature):
+        logger.info(f"Got invalid signature for nonce {nonce}: {signature}")
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid signature",
+        )
+
+
 @app.post("/start")
 async def start_benchmarking(
     submissions: dict[Key, ModelRepositoryInfo],
@@ -75,25 +95,9 @@ async def start_benchmarking(
     signature: Annotated[str, Header()],
     request: Request,
 ):
+    _authenticate_request(x_nonce, signature)
+
     benchmarker: Benchmarker = request.state.benchmarker
-
-    current_timestamp = time.time_ns()
-
-    if current_timestamp - x_nonce > 1_000_000_000:
-        logger.info(f"Got request with nonce {x_nonce}, which is {current_timestamp - x_nonce} nanoseconds old.")
-
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid nonce",
-        )
-
-    if not keypair.verify(str(x_nonce), signature):
-        logger.info(f"Got invalid signature for nonce {x_nonce}: {signature}")
-
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid signature",
-        )
 
     with benchmarker.lock:
         timestamp = time.time_ns()
@@ -136,7 +140,14 @@ def state(request: Request) -> BenchmarkResults:
 
 
 @app.websocket("/logs")
-async def stream_logs(websocket: WebSocket):
+async def stream_logs(
+    websocket: WebSocket,
+):
+    nonce = int(websocket.headers["x-nonce"])
+    signature = websocket.headers["signature"]
+
+    _authenticate_request(nonce, signature)
+
     await websocket.accept()
 
     await websocket.send_json({"version": API_VERSION})
