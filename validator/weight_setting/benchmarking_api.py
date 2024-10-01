@@ -85,6 +85,7 @@ class BenchmarkingApi:
 
     async def close(self):
         self._task.cancel()
+        await self._session.close()
 
 
 class BenchmarkingApiContextManager(Awaitable[BenchmarkingApi]):

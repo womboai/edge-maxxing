@@ -856,15 +856,18 @@ class Validator:
         )
 
         while True:
-            current_block = self.block
-
             try:
+                current_block = self.block
+
                 logger.info(f"Step {self.step}, block {current_block}")
 
                 await self.do_step(current_block)
             except Exception as e:
                 if not isinstance(e, ContestDeviceValidationError):
                     logger.error(f"Error during validation step {self.step}", exc_info=e)
+
+                    self.substrate = get_substrate(subtensor_address=self.substrate.url)
+
                     continue
 
                 for api in self.benchmarking_apis:
