@@ -35,8 +35,8 @@ RUN poetry install
 
 COPY validator/base_validator base_validator
 COPY validator/weight_setting weight_setting
-COPY neuron/neuron neuron/neuron
-COPY pipelines/pipelines pipelines/pipelines
+COPY neuron/neuron ../neuron/neuron
+COPY pipelines/pipelines ../pipelines/pipelines
 
 ENTRYPOINT [ \
     "poetry", \
