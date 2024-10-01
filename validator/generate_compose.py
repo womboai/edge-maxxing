@@ -7,16 +7,18 @@ API_SERVICE_TEMPLATE = """
       build:
         context: ../
         dockerfile: ./validator/submission_tester/Dockerfile
-      
+
       volumes:
         - ~/edge-maxxing/baseline-sandbox:/baseline-sandbox
-      
+        - ~/edge-maxxing/pip:/home/sandbox/.cache/pip
+        - ~/edge-maxxing/lfs-cache:/home/sandbox/.cache/lfs-cache
+
       ports:
         - 127.0.0.1:{port}:8000
-      
+
       environment:
         VALIDATOR_HOTKEY_SS58_ADDRESS: $VALIDATOR_HOTKEY_SS58_ADDRESS
-      
+
       deploy:
         resources:
           reservations:
