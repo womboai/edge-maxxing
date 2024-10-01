@@ -6,7 +6,7 @@ WORKDIR /api
 
 COPY README.md .
 COPY neuron/pyproject.toml neuron/
-COPY neuron/neuron/__init__.py neuron/
+COPY neuron/neuron/__init__.py neuron/neuron/
 COPY pipelines/pyproject.toml pipelines/
 COPY pipelines/pipelines/__init__.py pipelines/pipelines/
 
