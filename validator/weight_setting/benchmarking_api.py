@@ -18,6 +18,17 @@ from neuron import Key, CheckpointSubmission
 logger = get_logger(__name__)
 
 
+def _authentication_headers(keypair: Keypair):
+    nonce = str(time.time_ns())
+
+    signature = f"0x{keypair.sign(nonce).hex()}"
+
+    return {
+        "X-Nonce": nonce,
+        "Signature": signature,
+    }
+
+
 class BenchmarkingApi:
     _keypair: Keypair
     _api: str
@@ -60,16 +71,11 @@ class BenchmarkingApi:
 
         submissions_json = RootModel[dict[Key, CheckpointSubmission]](submissions).model_dump_json()
 
-        nonce = str(time.time_ns())
-
-        signature = f"0x{self._keypair.sign(nonce).hex()}"
-
         request = self._session.post(
             f"{self._api}/start",
             headers={
                 "Content-Type": "application/json",
-                "X-Nonce": nonce,
-                "Signature": signature,
+                **_authentication_headers(self._keypair),
             },
             data=submissions_json,
         )
@@ -100,7 +106,7 @@ class BenchmarkingApiContextManager(Awaitable[BenchmarkingApi]):
     async def _connect_to_api(self):
         url = self._api.replace("http", "ws")
 
-        websocket = await connect(f"{url}/logs")
+        websocket = await connect(f"{url}/logs", extra_headers=_authentication_headers(self._keypair))
 
         try:
             version = json.loads(await websocket.recv())["version"]
