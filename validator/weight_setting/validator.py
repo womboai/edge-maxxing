@@ -740,7 +740,7 @@ class Validator:
                 blocks_to_wait = random.randint(1, 10)
 
             logger.info(f"Nothing to do in this step, sleeping for {blocks_to_wait} blocks")
-            time.sleep(blocks_to_wait * 12)
+            await asyncio.sleep(blocks_to_wait * 12)
 
             return
 
@@ -834,7 +834,7 @@ class Validator:
 
         blocks = epoch_length / 4
         logger.info(f"Benchmarking in progress, sleeping for {blocks} blocks")
-        time.sleep(blocks * 12)
+        await asyncio.sleep(blocks * 12)
 
     @property
     def block(self):
