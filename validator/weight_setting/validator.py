@@ -2,7 +2,6 @@ import asyncio
 import random
 import time
 from argparse import ArgumentParser
-from dataclasses import dataclass
 from datetime import date, datetime
 from itertools import islice, groupby
 from math import ceil
@@ -11,7 +10,7 @@ from os import makedirs
 from os.path import isfile
 from pathlib import Path
 from pickle import dump, load
-from typing import cast, TypeAlias, Any
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import numpy
@@ -22,15 +21,12 @@ from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
 from fiber.chain.weights import set_node_weights, get_node_weights
 from fiber.logging_utils import get_logger
-from numpy import real, isreal
-from numpy.polynomial import Polynomial
 from substrateinterface import SubstrateInterface, Keypair
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
 from weight_setting.benchmarking_api import BenchmarkingApi, benchmarking_api
 
 from neuron import (
-    CheckpointSubmission,
     get_config,
     ContestId,
     CURRENT_CONTEST,
@@ -40,39 +36,20 @@ from neuron import (
     Key,
     Uid,
     should_update,
-    MinerModelInfo, MinerSubmissionRepositoryInfo,
+    MinerModelInfo,
+    MinerSubmissionRepositoryInfo,
 )
 from neuron.submissions import get_submission
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.7.1"
+VALIDATOR_VERSION = "2.8.0"
 WEIGHTS_VERSION = 29
 
 COLLECTED_SUBMISSIONS_VERSION = 1
 
-WINNER_PERCENTAGE = 0.8
-BUCKET_STEP_THRESHOLD = 1.05
-
-WinnerList: TypeAlias = list[tuple[Uid, float]]
+WINNER_SCORE_THRESHOLD = 1.05
 
 logger = get_logger(__name__)
-
-
-def _get_incentive(rank: int, sequence_ratio: float):
-    return WINNER_PERCENTAGE * (sequence_ratio ** rank)
-
-
-def _winner_percentage_sequence_ratio(sample_count: int):
-    if not sample_count:
-        return 1 - WINNER_PERCENTAGE
-
-    if sample_count == 1:
-        return 1 / WINNER_PERCENTAGE
-
-    polynomial = Polynomial([1 - WINNER_PERCENTAGE, -1] + ([0.0] * (sample_count - 2)) + [WINNER_PERCENTAGE])
-    real_roots = [float(real(root)) for root in polynomial.roots() if isreal(root) and root >= 0.0]
-
-    return real_roots[0]
 
 
 class ContestState:
@@ -235,7 +212,7 @@ class Validator:
 
         self.new_wandb_run()
 
-    def send_wandb_metrics(self, average_time: float | None = None, ranks: dict[Uid, int] | None = None):
+    def send_wandb_metrics(self, average_time: float | None = None, winner: Uid | None = None):
         if not self.wandb_run:
             return
 
@@ -274,11 +251,10 @@ class Validator:
                 "hotkey": self.hotkeys[uid],
             }
 
-            if ranks and uid in ranks:
-                rank, multiday_winner = ranks[uid]
-                data["rank"] = rank
-
             benchmark_data[str(uid)] = data
+
+        if winner:
+            benchmark_data[str(winner)]["winner"] = True
 
         log_data = {
             "submissions": submission_data,
@@ -433,15 +409,6 @@ class Validator:
         new_data[:length] = self.benchmarks[:length]
         self.benchmarks = new_data
 
-    def get_sorted_contestants(self) -> list[tuple[Uid, float]]:
-        contestants = [
-            (uid, metric_data.calculate_score())
-            for uid, metric_data in enumerate(self.benchmarks)
-            if metric_data
-        ]
-
-        return sorted(contestants, key=itemgetter(1))
-
     def check_registration(self):
         hotkey = self.keypair.ss58_address
         if hotkey not in self.hotkeys:
@@ -522,27 +489,14 @@ class Validator:
 
         logger.info("Setting weights")
 
-        buckets = self.get_score_buckets()
+        highest_uids = self.get_highest_uids()
+        winner = min(highest_uids, key=lambda uid: self.contest_state.miner_info[uid].block)
 
-        highest_bucket = len(buckets) - 1
-
-        ranks: dict[Uid, int] = {}
-
-        for index, bucket in enumerate(buckets):
-            bucket_rank = highest_bucket - index
-
-            first_submitter = min(map(itemgetter(0), bucket), key=lambda uid: self.contest_state.miner_info[uid].block)
-
-            ranks[first_submitter] = bucket_rank
-
-        self.send_wandb_metrics(ranks=ranks)
-
-        sequence_ratio = _winner_percentage_sequence_ratio(len(buckets))
+        self.send_wandb_metrics(winner=winner)
 
         weights = numpy.zeros(len(self.metagraph.nodes))
 
-        for uid, rank in ranks.items():
-            weights[uid] = _get_incentive(rank, sequence_ratio)
+        weights[winner] = 1.0
 
         uids = numpy.indices(weights.shape)[0]
 
@@ -558,28 +512,31 @@ class Validator:
 
         self.metagraph.sync_nodes()
 
-    def get_score_buckets(self) -> list[WinnerList]:
-        sorted_contestants = cast(list[tuple[Uid, float]], self.get_sorted_contestants())
+    def get_highest_uids(self) -> list[Uid]:
+        contestants = [
+            (uid, metric_data.calculate_score())
+            for uid, metric_data in enumerate(self.benchmarks)
+            if metric_data
+        ]
 
-        buckets: list[WinnerList] = [[]]
+        sorted_contestants = sorted(contestants, key=itemgetter(1), reverse=True)
 
-        last_score = sorted_contestants[0][1] if len(sorted_contestants) else None
+        highest_uids: list[Uid] = []
+
+        last_score: float | None = None
 
         for contestant in sorted_contestants:
-            _, score = contestant
+            uid, score = contestant
 
-            if last_score and score > last_score * BUCKET_STEP_THRESHOLD:
-                # New bucket
-                buckets.append([contestant])
+            if last_score and last_score > score * WINNER_SCORE_THRESHOLD:
+                # No longer in top threshold
+                break
             else:
-                buckets[len(buckets) - 1].append(contestant)
+                highest_uids.append(uid)
 
             last_score = score
 
-        return buckets
-
-    def current_winners(self) -> WinnerList:
-        return [(uid, score) for uid, score in self.get_score_buckets()[-1] if score > 0.0]
+        return highest_uids
 
     def get_miner_submissions(self):
         visited_repositories: dict[str, tuple[Uid, int]] = {}
