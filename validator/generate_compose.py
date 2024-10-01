@@ -18,6 +18,7 @@ API_SERVICE_TEMPLATE = """
 
       environment:
         VALIDATOR_HOTKEY_SS58_ADDRESS: $VALIDATOR_HOTKEY_SS58_ADDRESS
+        VALIDATOR_DEBUG: $VALIDATOR_DEBUG
 
       deploy:
         resources:

@@ -27,7 +27,7 @@ su - api -c "cd /api/validator && poetry install"
 
 echo "api ALL = (sandbox) NOPASSWD: ALL" >> /etc/sudoers
 echo "api ALL = (baseline-sandbox) NOPASSWD: ALL" >> /etc/sudoers
-echo "Defaults env_keep += \"VALIDATOR_HOTKEY_SS58_ADDRESS\"" >> /etc/sudoers
+echo "Defaults env_keep += \"VALIDATOR_HOTKEY_SS58_ADDRESS VALIDATOR_DEBUG\"" >> /etc/sudoers
 
 git config --system lfs.concurrenttransfers 64
 git config --system advice.detachedHead false

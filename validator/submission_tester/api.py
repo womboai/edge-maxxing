@@ -18,6 +18,7 @@ from neuron import CURRENT_CONTEST, Key, ModelRepositoryInfo
 from .benchmarker import Benchmarker
 
 hotkey = os.getenv("VALIDATOR_HOTKEY_SS58_ADDRESS")
+debug = int(os.getenv("VALIDATOR_DEBUG", 0)) > 0
 
 if not hotkey:
     raise ValueError("Environment variable VALIDATOR_HOTKEY_SS58_ADDRESS was not specified")
@@ -58,7 +59,8 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    CURRENT_CONTEST.validate()
+    if not debug:
+        CURRENT_CONTEST.validate()
 
     yield {
         "benchmarker": Benchmarker(),
@@ -69,6 +71,9 @@ app = FastAPI(lifespan=lifespan)
 
 
 def _authenticate_request(nonce: int, signature: str):
+    if debug:
+        return
+
     current_timestamp = time.time_ns()
 
     if current_timestamp - nonce > 2_000_000_000:
