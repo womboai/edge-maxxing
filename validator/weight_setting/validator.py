@@ -37,7 +37,7 @@ from neuron import (
     Uid,
     should_update,
     MinerModelInfo,
-    MinerSubmissionRepositoryInfo,
+    ModelRepositoryInfo,
 )
 from neuron.submissions import get_submission
 from .wandb_args import add_wandb_args
@@ -591,7 +591,7 @@ class Validator:
 
         return miner_info
 
-    async def send_submissions_to_api(self, apis: list[BenchmarkingApi], submissions: dict[Key, MinerSubmissionRepositoryInfo]):
+    async def send_submissions_to_api(self, apis: list[BenchmarkingApi], submissions: dict[Key, ModelRepositoryInfo]):
         iterator = iter(submissions.items())
 
         chunk_size = ceil(len(submissions) / len(apis))
@@ -606,7 +606,7 @@ class Validator:
             for api, chunk in chunks
         ])
 
-    def start_benchmarking(self, submissions: dict[Key, MinerSubmissionRepositoryInfo]):
+    def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         return self.send_submissions_to_api(self.benchmarking_apis, submissions)
 
     def current_time(self):

@@ -14,7 +14,7 @@ from fastapi import FastAPI, WebSocket, Request, Header, HTTPException
 from starlette import status
 from substrateinterface import Keypair
 
-from neuron import CURRENT_CONTEST, Key, MinerSubmissionRepositoryInfo
+from neuron import CURRENT_CONTEST, Key, ModelRepositoryInfo
 from .benchmarker import Benchmarker
 
 hotkey = os.getenv("VALIDATOR_HOTKEY_SS58_ADDRESS")
@@ -70,7 +70,7 @@ app = FastAPI(lifespan=lifespan)
 
 @app.post("/start")
 async def start_benchmarking(
-    submissions: dict[Key, MinerSubmissionRepositoryInfo],
+    submissions: dict[Key, ModelRepositoryInfo],
     x_nonce: Annotated[int, Header()],
     signature: Annotated[str, Header()],
     request: Request,

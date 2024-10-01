@@ -10,14 +10,14 @@ from zoneinfo import ZoneInfo
 
 from submission_tester.testing import compare_checkpoints
 
-from neuron import CURRENT_CONTEST, Key, MinerSubmissionRepositoryInfo
+from neuron import CURRENT_CONTEST, Key, ModelRepositoryInfo
 from validator.base_validator.metrics import CheckpointBenchmark
 
 logger = logging.getLogger(__name__)
 
 
 class Benchmarker:
-    submissions: dict[Key, MinerSubmissionRepositoryInfo]
+    submissions: dict[Key, ModelRepositoryInfo]
     benchmarks: dict[Key, CheckpointBenchmark | None]
     started: bool
     done: bool
@@ -51,7 +51,7 @@ class Benchmarker:
 
         await loop.run_in_executor(None, self._benchmark_key, hotkey)
 
-    async def _start_benchmarking(self, submissions: dict[Key, MinerSubmissionRepositoryInfo]):
+    async def _start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         self.submissions = submissions
         self.benchmarks = {}
         self.submission_times = []
@@ -81,7 +81,7 @@ class Benchmarker:
 
         self.done = True
 
-    async def start_benchmarking(self, submissions: dict[Key, MinerSubmissionRepositoryInfo]):
+    async def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         if not self.done and self.started:
             self.benchmark_task.cancel()
 

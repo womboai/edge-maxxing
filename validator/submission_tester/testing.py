@@ -11,7 +11,7 @@ from neuron import (
     generate_random_prompt,
     VRamMonitor,
     BENCHMARK_SAMPLE_COUNT,
-    MinerSubmissionRepositoryInfo,
+    ModelRepositoryInfo,
 )
 from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
 
@@ -45,7 +45,7 @@ def generate(contest: Contest, container: InferenceSandbox, prompt: str, seed: i
     )
 
 
-def compare_checkpoints(contest: Contest, submission: MinerSubmissionRepositoryInfo) -> CheckpointBenchmark | None:
+def compare_checkpoints(contest: Contest, submission: ModelRepositoryInfo) -> CheckpointBenchmark | None:
     logger.info("Generating model samples")
 
     outputs: list[GenerationOutput] = []

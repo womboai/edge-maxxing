@@ -8,7 +8,7 @@ from pathlib import Path
 from subprocess import Popen, run, TimeoutExpired, CalledProcessError
 from typing import Generic
 
-from neuron import RequestT, INFERENCE_SOCKET_TIMEOUT, MinerSubmissionRepositoryInfo
+from neuron import RequestT, INFERENCE_SOCKET_TIMEOUT, ModelRepositoryInfo
 
 SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "setup_inference_sandbox.sh")
 
@@ -31,12 +31,12 @@ class InvalidSubmissionError(Exception):
 
 
 class InferenceSandbox(Generic[RequestT]):
-    _repository: MinerSubmissionRepositoryInfo
+    _repository: ModelRepositoryInfo
 
     _client: Client
     _process: Popen
 
-    def __init__(self, repository_info: MinerSubmissionRepositoryInfo, baseline: bool):
+    def __init__(self, repository_info: ModelRepositoryInfo, baseline: bool):
         logger.info(f"Downloading {repository_info}")
 
         self._repository = repository_info
