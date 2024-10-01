@@ -11,8 +11,12 @@ USER validator
 RUN pipx install poetry
 
 COPY README.md .
-COPY neuron neuron
-COPY pipelines pipelines
+COPY neuron/pyproject.toml neuron/
+COPY neuron/poetry.lock neuron/
+COPY neuron/neuron/__init__.py neuron/
+COPY pipelines/pyproject.toml pipelines/
+COPY pipelines/poetry.lock pipelines/
+COPY pipelines/pipelines/__init__.py pipelines/
 
 COPY validator/pyproject.toml validator/
 COPY validator/poetry.toml validator/
@@ -33,6 +37,8 @@ RUN poetry install
 
 COPY validator/base_validator base_validator
 COPY validator/weight_setting weight_setting
+COPY neuron/neuron neuron/neuron
+COPY pipelines/pipelines pipelines/pipelines
 
 ENTRYPOINT [ \
     "poetry", \

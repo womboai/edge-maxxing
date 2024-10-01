@@ -5,8 +5,12 @@ RUN apt-get update && apt-get install -y curl
 WORKDIR /api
 
 COPY README.md .
-COPY neuron neuron
-COPY pipelines pipelines
+COPY neuron/pyproject.toml neuron/
+COPY neuron/poetry.lock neuron/
+COPY neuron/neuron/__init__.py neuron/
+COPY pipelines/pyproject.toml pipelines/
+COPY pipelines/poetry.lock pipelines/
+COPY pipelines/pipelines/__init__.py pipelines/
 
 COPY validator/pyproject.toml validator/
 COPY validator/poetry.toml validator/
@@ -22,6 +26,8 @@ RUN ./validator/submission_tester/setup.sh
 
 COPY validator/base_validator validator/base_validator
 COPY validator/submission_tester validator/submission_tester
+COPY neuron/neuron neuron/neuron
+COPY pipelines/pipelines pipelines/pipelines
 
 WORKDIR /api/validator
 
