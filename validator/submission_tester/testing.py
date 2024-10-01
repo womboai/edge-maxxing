@@ -3,7 +3,7 @@ from os import urandom
 from time import perf_counter
 
 from base_validator.metrics import CheckpointBenchmark, MetricData
-from pipelines.models import TextToImageRequest
+from pipelines import TextToImageRequest
 
 from neuron import (
     Contest,

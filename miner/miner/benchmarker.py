@@ -7,7 +7,7 @@ from subprocess import run, Popen
 from time import sleep, perf_counter
 
 from fiber.logging_utils import get_logger
-from pipelines.models import TextToImageRequest
+from pipelines import TextToImageRequest
 
 from neuron import (
     CheckpointSubmission,
