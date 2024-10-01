@@ -58,7 +58,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    # CURRENT_CONTEST.validate()
+    CURRENT_CONTEST.validate()
 
     yield {
         "benchmarker": Benchmarker(),
