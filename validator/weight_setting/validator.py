@@ -100,6 +100,7 @@ class Validator:
 
     current_block: int
     last_block_fetch: datetime | None = None
+    last_metagraph_sync: int = 0
     attempted_set_weights: bool = False
 
     benchmarks: list[CheckpointBenchmark | None]
@@ -338,6 +339,7 @@ class Validator:
                     "last_day": self.last_day,
                     "contest_state": self.contest_state,
                     "benchmarking": self.benchmarking,
+                    "last_metagraph_sync": self.last_metagraph_sync,
                 },
                 file,
             )
@@ -362,6 +364,7 @@ class Validator:
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
         self.benchmarking = state.get("benchmarking", self.benchmarking)
+        self.last_metagraph_sync = state.get("last_metagraph_sync", self.last_metagraph_sync)
 
         if self.contest_state:
             if self.contest_state.miner_score_version != WEIGHTS_VERSION:
@@ -418,7 +421,7 @@ class Validator:
     def metagraph_nodes(self):
         return sorted(self.metagraph.nodes.values(), key=attrgetter("node_id"))
 
-    def sync(self):
+    def sync_chain_nodes(self, block: int):
         self.metagraph.sync_nodes()
 
         self.check_registration()
@@ -444,13 +447,18 @@ class Validator:
                     self.contest_state.miner_info[uid] = None
 
         self.hotkeys = list(self.metagraph.nodes.keys())
+        self.last_metagraph_sync = block
+
+    def sync(self, block: int):
+        if block - self.last_metagraph_sync > self.config["epoch_length"]:
+            self.sync_chain_nodes(block)
 
         try:
             self.set_weights()
 
             self.attempted_set_weights = True
 
-            self.metagraph.sync_nodes()
+            self.sync_chain_nodes(block)
         except Exception as e:
             logger.error(f"Failed to set weights", exc_info=e)
 
@@ -701,7 +709,7 @@ class Validator:
 
         if blocks_elapsed >= epoch_length:
             logger.info(f"{blocks_elapsed} blocks since last update, resyncing metagraph")
-            self.sync()
+            self.sync(block)
 
             # Recalculate in-case weights were set
             blocks_elapsed = block - self.metagraph.nodes[self.keypair.ss58_address].last_updated
