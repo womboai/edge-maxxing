@@ -60,13 +60,3 @@ class MinerModelInfo:
     def __init__(self, repository: ModelRepositoryInfo, block: int):
         self.repository = repository
         self.block = block
-
-
-def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
-    if old_info is None and new_info is None:
-        return False
-
-    if (old_info is None) != (new_info is None):
-        return True
-
-    return old_info.repository != new_info.repository or old_info.revision != new_info.revision

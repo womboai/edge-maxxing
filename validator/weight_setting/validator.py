@@ -35,7 +35,6 @@ from neuron import (
     Contest,
     Key,
     Uid,
-    should_update,
     MinerModelInfo,
     ModelRepositoryInfo,
 )
@@ -597,14 +596,16 @@ class Validator:
         chunk_size = ceil(len(submissions) / len(apis))
 
         chunks = [
-             (api, list(islice(iterator, chunk_size)))
-             for api in apis
+            (api, list(islice(iterator, chunk_size)))
+            for api in apis
         ]
 
-        await asyncio.gather(*[
-            api.start_benchmarking(dict(chunk))
-            for api, chunk in chunks
-        ])
+        await asyncio.gather(
+            *[
+                api.start_benchmarking(dict(chunk))
+                for api, chunk in chunks
+            ]
+            )
 
     def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         return self.send_submissions_to_api(self.benchmarking_apis, submissions)
@@ -653,11 +654,20 @@ class Validator:
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
             else:
+                def should_update(old_info: MinerModelInfo | None, new_info: MinerModelInfo | None):
+                    if old_info is None and new_info is None:
+                        return False
+
+                    if (old_info is None) != (new_info is None):
+                        return True
+
+                    return old_info.repository != new_info.repository
+
                 updated_uids = [
-                                   uid
-                                   for uid in range(len(self.metagraph.nodes))
-                                   if should_update(self.contest_state.miner_info[uid], miner_info[uid])
-                               ] + self.non_tested_miners()
+                    uid
+                    for uid in range(len(self.metagraph.nodes))
+                    if should_update(self.contest_state.miner_info[uid], miner_info[uid])
+                ] + self.non_tested_miners()
 
                 nodes = self.metagraph_nodes()
 
@@ -734,10 +744,12 @@ class Validator:
 
             return
 
-        states = await asyncio.gather(*[
-            api.state()
-            for api in self.benchmarking_apis
-        ])
+        states = await asyncio.gather(
+            *[
+                api.state()
+                for api in self.benchmarking_apis
+            ]
+            )
 
         by_state = {
             state: list(group)
@@ -835,10 +847,12 @@ class Validator:
 
     async def run(self):
         self.benchmarking_apis = list(
-            await asyncio.gather(*[
-                benchmarking_api(self.keypair, api, index)
-                for index, api in enumerate(self.benchmarking_api_urls)
-            ])
+            await asyncio.gather(
+                *[
+                    benchmarking_api(self.keypair, api, index)
+                    for index, api in enumerate(self.benchmarking_api_urls)
+                ]
+                )
         )
 
         while True:
