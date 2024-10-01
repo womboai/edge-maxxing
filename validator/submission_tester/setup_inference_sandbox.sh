@@ -10,21 +10,14 @@ BASELINE=$5
 
 READY_MARKER="$SANDBOX_DIRECTORY/ready"
 VENV="$SANDBOX_DIRECTORY/.venv"
-CACHE_DIR="$HOME/.cache/lfs-cache"
 
 cd "$SANDBOX_DIRECTORY"
-
-git lfs install
-mkdir -p "$CACHE_DIR"
-git config --global lfs.concurrenttransfers 64
-git config --global lfs.storage "$CACHE_DIR"
 
 if $($BASELINE) && [ -f "$READY_MARKER" ]; then
   git fetch
 else
   find "$SANDBOX_DIRECTORY" -mindepth 1 -delete
 
-  git config --global advice.detachedHead false
   git clone --shallow-submodules --no-checkout "https://$GIT_PROVIDER/$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
   if $($BASELINE); then
     touch "$READY_MARKER"
