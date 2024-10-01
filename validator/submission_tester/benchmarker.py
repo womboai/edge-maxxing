@@ -1,23 +1,23 @@
 import asyncio
 import logging
-from threading import Lock
-from time import perf_counter
 import traceback
 from asyncio import Task
 from datetime import timedelta, datetime
 from random import choice
+from threading import Lock
+from time import perf_counter
 from zoneinfo import ZoneInfo
 
 from base_validator.metrics import CheckpointBenchmark
-
-from neuron import CURRENT_CONTEST, CheckpointSubmission, Key
 from submission_tester.testing import compare_checkpoints
+
+from neuron import CURRENT_CONTEST, Key, ModelRepositoryInfo
 
 logger = logging.getLogger(__name__)
 
 
 class Benchmarker:
-    submissions: dict[Key, CheckpointSubmission]
+    submissions: dict[Key, ModelRepositoryInfo]
     benchmarks: dict[Key, CheckpointBenchmark | None]
     started: bool
     done: bool
@@ -51,7 +51,7 @@ class Benchmarker:
 
         await loop.run_in_executor(None, self._benchmark_key, hotkey)
 
-    async def _start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
+    async def _start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         self.submissions = submissions
         self.benchmarks = {}
         self.submission_times = []
@@ -81,7 +81,7 @@ class Benchmarker:
 
         self.done = True
 
-    async def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
+    async def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         if not self.done and self.started:
             self.benchmark_task.cancel()
 

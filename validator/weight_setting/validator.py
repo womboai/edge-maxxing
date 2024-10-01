@@ -2,7 +2,6 @@ import asyncio
 import random
 import time
 from argparse import ArgumentParser
-from dataclasses import dataclass
 from datetime import date, datetime
 from itertools import islice, groupby
 from math import ceil
@@ -11,7 +10,7 @@ from os import makedirs
 from os.path import isfile
 from pathlib import Path
 from pickle import dump, load
-from typing import cast, TypeAlias, Any
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import numpy
@@ -22,15 +21,12 @@ from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
 from fiber.chain.weights import set_node_weights, get_node_weights
 from fiber.logging_utils import get_logger
-from numpy import real, isreal
-from numpy.polynomial import Polynomial
 from substrateinterface import SubstrateInterface, Keypair
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
 from weight_setting.benchmarking_api import BenchmarkingApi, benchmarking_api
 
 from neuron import (
-    CheckpointSubmission,
     get_config,
     ContestId,
     CURRENT_CONTEST,
@@ -39,56 +35,32 @@ from neuron import (
     Contest,
     Key,
     Uid,
-    should_update, SPEC_VERSION,
+    MinerModelInfo,
+    ModelRepositoryInfo,
 )
 from neuron.submissions import get_submission
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.7.1"
-WEIGHTS_VERSION = 28
+VALIDATOR_VERSION = "3.0.0"
+WEIGHTS_VERSION = 30
 
-WINNER_PERCENTAGE = 0.8
-BUCKET_STEP_THRESHOLD = 1.01
-IMPROVEMENT_BENCHMARK_PERCENTAGE = 1.10
+COLLECTED_SUBMISSIONS_VERSION = 1
 
-WinnerList: TypeAlias = list[tuple[Uid, float]]
+WINNER_SCORE_THRESHOLD = 1.05
 
 logger = get_logger(__name__)
-
-
-@dataclass
-class ContestSubmissionsBucket:
-    scores: WinnerList
-    previous_day_winners: bool = False
-
-
-def _get_incentive(rank: int, sequence_ratio: float):
-    return WINNER_PERCENTAGE * (sequence_ratio ** rank)
-
-
-def _winner_percentage_sequence_ratio(sample_count: int):
-    if not sample_count:
-        return 1 - WINNER_PERCENTAGE
-
-    if sample_count == 1:
-        return 1 / WINNER_PERCENTAGE
-
-    polynomial = Polynomial([1 - WINNER_PERCENTAGE, -1] + ([0.0] * (sample_count - 2)) + [WINNER_PERCENTAGE])
-    real_roots = [float(real(root)) for root in polynomial.roots() if isreal(root) and root >= 0.0]
-
-    return real_roots[0]
 
 
 class ContestState:
     id: ContestId
     miner_score_version: int
     submission_spec_version: int
-    miner_info: list[CheckpointSubmission | None]
+    miner_info: list[MinerModelInfo | None]
 
     def __init__(
         self,
         contest_id: ContestId,
-        miner_info: list[CheckpointSubmission | None],
+        miner_info: list[MinerModelInfo | None],
     ):
         self.id = contest_id
         self.miner_score_version = WEIGHTS_VERSION
@@ -119,7 +91,6 @@ class Validator:
 
     last_day: date | None
     contest_state: ContestState | None
-    previous_day_winners: WinnerList
     benchmarking: bool
     benchmarking_api_urls: list[str]
     benchmarking_apis: list[BenchmarkingApi]
@@ -129,6 +100,7 @@ class Validator:
 
     current_block: int
     last_block_fetch: datetime | None = None
+    last_metagraph_sync: int = 0
     attempted_set_weights: bool = False
 
     benchmarks: list[CheckpointBenchmark | None]
@@ -171,7 +143,6 @@ class Validator:
 
         self.last_day = None
         self.contest_state = None
-        self.previous_day_winners = []
         self.benchmarking = False
         self.benchmarking_api_urls = self.config["benchmarker_api"]
 
@@ -241,7 +212,7 @@ class Validator:
 
         self.new_wandb_run()
 
-    def send_wandb_metrics(self, average_time: float | None = None, ranks: dict[Uid, tuple[int, bool]] | None = None):
+    def send_wandb_metrics(self, average_time: float | None = None, winner: Uid | None = None):
         if not self.wandb_run:
             return
 
@@ -250,7 +221,11 @@ class Validator:
         benchmark_data = {}
 
         submission_data = {
-            str(uid): info.model_dump(exclude={"contest"})
+            str(uid): {
+                "repository": info.repository.url,
+                "revision": info.repository.revision,
+                "block": info.block,
+            }
             for uid, info in enumerate(self.contest_state.miner_info)
             if info
         }
@@ -264,8 +239,6 @@ class Validator:
                 continue
 
             data = {
-                "model": miner_info.repository,
-                "revision": miner_info.revision,
                 "baseline_generation_time": benchmark.baseline.generation_time,
                 "generation_time": benchmark.model.generation_time,
                 "similarity": benchmark.similarity_score,
@@ -278,12 +251,10 @@ class Validator:
                 "hotkey": self.hotkeys[uid],
             }
 
-            if ranks and uid in ranks:
-                rank, multiday_winner = ranks[uid]
-                data["rank"] = rank
-                data["multiday_winner"] = multiday_winner
-
             benchmark_data[str(uid)] = data
+
+        if winner:
+            benchmark_data[str(winner)]["winner"] = True
 
         log_data = {
             "submissions": submission_data,
@@ -367,8 +338,8 @@ class Validator:
                     "failed": self.failed,
                     "last_day": self.last_day,
                     "contest_state": self.contest_state,
-                    "previous_day_winners": self.previous_day_winners,
                     "benchmarking": self.benchmarking,
+                    "last_metagraph_sync": self.last_metagraph_sync,
                 },
                 file,
             )
@@ -392,11 +363,8 @@ class Validator:
         self.failed = state.get("failed", self.failed)
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
-        self.previous_day_winners = (
-            state.get("previous_day_winners", self.previous_day_winners) or
-            self.previous_day_winners
-        )
         self.benchmarking = state.get("benchmarking", self.benchmarking)
+        self.last_metagraph_sync = state.get("last_metagraph_sync", self.last_metagraph_sync)
 
         if self.contest_state:
             if self.contest_state.miner_score_version != WEIGHTS_VERSION:
@@ -409,10 +377,10 @@ class Validator:
                 self.failed.clear()
                 self.contest_state.miner_score_version = WEIGHTS_VERSION
 
-            if self.contest_state.submission_spec_version != SPEC_VERSION:
+            if self.contest_state.submission_spec_version != COLLECTED_SUBMISSIONS_VERSION:
                 logger.warning(
                     f"Contest state has outdated spec version: {self.contest_state.submission_spec_version}, "
-                    f"current version: {SPEC_VERSION}. Resetting benchmarks."
+                    f"current version: {COLLECTED_SUBMISSIONS_VERSION}. Resetting benchmarks."
                 )
 
                 self.benchmarks = self.clear_benchmarks()
@@ -420,9 +388,9 @@ class Validator:
 
                 self.benchmarking = True
                 self.contest_state.miner_info = self.get_miner_submissions()
-                self.contest_state.submission_spec_version = SPEC_VERSION
+                self.contest_state.submission_spec_version = COLLECTED_SUBMISSIONS_VERSION
 
-    def clear_benchmarks(self) -> list[CheckpointSubmission | None]:
+    def clear_benchmarks(self) -> list[CheckpointBenchmark | None]:
         return [None] * len(self.metagraph.nodes)
 
     def reset_miner(self, uid: Uid):
@@ -443,15 +411,6 @@ class Validator:
         new_data[:length] = self.benchmarks[:length]
         self.benchmarks = new_data
 
-    def get_sorted_contestants(self) -> list[tuple[Uid, float]]:
-        contestants = [
-            (uid, metric_data.calculate_score())
-            for uid, metric_data in enumerate(self.benchmarks)
-            if metric_data
-        ]
-
-        return sorted(contestants, key=itemgetter(1))
-
     def check_registration(self):
         hotkey = self.keypair.ss58_address
         if hotkey not in self.hotkeys:
@@ -462,7 +421,9 @@ class Validator:
     def metagraph_nodes(self):
         return sorted(self.metagraph.nodes.values(), key=attrgetter("node_id"))
 
-    def sync(self):
+    def sync_chain_nodes(self, block: int):
+        logger.info("Syncing metagraph")
+
         self.metagraph.sync_nodes()
 
         self.check_registration()
@@ -484,25 +445,22 @@ class Validator:
                 # hotkey has been replaced
                 self.reset_miner(uid)
 
-                filtered_winners = [
-                    (winner_uid, score)
-                    for winner_uid, score in self.previous_day_winners
-                    if uid != winner_uid
-                ]
-
-                self.previous_day_winners = filtered_winners
-
                 if self.contest_state:
                     self.contest_state.miner_info[uid] = None
 
         self.hotkeys = list(self.metagraph.nodes.keys())
+        self.last_metagraph_sync = block
+
+    def sync(self, block: int):
+        if block - self.last_metagraph_sync > self.config["epoch_length"]:
+            self.sync_chain_nodes(block)
 
         try:
             self.set_weights()
 
             self.attempted_set_weights = True
 
-            self.metagraph.sync_nodes()
+            self.sync_chain_nodes(block)
         except Exception as e:
             logger.error(f"Failed to set weights", exc_info=e)
 
@@ -540,43 +498,14 @@ class Validator:
 
         logger.info("Setting weights")
 
-        buckets = [ContestSubmissionsBucket(scores) for scores in self.get_score_buckets()]
+        highest_uids = self.get_highest_uids()
+        winner = min(highest_uids, key=lambda uid: self.contest_state.miner_info[uid].block)
 
-        if len(self.previous_day_winners):
-            winners = self.current_winners()
-
-            if len(winners):
-                highest_score = max([score for _, score in winners])
-
-                winner_overrides = [
-                    (uid, score)
-                    for uid, score in self.previous_day_winners
-                    if highest_score <= score * IMPROVEMENT_BENCHMARK_PERCENTAGE
-                ]
-
-                if len(winner_overrides):
-                    buckets.append(ContestSubmissionsBucket(winner_overrides, previous_day_winners=True))
-
-        highest_bucket = len(buckets) - 1
-
-        ranks: dict[Uid, tuple[int, bool]] = {}
-
-        for index, bucket in enumerate(buckets):
-            bucket_rank = highest_bucket - index
-            for uid, _ in bucket.scores:
-                ranks[uid] = (bucket_rank, bucket.previous_day_winners)
-
-        self.send_wandb_metrics(ranks=ranks)
-
-        sequence_ratio = _winner_percentage_sequence_ratio(len(buckets))
+        self.send_wandb_metrics(winner=winner)
 
         weights = numpy.zeros(len(self.metagraph.nodes))
 
-        for index, bucket in enumerate(buckets):
-            bucket_incentive = _get_incentive(highest_bucket - index, sequence_ratio)
-
-            for uid, _ in bucket.scores:
-                weights[uid] = bucket_incentive / len(bucket.scores)
+        weights[winner] = 1.0
 
         uids = numpy.indices(weights.shape)[0]
 
@@ -592,34 +521,37 @@ class Validator:
 
         self.metagraph.sync_nodes()
 
-    def get_score_buckets(self) -> list[WinnerList]:
-        sorted_contestants = cast(list[tuple[Uid, float]], self.get_sorted_contestants())
+    def get_highest_uids(self) -> list[Uid]:
+        contestants = [
+            (uid, metric_data.calculate_score())
+            for uid, metric_data in enumerate(self.benchmarks)
+            if metric_data
+        ]
 
-        buckets: list[WinnerList] = [[]]
+        sorted_contestants = sorted(contestants, key=itemgetter(1), reverse=True)
 
-        last_score = sorted_contestants[0][1] if len(sorted_contestants) else None
+        highest_uids: list[Uid] = []
+
+        last_score: float | None = None
 
         for contestant in sorted_contestants:
-            _, score = contestant
+            uid, score = contestant
 
-            if last_score and score > last_score * BUCKET_STEP_THRESHOLD:
-                # New bucket
-                buckets.append([contestant])
+            if last_score and last_score > score * WINNER_SCORE_THRESHOLD:
+                # No longer in top threshold
+                break
             else:
-                buckets[len(buckets) - 1].append(contestant)
+                highest_uids.append(uid)
 
             last_score = score
 
-        return buckets
-
-    def current_winners(self) -> WinnerList:
-        return [(uid, score) for uid, score in self.get_score_buckets()[-1] if score > 0.0]
+        return highest_uids
 
     def get_miner_submissions(self):
         visited_repositories: dict[str, tuple[Uid, int]] = {}
         visited_revisions: dict[str, tuple[Uid, int]] = {}
 
-        miner_info: list[CheckpointSubmission | None] = []
+        miner_info: list[MinerModelInfo | None] = []
 
         for hotkey, node in tqdm(self.metagraph.nodes.items()):
             if (
@@ -631,20 +563,18 @@ class Validator:
 
             logger.info(f"Getting submission for hotkey {hotkey}")
 
-            submission = get_submission(
+            info = get_submission(
                 self.substrate,
                 self.metagraph.netuid,
                 hotkey,
             )
 
-            if not submission:
+            if not info:
                 miner_info.append(None)
                 continue
 
-            info, block = submission
-
-            existing_repository_submission = visited_repositories.get(info.repository)
-            existing_revision_submission = visited_revisions.get(info.revision)
+            existing_repository_submission = visited_repositories.get(info.repository.url)
+            existing_revision_submission = visited_revisions.get(info.repository.revision)
 
             if existing_repository_submission and existing_revision_submission:
                 existing_submission = min(
@@ -656,36 +586,38 @@ class Validator:
             if existing_submission:
                 existing_uid, existing_block = existing_submission
 
-                if block > existing_block:
+                if info.block > existing_block:
                     miner_info.append(None)
                     continue
 
                 miner_info[existing_uid] = None
 
             miner_info.append(info)
-            visited_repositories[info.repository] = node.node_id, block
-            visited_revisions[info.revision] = node.node_id, block
+            visited_repositories[info.repository.url] = node.node_id, info.block
+            visited_revisions[info.repository.revision] = node.node_id, info.block
 
             time.sleep(0.2)
 
         return miner_info
 
-    async def send_submissions_to_api(self, apis: list[BenchmarkingApi], submissions: dict[Key, CheckpointSubmission]):
+    async def send_submissions_to_api(self, apis: list[BenchmarkingApi], submissions: dict[Key, ModelRepositoryInfo]):
         iterator = iter(submissions.items())
 
         chunk_size = ceil(len(submissions) / len(apis))
 
         chunks = [
-             (api, list(islice(iterator, chunk_size)))
-             for api in apis
+            (api, list(islice(iterator, chunk_size)))
+            for api in apis
         ]
 
-        await asyncio.gather(*[
-            api.start_benchmarking(dict(chunk))
-            for api, chunk in chunks
-        ])
+        await asyncio.gather(
+            *[
+                api.start_benchmarking(dict(chunk))
+                for api, chunk in chunks
+            ]
+            )
 
-    def start_benchmarking(self, submissions: dict[Key, CheckpointSubmission]):
+    def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         return self.send_submissions_to_api(self.benchmarking_apis, submissions)
 
     def current_time(self):
@@ -718,7 +650,7 @@ class Validator:
                 nodes = self.metagraph_nodes()
 
                 submissions = {
-                    nodes[uid].hotkey: submission
+                    nodes[uid].hotkey: submission.repository
                     for uid, submission in enumerate(miner_info)
                     if submission
                 }
@@ -731,18 +663,26 @@ class Validator:
                 self.failed.clear()
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
-                self.previous_day_winners = []
             else:
+                def should_update(old_info: MinerModelInfo | None, new_info: MinerModelInfo | None):
+                    if old_info is None and new_info is None:
+                        return False
+
+                    if (old_info is None) != (new_info is None):
+                        return True
+
+                    return old_info.repository != new_info.repository
+
                 updated_uids = [
-                                   uid
-                                   for uid in range(len(self.metagraph.nodes))
-                                   if should_update(self.contest_state.miner_info[uid], miner_info[uid])
-                               ] + self.non_tested_miners()
+                    uid
+                    for uid in range(len(self.metagraph.nodes))
+                    if should_update(self.contest_state.miner_info[uid], miner_info[uid])
+                ] + self.non_tested_miners()
 
                 nodes = self.metagraph_nodes()
 
                 submissions = {
-                    nodes[uid].hotkey: miner_info[uid]
+                    nodes[uid].hotkey: miner_info[uid].repository
                     for uid in set(updated_uids)
                     if miner_info[uid]
                 }
@@ -755,24 +695,6 @@ class Validator:
                     self.reset_miner(uid)
 
                 self.contest_state.miner_info = miner_info
-
-                winners = self.current_winners()
-
-                if len(winners):
-                    if len(self.previous_day_winners):
-                        bucket_score = min([score for _, score in self.previous_day_winners])
-
-                        new_winners = [
-                            (uid, score)
-                            for uid, score in winners
-                            if bucket_score <= score * IMPROVEMENT_BENCHMARK_PERCENTAGE
-                        ]
-
-                        if len(new_winners):
-                            # New winner
-                            self.previous_day_winners = new_winners
-                    else:
-                        self.previous_day_winners = winners
 
             self.last_day = now.date()
 
@@ -788,15 +710,15 @@ class Validator:
         epoch_length = self.config["epoch_length"]
 
         if blocks_elapsed >= epoch_length:
-            logger.info(f"{blocks_elapsed} blocks since last update, resyncing metagraph")
-            self.sync()
+            logger.info(f"{blocks_elapsed} blocks since weight setting, attempting to set weights")
+            self.sync(block)
 
             # Recalculate in-case weights were set
             blocks_elapsed = block - self.metagraph.nodes[self.keypair.ss58_address].last_updated
         else:
             logger.info(
                 f"{blocks_elapsed} since last update, "
-                f"{epoch_length - blocks_elapsed} blocks remaining until metagraph sync"
+                f"{epoch_length - blocks_elapsed} blocks remaining until weight setting"
             )
 
         if not self.benchmarking:
@@ -809,7 +731,7 @@ class Validator:
                     nodes = self.metagraph_nodes()
 
                     submissions = {
-                        nodes[uid].hotkey: self.contest_state.miner_info[uid]
+                        nodes[uid].hotkey: self.contest_state.miner_info[uid].repository
                         for uid in remaining
                     }
 
@@ -828,14 +750,16 @@ class Validator:
                 blocks_to_wait = random.randint(1, 10)
 
             logger.info(f"Nothing to do in this step, sleeping for {blocks_to_wait} blocks")
-            time.sleep(blocks_to_wait * 12)
+            await asyncio.sleep(blocks_to_wait * 12)
 
             return
 
-        states = await asyncio.gather(*[
-            api.state()
-            for api in self.benchmarking_apis
-        ])
+        states = await asyncio.gather(
+            *[
+                api.state()
+                for api in self.benchmarking_apis
+            ]
+            )
 
         by_state = {
             state: list(group)
@@ -868,7 +792,7 @@ class Validator:
             nodes = self.metagraph_nodes()
 
             submissions = {
-                nodes[uid].hotkey: self.contest_state.miner_info[uid]
+                nodes[uid].hotkey: self.contest_state.miner_info[uid].repository
                 for uid in self.non_tested_miners()
             }
 
@@ -920,7 +844,7 @@ class Validator:
 
         blocks = epoch_length / 4
         logger.info(f"Benchmarking in progress, sleeping for {blocks} blocks")
-        time.sleep(blocks * 12)
+        await asyncio.sleep(blocks * 12)
 
     @property
     def block(self):
@@ -933,22 +857,27 @@ class Validator:
 
     async def run(self):
         self.benchmarking_apis = list(
-            await asyncio.gather(*[
-                benchmarking_api(self.keypair, api, index)
-                for index, api in enumerate(self.benchmarking_api_urls)
-            ])
+            await asyncio.gather(
+                *[
+                    benchmarking_api(self.keypair, api, index)
+                    for index, api in enumerate(self.benchmarking_api_urls)
+                ]
+                )
         )
 
         while True:
-            current_block = self.block
-
             try:
+                current_block = self.block
+
                 logger.info(f"Step {self.step}, block {current_block}")
 
                 await self.do_step(current_block)
             except Exception as e:
                 if not isinstance(e, ContestDeviceValidationError):
                     logger.error(f"Error during validation step {self.step}", exc_info=e)
+
+                    self.substrate = get_substrate(subtensor_address=self.substrate.url)
+
                     continue
 
                 for api in self.benchmarking_apis:

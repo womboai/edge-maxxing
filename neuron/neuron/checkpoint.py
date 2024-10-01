@@ -3,7 +3,7 @@ from typing import TypeAlias, Annotated
 
 from pydantic import BaseModel, Field
 
-from .contest import ContestId, CURRENT_CONTEST
+from .contest import ContestId, CURRENT_CONTEST, ModelRepositoryInfo
 from .network_commitments import Encoder, Decoder
 
 Uid: TypeAlias = int
@@ -53,11 +53,10 @@ class CheckpointSubmission(BaseModel):
         return f"https://{self.provider}/{self.repository}"
 
 
-def should_update(old_info: CheckpointSubmission | None, new_info: CheckpointSubmission | None):
-    if old_info is None and new_info is None:
-        return False
+class MinerModelInfo:
+    repository: ModelRepositoryInfo
+    block: int
 
-    if (old_info is None) != (new_info is None):
-        return True
-
-    return old_info.repository != new_info.repository or old_info.revision != new_info.revision
+    def __init__(self, repository: ModelRepositoryInfo, block: int):
+        self.repository = repository
+        self.block = block

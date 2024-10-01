@@ -69,9 +69,10 @@ def validate(provider: str, repository: str, revision: str, contest: Contest):
     if contest not in CONTESTS:
         raise ValueError(f"Invalid contest: {contest.id.name}")
 
-    if contest.baseline_repository == repository:
+    if repository in contest.baseline_repository.url:
         raise ValueError(f"Cannot submit baseline repository: {repository}")
-    if contest.baseline_revision == revision:
+
+    if revision == contest.baseline_repository.revision:
         raise ValueError(f"Cannot submit baseline revision: {revision}")
 
     git = cmd.Git()

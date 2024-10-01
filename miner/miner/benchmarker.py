@@ -7,7 +7,7 @@ from subprocess import run, Popen
 from time import sleep, perf_counter
 
 from fiber.logging_utils import get_logger
-from pipelines.models import TextToImageRequest
+from pipelines import TextToImageRequest
 
 from neuron import (
     CheckpointSubmission,
@@ -17,18 +17,19 @@ from neuron import (
     get_config,
     generate_random_prompt,
     VRamMonitor,
+    INFERENCE_SOCKET_TIMEOUT,
+    BENCHMARK_SAMPLE_COUNT,
 )
 
 MODEL_DIRECTORY = Path("model")
 SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent.parent.parent / "validator/submission_tester/setup_inference_sandbox.sh")
-SAMPLE_COUNT = 5
-SOCKET_TIMEOUT = 120
+
 
 logger = get_logger(__name__)
 
 
 def wait_for_socket(socket_path: str, process: Popen):
-    for _ in range(SOCKET_TIMEOUT):
+    for _ in range(INFERENCE_SOCKET_TIMEOUT):
         if os.path.exists(socket_path):
             break
 
@@ -37,12 +38,12 @@ def wait_for_socket(socket_path: str, process: Popen):
         if process.returncode:
             raise RuntimeError(f"Model crashed with exit code {process.returncode}")
     else:
-        raise RuntimeError(f"Socket file '{socket_path}' not found after {SOCKET_TIMEOUT} seconds. Your pipeline is taking too long to load. Please optimize and and make sure to precompile anything.")
+        raise RuntimeError(f"Socket file '{socket_path}' not found after {INFERENCE_SOCKET_TIMEOUT} seconds. Your pipeline is taking too long to load. Please optimize and and make sure to precompile anything.")
 
 
 def test(contest: Contest, client: Client):
     outputs: list[GenerationOutput] = []
-    for i in range(SAMPLE_COUNT):
+    for i in range(BENCHMARK_SAMPLE_COUNT):
         output = benchmark(contest, client)
 
         logger.info(
@@ -60,7 +61,7 @@ def test(contest: Contest, client: Client):
     watts_used = max(output.watts_used for output in outputs)
 
     logger.info(
-        f"\n\nTested {SAMPLE_COUNT} Samples\n"
+        f"\n\nTested {BENCHMARK_SAMPLE_COUNT} Samples\n"
         f"Average Generation Time: {average_time}s\n"
         f"Model Size: {size}b\n"
         f"Max VRAM Usage: {vram_used}b\n"
@@ -112,8 +113,7 @@ def start_benchmarking(submission: CheckpointSubmission):
         [
             SETUP_INFERENCE_SANDBOX_SCRIPT,
             MODEL_DIRECTORY.absolute(),
-            submission.provider,
-            submission.repository,
+            submission.get_repo_link(),
             submission.revision,
             "true",
         ],

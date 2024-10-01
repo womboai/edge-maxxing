@@ -66,13 +66,7 @@ By optimizing popular models like LLAMA3 and Stable Diffusion, we transform idle
 
 The EdgeMaxxing subnet defines specific models, pipelines, and target hardware for optimization. Miners and validators collaborate in a daily competition to improve AI model performance on consumer devices.
 
-Miners are incentivized through a ranking-based reward system. The more effective their optimization, the higher their tier is. Every day at 12PM EST a contest is run, where:
-- 🥇 Golden Tier: 80% of the total reward pool
-- 🥈 Silver Tier: 16%
-- 🥉 Bronze Tier: 3.2%
-- 🎖️ All other tiers share the remaining pool
-
-Each tier's rewards are divided evenly among its contestants.
+Miners are incentivized through a winner-takes-all reward system. The best optimizations are grouped together, and the one submitted first is selected as winner. Every day at 12PM EST a contest is run.
 
 Validators receive rewards for their consistent operation and accurate scoring.
 

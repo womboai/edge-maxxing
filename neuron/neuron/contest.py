@@ -9,6 +9,11 @@ RequestT = TypeVar("RequestT", bound=BaseModel)
 ResponseT = TypeVar("ResponseT")
 
 
+class ModelRepositoryInfo(BaseModel):
+    url: str
+    revision: str
+
+
 class ContestId(Enum):
     SDXL_APPLE_SILICON = 0
     SDXL_NEWDREAM_NVIDIA_4090 = 1
@@ -17,19 +22,16 @@ class ContestId(Enum):
 
 class Contest(ABC):
     id: ContestId
-    baseline_repository: str
-    baseline_revision: str
+    baseline_repository: ModelRepositoryInfo
     device_name: str | None
 
     def __init__(
         self,
         contest_id: ContestId,
-        baseline_repository: str,
-        baseline_revision: str,
+        baseline_repository: ModelRepositoryInfo,
     ):
         self.id = contest_id
         self.baseline_repository = baseline_repository
-        self.baseline_revision = baseline_revision
 
     @abstractmethod
     def get_vram_used(self) -> int:
@@ -97,11 +99,10 @@ class CudaContest(ImageContestMixIn, Contest):
     def __init__(
         self,
         contest_id: ContestId,
-        baseline_repository: str,
-        baseline_revision: str,
+        baseline_repository: ModelRepositoryInfo,
         expected_device_name: str,
     ):
-        super().__init__(contest_id, baseline_repository, baseline_revision)
+        super().__init__(contest_id, baseline_repository)
 
         self.expected_device_name = expected_device_name
 
@@ -164,8 +165,7 @@ class ContestDeviceValidationError(Exception):
 CONTESTS = [
     CudaContest(
         ContestId.SDXL_NEWDREAM_NVIDIA_4090,
-        "womboai/sdxl-newdream-20-inference",
-        "3e5710d8",
+        ModelRepositoryInfo(url="https://womboai/sdxl-newdream-20-inference", revision="3e5710d8"),
         "NVIDIA GeForce RTX 4090",
     ),
 ]

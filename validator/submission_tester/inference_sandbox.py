@@ -8,13 +8,12 @@ from pathlib import Path
 from subprocess import Popen, run, TimeoutExpired, CalledProcessError
 from typing import Generic
 
-from neuron import RequestT
+from neuron import RequestT, INFERENCE_SOCKET_TIMEOUT, ModelRepositoryInfo
 
 SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "setup_inference_sandbox.sh")
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
-SOCKET_TIMEOUT = 120
 
 logger = logging.getLogger(__name__)
 
@@ -32,15 +31,15 @@ class InvalidSubmissionError(Exception):
 
 
 class InferenceSandbox(Generic[RequestT]):
-    _repository: str
+    _repository: ModelRepositoryInfo
 
     _client: Client
     _process: Popen
 
-    def __init__(self, provider: str, repository: str, revision: str, baseline: bool):
-        logger.info(f"Downloading {repository} with revision {revision}")
+    def __init__(self, repository_info: ModelRepositoryInfo, baseline: bool):
+        logger.info(f"Downloading {repository_info}")
 
-        self._repository = repository
+        self._repository = repository_info
 
         self._baseline = baseline
 
@@ -50,9 +49,8 @@ class InferenceSandbox(Generic[RequestT]):
                     *sandbox_args(self._user),
                     SETUP_INFERENCE_SANDBOX_SCRIPT,
                     self._sandbox_directory,
-                    provider,
-                    repository,
-                    revision,
+                    repository_info.url,
+                    repository_info.revision,
                     str(baseline).lower(),
                 ],
                 capture_output=True,
@@ -71,7 +69,7 @@ class InferenceSandbox(Generic[RequestT]):
 
         self._file_size = sum(file.stat().st_size for file in self._sandbox_directory.rglob("*"))
 
-        logger.info(f"Repository {provider}/{repository} had size {self._file_size}")
+        logger.info(f"Repository {repository_info} had size {self._file_size}")
 
         self._process = Popen(
             [
@@ -84,7 +82,7 @@ class InferenceSandbox(Generic[RequestT]):
         logger.info(f"Inference process starting")
         socket_path = abspath(self._sandbox_directory / "inferences.sock")
 
-        for _ in range(SOCKET_TIMEOUT):
+        for _ in range(INFERENCE_SOCKET_TIMEOUT):
             if os.path.exists(socket_path):
                 break
 
@@ -92,7 +90,7 @@ class InferenceSandbox(Generic[RequestT]):
 
             self._check_exit()
         else:
-            raise InvalidSubmissionError(f"Socket file '{socket_path}' not found after {SOCKET_TIMEOUT} seconds.")
+            raise InvalidSubmissionError(f"Socket file '{socket_path}' not found after {INFERENCE_SOCKET_TIMEOUT} seconds.")
 
         logger.info(f"Connecting to socket")
         self._client = Client(socket_path)
