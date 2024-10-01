@@ -42,8 +42,8 @@ from neuron import (
 from neuron.submissions import get_submission
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "2.8.0"
-WEIGHTS_VERSION = 29
+VALIDATOR_VERSION = "3.0.0"
+WEIGHTS_VERSION = 30
 
 COLLECTED_SUBMISSIONS_VERSION = 1
 
