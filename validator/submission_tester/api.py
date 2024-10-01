@@ -72,7 +72,7 @@ app = FastAPI(lifespan=lifespan)
 def _authenticate_request(nonce: int, signature: str):
     current_timestamp = time.time_ns()
 
-    if current_timestamp - nonce > 1_000_000_000:
+    if current_timestamp - nonce > 2_000_000_000:
         logger.info(f"Got request with nonce {nonce}, which is {current_timestamp - nonce} nanoseconds old.")
 
         raise HTTPException(
