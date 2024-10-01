@@ -52,16 +52,13 @@ class CheckpointSubmission(BaseModel):
     def get_repo_link(self):
         return f"https://{self.provider}/{self.repository}"
 
-    def repository_info(self):
-        return ModelRepositoryInfo(url=self.get_repo_link(), revision=self.revision)
-
 
 class MinerModelInfo:
     repository: ModelRepositoryInfo
     block: int
 
-    def __init__(self, submission: CheckpointSubmission, block: int):
-        self.repository = submission.repository_info()
+    def __init__(self, repository: ModelRepositoryInfo, block: int):
+        self.repository = repository
         self.block = block
 
 

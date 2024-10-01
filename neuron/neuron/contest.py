@@ -29,11 +29,9 @@ class Contest(ABC):
         self,
         contest_id: ContestId,
         baseline_repository: ModelRepositoryInfo,
-        baseline_revision: str,
     ):
         self.id = contest_id
         self.baseline_repository = baseline_repository
-        self.baseline_revision = baseline_revision
 
     @abstractmethod
     def get_vram_used(self) -> int:
