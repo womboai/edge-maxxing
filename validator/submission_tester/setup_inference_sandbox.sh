@@ -10,8 +10,14 @@ BASELINE=$5
 
 READY_MARKER="$SANDBOX_DIRECTORY/ready"
 VENV="$SANDBOX_DIRECTORY/.venv"
+CACHE_DIR="$HOME/.cache/lfs-cache"
 
 cd "$SANDBOX_DIRECTORY"
+
+git lfs install
+mkdir -p "$CACHE_DIR"
+git config --global lfs.concurrenttransfers 64
+git config --global lfs.storage "$CACHE_DIR"
 
 if $($BASELINE) && [ -f "$READY_MARKER" ]; then
   git fetch
