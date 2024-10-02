@@ -24,7 +24,8 @@ from fiber.logging_utils import get_logger
 from substrateinterface import SubstrateInterface, Keypair
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
-from weight_setting.benchmarking_api import BenchmarkingApi, benchmarking_api
+from .benchmarking_api import BenchmarkingApi, benchmarking_api
+from .winner_selection import get_highest_uids, get_contestant_scores
 
 from neuron import (
     get_config,
@@ -41,12 +42,11 @@ from neuron import (
 from neuron.submissions import get_submission
 from .wandb_args import add_wandb_args
 
-VALIDATOR_VERSION = "3.0.1"
+VALIDATOR_VERSION = "3.1.0"
 WEIGHTS_VERSION = 31
 
 COLLECTED_SUBMISSIONS_VERSION = 1
 
-WINNER_SCORE_THRESHOLD = 1.05
 
 logger = get_logger(__name__)
 
@@ -498,7 +498,7 @@ class Validator:
 
         logger.info("Setting weights")
 
-        highest_uids = self.get_highest_uids()
+        highest_uids = get_highest_uids(get_contestant_scores(self.benchmarks))
         winner = min(highest_uids, key=lambda uid: self.contest_state.miner_info[uid].block)
 
         self.send_wandb_metrics(winner=winner)
@@ -520,32 +520,6 @@ class Validator:
         )
 
         self.metagraph.sync_nodes()
-
-    def get_highest_uids(self) -> list[Uid]:
-        contestants = [
-            (uid, metric_data.calculate_score())
-            for uid, metric_data in enumerate(self.benchmarks)
-            if metric_data
-        ]
-
-        sorted_contestants = sorted(contestants, key=itemgetter(1), reverse=True)
-
-        highest_uids: list[Uid] = []
-
-        last_score: float | None = None
-
-        for contestant in sorted_contestants:
-            uid, score = contestant
-
-            if last_score and last_score > score * WINNER_SCORE_THRESHOLD:
-                # No longer in top threshold
-                break
-            else:
-                highest_uids.append(uid)
-
-            last_score = score
-
-        return highest_uids
 
     def get_miner_submissions(self):
         visited_repositories: dict[str, tuple[Uid, int]] = {}
