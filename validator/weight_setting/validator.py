@@ -464,6 +464,11 @@ class Validator:
         except Exception as e:
             logger.error(f"Failed to set weights", exc_info=e)
 
+    def get_winner(self) -> Uid | None:
+        highest_uids = get_highest_uids(get_contestant_scores(self.benchmarks))
+        winner = min(highest_uids, key=lambda uid: self.contest_state.miner_info[uid].block) if highest_uids else None
+        return winner
+
     def set_weights(self):
         if self.attempted_set_weights:
             return
@@ -498,8 +503,7 @@ class Validator:
 
         logger.info("Setting weights")
 
-        highest_uids = get_highest_uids(get_contestant_scores(self.benchmarks))
-        winner = min(highest_uids, key=lambda uid: self.contest_state.miner_info[uid].block) if highest_uids else None
+        winner = self.get_winner()
 
         self.send_wandb_metrics(winner=winner)
 

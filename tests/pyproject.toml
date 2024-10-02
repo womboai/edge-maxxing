@@ -1,0 +1,43 @@
+[tool.poetry]
+name = "edge-maxxing-tests"
+
+version = "1.0.0"
+
+description = "tests"
+
+readme = "../README.md"
+
+license = "MIT"
+
+authors = ["WOMBO <hello@w.ai>"]
+
+packages = [{ include = "tests" }]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+edge-maxxing-validator = { path = "../validator", develop = true }
+pytest = "8.3.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry-monorepo.deps]
+
+[tool.pytype]
+inputs = ["tests"]
