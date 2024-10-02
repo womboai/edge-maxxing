@@ -499,13 +499,15 @@ class Validator:
         logger.info("Setting weights")
 
         highest_uids = get_highest_uids(get_contestant_scores(self.benchmarks))
-        winner = min(highest_uids, key=lambda uid: self.contest_state.miner_info[uid].block)
+        winner = min(highest_uids, key=lambda uid: self.contest_state.miner_info[uid].block) if highest_uids else None
 
         self.send_wandb_metrics(winner=winner)
 
-        weights = numpy.zeros(len(self.metagraph.nodes))
-
-        weights[winner] = 1.0
+        if winner:
+            weights = numpy.zeros(len(self.metagraph.nodes))
+            weights[winner] = 1.0
+        else:
+            weights = numpy.ones(len(self.metagraph.nodes))
 
         uids = numpy.indices(weights.shape)[0]
 
