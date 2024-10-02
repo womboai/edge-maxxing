@@ -1,0 +1,20 @@
+on:
+  pull_request:
+    type:
+      - opened
+
+jobs:
+  test-types:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+
+      - name: Test Types
+        working-directory: miner
+        run: |
+          poetry install
+          poetry run pytype
