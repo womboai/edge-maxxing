@@ -96,7 +96,7 @@ def compare_checkpoints(contest: Contest, submission: ModelRepositoryInfo) -> Ch
 
     baseline_outputs: list[GenerationOutput] = []
 
-    min_similarity = 1.0
+    average_similarity = 1.0
 
     with InferenceSandbox(contest.baseline_repository, True) as baseline_sandbox:
         baseline_size = baseline_sandbox.model_size
@@ -129,14 +129,13 @@ def compare_checkpoints(contest: Contest, submission: ModelRepositoryInfo) -> Ch
 
             baseline_outputs.append(baseline)
 
-            if similarity < min_similarity:
-                min_similarity = similarity
+            average_similarity = (average_similarity * i + similarity) / (i + 1)
 
     baseline_average_time = sum(output.generation_time for output in baseline_outputs) / len(baseline_outputs)
     baseline_vram_used = max(output.vram_used for output in baseline_outputs)
     baseline_watts_used = max(output.watts_used for output in baseline_outputs)
 
-    logger.info(f"Similarity Score: {min_similarity}")
+    logger.info(f"Average Similarity: {average_similarity}")
 
     return CheckpointBenchmark(
         baseline=MetricData(
@@ -151,5 +150,5 @@ def compare_checkpoints(contest: Contest, submission: ModelRepositoryInfo) -> Ch
             vram_used=vram_used,
             watts_used=watts_used,
         ),
-        similarity_score=min_similarity,
+        similarity_score=average_similarity,
     )
