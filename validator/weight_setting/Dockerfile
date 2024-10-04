@@ -1,6 +1,6 @@
 FROM python:3.10
 
-RUN apt-get update && apt-get install -y pipx
+RUN apt-get update && apt-get install -y sudo pipx
 
 RUN useradd --create-home --home-dir /home/validator validator
 
@@ -26,6 +26,7 @@ COPY validator/weight_setting/__init__.py validator/weight_setting/
 
 USER root
 RUN chown -R validator:validator /app
+RUN echo "Defaults env_keep += \"WANDB_API_KEY\"" >> /etc/sudoers
 USER validator
 
 WORKDIR /app/validator
@@ -38,8 +39,5 @@ COPY validator/weight_setting weight_setting
 COPY neuron/neuron ../neuron/neuron
 COPY pipelines/pipelines ../pipelines/pipelines
 
-ENTRYPOINT [ \
-    "poetry", \
-    "run", \
-    "start_validator" \
-]
+USER root
+ENTRYPOINT ["weight_setting/entrypoint.sh"]
