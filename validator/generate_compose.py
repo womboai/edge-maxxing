@@ -34,15 +34,17 @@ VALIDATOR_SERVICE_TEMPLATE = """
       build:
         context: ../
         dockerfile: ./validator/weight_setting/Dockerfile
-      
+
       volumes:
         - ~/.bittensor:/home/validator/.bittensor
-        - ~/.netrc:/home/validator/.netrc
-      
+        - type: bind
+          source: ~/.netrc
+          target: /home/validator/.netrc
+
       command: --benchmarker_api {apis} $VALIDATOR_ARGS
-      
+
       network_mode: host
-      
+
       depends_on:
 """
 
