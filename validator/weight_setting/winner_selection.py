@@ -4,7 +4,7 @@ from base_validator.metrics import CheckpointBenchmark
 
 from neuron import Uid
 
-WINNER_SCORE_THRESHOLD = 1.025
+WINNER_SCORE_THRESHOLD = 1.05
 
 
 def get_contestant_scores(benchmarks: list[CheckpointBenchmark | None]):
