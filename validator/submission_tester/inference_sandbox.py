@@ -16,6 +16,9 @@ SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
 DEPENDENCY_BLACKLIST = abspath(Path(__file__).parent / "dependency_blacklist.txt")
 
+with open(DEPENDENCY_BLACKLIST, 'r') as blacklist_file:
+    BLACKLISTED_DEPENDENCIES = " ".join(blacklist_file.read().splitlines())
+
 logger = logging.getLogger(__name__)
 
 
@@ -44,9 +47,6 @@ class InferenceSandbox(Generic[RequestT]):
 
         self._baseline = baseline
 
-        with open(DEPENDENCY_BLACKLIST, 'r') as f:
-            blacklisted_dependencies = f.read().splitlines()
-
         start_process = None
         try:
             start_process = run(
@@ -57,7 +57,7 @@ class InferenceSandbox(Generic[RequestT]):
                     repository_info.url,
                     repository_info.revision,
                     str(baseline).lower(),
-                    " ".join(blacklisted_dependencies),
+                    BLACKLISTED_DEPENDENCIES,
                 ],
                 capture_output=True,
                 encoding='utf-8',
