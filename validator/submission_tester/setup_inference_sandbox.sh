@@ -28,27 +28,25 @@ FULL_REVISION=$(git rev-parse "$REVISION")
 git fetch --depth 1 origin "$FULL_REVISION"
 git checkout "$REVISION"
 
-check_blacklist() {
-  local file="$1"
-  if [ -f "$file" ]; then
-    while IFS= read -r line; do
-      for dependency in $BLACKLISTED_DEPENDENCIES; do
-        if [[ "$line" == *"$dependency"* ]]; then
-          echo "Found blacklisted dependency '$dependency' in file '$file'"
-          exit 2
-        fi
-      done
-    done < "$file"
-  fi
-}
+echo "Checking for blacklisted dependencies..."
+find "$SANDBOX_DIRECTORY" -type f -print0 | while IFS= read -r -d '' file; do
+  for dependency in $BLACKLISTED_DEPENDENCIES; do
+     if [[ "$file" == *"$dependency"* ]]; then
+       echo "Found blacklisted dependency '$dependency' in filename '$file'"
+       exit 2
+     fi
+  done
 
-REQUIREMENTS="$SANDBOX_DIRECTORY/requirements.txt"
-PYPROJECT="$SANDBOX_DIRECTORY/pyproject.toml"
-PIPELINE="$SANDBOX_DIRECTORY/src/pipeline.py"
-
-check_blacklist "$REQUIREMENTS"
-check_blacklist "$PYPROJECT"
-check_blacklist "$PIPELINE"
+  while IFS= read -r line; do
+    for dependency in $BLACKLISTED_DEPENDENCIES; do
+      if [[ "$line" == *"$dependency"* ]]; then
+        echo "Found blacklisted dependency '$dependency' in file '$file'"
+        exit 2
+      fi
+    done
+  done < "$file"
+done
+echo "No blacklisted dependencies found."
 
 echo "Pulling LFS files..."
 git lfs pull
@@ -59,6 +57,8 @@ echo "Installing dependencies..."
 if ! [ -f "$VENV" ]; then
   python3.10 -m venv "$VENV"
 fi
+
+REQUIREMENTS="$SANDBOX_DIRECTORY/requirements.txt"
 
 if [ -f "$REQUIREMENTS" ]; then
   "$VENV/bin/pip" install -q -r "$REQUIREMENTS" -e "$SANDBOX_DIRECTORY"
