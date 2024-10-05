@@ -14,7 +14,7 @@ SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "setup_inferenc
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
-DEPENDENCY_BLACKLIST = Path("submission_tester/dependency_blacklist.txt")
+DEPENDENCY_BLACKLIST = abspath(Path(__file__).parent / "dependency_blacklist.txt")
 
 logger = logging.getLogger(__name__)
 
