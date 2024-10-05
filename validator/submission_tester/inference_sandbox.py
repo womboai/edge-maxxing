@@ -47,6 +47,7 @@ class InferenceSandbox(Generic[RequestT]):
         with open(DEPENDENCY_BLACKLIST, 'r') as f:
             blacklisted_dependencies = f.read().splitlines()
 
+        start_process = None
         try:
             start_process = run(
                 [
@@ -73,8 +74,9 @@ class InferenceSandbox(Generic[RequestT]):
                 else:
                     raise InvalidSubmissionError(f"Failed to setup sandbox: {e}")
         finally:
-            print(start_process.stdout)
-            print(start_process.stderr, file=sys.stderr)
+            if start_process:
+                print(start_process.stdout)
+                print(start_process.stderr, file=sys.stderr)
 
         self._file_size = sum(file.stat().st_size for file in self._sandbox_directory.rglob("*"))
 
