@@ -45,7 +45,7 @@ from .wandb_args import add_wandb_args
 VALIDATOR_VERSION = "3.4.0"
 WEIGHTS_VERSION = 34
 
-COLLECTED_SUBMISSIONS_VERSION = 2
+COLLECTED_SUBMISSIONS_VERSION = 1
 
 
 logger = get_logger(__name__)
