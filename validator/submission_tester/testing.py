@@ -1,5 +1,6 @@
 import logging
 from os import urandom
+from statistics import median
 from time import perf_counter
 
 from base_validator.metrics import CheckpointBenchmark, MetricData
@@ -96,7 +97,7 @@ def compare_checkpoints(contest: Contest, submission: ModelRepositoryInfo) -> Ch
 
     baseline_outputs: list[GenerationOutput] = []
 
-    min_similarity = 1.0
+    similarity_scores = []
 
     with InferenceSandbox(contest.baseline_repository, True) as baseline_sandbox:
         baseline_size = baseline_sandbox.model_size
@@ -129,14 +130,15 @@ def compare_checkpoints(contest: Contest, submission: ModelRepositoryInfo) -> Ch
 
             baseline_outputs.append(baseline)
 
-            if similarity < min_similarity:
-                min_similarity = similarity
+            similarity_scores.append(similarity)
 
     baseline_average_time = sum(output.generation_time for output in baseline_outputs) / len(baseline_outputs)
     baseline_vram_used = max(output.vram_used for output in baseline_outputs)
     baseline_watts_used = max(output.watts_used for output in baseline_outputs)
 
-    logger.info(f"Similarity Score: {min_similarity}")
+    similarity_score = median(similarity_scores) * 0.75 + min(similarity_scores) * 0.25
+
+    logger.info(f"Similarity Score: {similarity_score}")
 
     return CheckpointBenchmark(
         baseline=MetricData(
@@ -151,5 +153,5 @@ def compare_checkpoints(contest: Contest, submission: ModelRepositoryInfo) -> Ch
             vram_used=vram_used,
             watts_used=watts_used,
         ),
-        similarity_score=min_similarity,
+        similarity_score=similarity_score,
     )

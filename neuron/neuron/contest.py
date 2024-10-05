@@ -55,7 +55,7 @@ class ImageContestMixIn(Contest, ABC):
     device: str
 
     def compare_outputs(self, baseline: bytes, optimized: bytes) -> float:
-        from torch import Tensor
+        from torch import Tensor, manual_seed
         from torch.nn import Module, Sequential
         from torch.nn.functional import cosine_similarity
 
@@ -63,6 +63,8 @@ class ImageContestMixIn(Contest, ABC):
         from torchvision.transforms.functional import pil_to_tensor
 
         from PIL import Image
+
+        manual_seed(0)
 
         resnet_embed = Sequential(*list(resnet50().eval().children())[:-1]).to(self.device)
 
