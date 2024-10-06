@@ -29,7 +29,7 @@ git fetch --depth 1 origin "$FULL_REVISION"
 git checkout "$REVISION"
 
 echo "Checking for blacklisted dependencies..."
-find "$SANDBOX_DIRECTORY" -type f -print0 | while IFS= read -r -d '' file; do
+find "$SANDBOX_DIRECTORY" -type f -not -path '*/\.git/*' -print0 | while IFS= read -r -d '' file; do
   for dependency in $BLACKLISTED_DEPENDENCIES; do
      if [[ "$file" == *"$dependency"* ]]; then
        echo "Found blacklisted dependency '$dependency' in filename '$file'"
