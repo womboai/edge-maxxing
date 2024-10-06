@@ -14,6 +14,10 @@ SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "setup_inferenc
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
+DEPENDENCY_BLACKLIST = abspath(Path(__file__).parent / "dependency_blacklist.txt")
+
+with open(DEPENDENCY_BLACKLIST, 'r') as blacklist_file:
+    BLACKLISTED_DEPENDENCIES = " ".join(blacklist_file.read().splitlines())
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +47,7 @@ class InferenceSandbox(Generic[RequestT]):
 
         self._baseline = baseline
 
+        start_process = None
         try:
             start_process = run(
                 [
@@ -52,12 +57,11 @@ class InferenceSandbox(Generic[RequestT]):
                     repository_info.url,
                     repository_info.revision,
                     str(baseline).lower(),
+                    BLACKLISTED_DEPENDENCIES,
                 ],
                 capture_output=True,
                 encoding='utf-8',
             )
-            print(start_process.stdout)
-            print(start_process.stderr, file=sys.stderr)
             start_process.check_returncode()
 
         except CalledProcessError as e:
@@ -65,7 +69,14 @@ class InferenceSandbox(Generic[RequestT]):
                 self.clear_sandbox()
                 raise RuntimeError(f"Failed to setup baseline sandbox, cleared baseline sandbox directory: {e}")
             else:
-                raise InvalidSubmissionError(f"Failed to setup sandbox: {e}")
+                if e.returncode == 2:
+                    raise InvalidSubmissionError(f"Submission '{repository_info}' uses a blacklisted dependency. Skipping.")
+                else:
+                    raise InvalidSubmissionError(f"Failed to setup sandbox: {e}")
+        finally:
+            if start_process:
+                print(start_process.stdout)
+                print(start_process.stderr, file=sys.stderr)
 
         self._file_size = sum(file.stat().st_size for file in self._sandbox_directory.rglob("*"))
 
