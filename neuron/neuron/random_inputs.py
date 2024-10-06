@@ -10,7 +10,7 @@ nltk.download('averaged_perceptron_tagger_eng')
 from nltk.corpus import words
 from nltk import pos_tag
 
-BENCHMARK_SAMPLE_COUNT = 20
+BENCHMARK_SAMPLE_COUNT = 35
 INFERENCE_SOCKET_TIMEOUT = 200
 
 AVAILABLE_WORDS = [word for word, tag in pos_tag(words.words(), tagset='universal') if tag == "ADJ" or tag == "NOUN"]
