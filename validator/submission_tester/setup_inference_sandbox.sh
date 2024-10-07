@@ -18,14 +18,12 @@ if $($BASELINE) && [ -f "$READY_MARKER" ]; then
 else
   find "$SANDBOX_DIRECTORY" -mindepth 1 -delete
 
-  GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 --shallow-submodules "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
+  GIT_LFS_SKIP_SMUDGE=1 git clone --shallow-submodules "$REPOSITORY_URL" "$SANDBOX_DIRECTORY"
   if $($BASELINE); then
     touch "$READY_MARKER"
   fi
 fi
 
-FULL_REVISION=$(git rev-parse "$REVISION")
-git fetch --depth 1 origin "$FULL_REVISION"
 git checkout "$REVISION"
 
 echo "Checking for blacklisted dependencies..."
@@ -46,7 +44,6 @@ find "$SANDBOX_DIRECTORY" -type f -not -path '*/\.git/*' -print0 | while IFS= re
     done
   done < "$file"
 done
-echo "No blacklisted dependencies found."
 
 echo "Pulling LFS files..."
 git lfs pull
