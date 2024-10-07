@@ -25,15 +25,17 @@ def get_highest_uids(contestants: list[tuple[int, float]]) -> list[Uid]:
     if not contestants:
         return []
 
-    _, top_score = contestants[0]
+    _, last_score = contestants[0]
 
     for contestant in contestants:
         uid, score = contestant
 
-        if top_score > score * WINNER_SCORE_THRESHOLD:
+        if last_score > score * WINNER_SCORE_THRESHOLD:
             # No longer in top threshold
             break
         else:
             highest_uids.append(uid)
+
+        last_score = score
 
     return highest_uids
