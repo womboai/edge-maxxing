@@ -41,15 +41,13 @@ class InferenceSandbox(Generic[RequestT]):
         self._baseline = baseline
 
         try:
-            setup_sandbox(sandbox_args(self._user), self._sandbox_directory, baseline, repository_info.url,repository_info.revision)
+            self._file_size = setup_sandbox(sandbox_args(self._user), self._sandbox_directory, baseline, repository_info.url,repository_info.revision)
         except InvalidSubmissionError as e:
             if baseline:
                 self.clear_sandbox()
                 raise RuntimeError(f"Failed to setup baseline sandbox, cleared baseline sandbox directory") from e
             else:
                 raise e
-
-        self._file_size = sum(file.stat().st_size for file in self._sandbox_directory.rglob("*"))
 
         logger.info(f"Repository {repository_info} had size {self._file_size}")
 

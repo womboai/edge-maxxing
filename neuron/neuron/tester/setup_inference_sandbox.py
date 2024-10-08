@@ -44,7 +44,7 @@ def _run(script: str, sandbox_args: list[str], sandbox_directory: Path, args: li
             print(process.stderr, file=sys.stderr)
 
 
-def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bool, url: str, revision: str):
+def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bool, url: str, revision: str) -> int:
     start = perf_counter()
     logger.info(f"Cloning repository '{url}' with revision '{revision}'...")
     _run(
@@ -66,7 +66,7 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
             [BLACKLISTED_DEPENDENCIES],
             f"Found blacklisted dependency in repository '{url}'"
         )
-        logger.info(f"Found no blacklisted dependencies in {perf_counter() - start:.2f} seconds")
+        logger.info(f"Checked for blacklisted dependencies in {perf_counter() - start:.2f} seconds")
 
     start = perf_counter()
     logger.info(f"Pulling LFS files...")
@@ -79,6 +79,8 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
     )
     logger.info(f"Pulled LFS files in {perf_counter() - start:.2f} seconds")
 
+    file_size = sum(file.stat().st_size for file in sandbox_directory.rglob("*"))
+
     start = perf_counter()
     logger.info(f"Installing dependencies...")
     _run(
@@ -89,3 +91,5 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
         f"Failed to install dependencies from repository '{url}'"
     )
     logger.info(f"Installed dependencies in {perf_counter() - start:.2f} seconds")
+
+    return file_size
