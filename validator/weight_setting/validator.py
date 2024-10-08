@@ -15,7 +15,6 @@ from zoneinfo import ZoneInfo
 
 import numpy
 import wandb
-from base_validator.metrics import BenchmarkState, CheckpointBenchmark
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
@@ -24,8 +23,6 @@ from fiber.logging_utils import get_logger
 from substrateinterface import SubstrateInterface, Keypair
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
-from .benchmarking_api import BenchmarkingApi, benchmarking_api
-from .winner_selection import get_highest_uids, get_contestant_scores
 
 from neuron import (
     get_config,
@@ -37,16 +34,19 @@ from neuron import (
     Key,
     Uid,
     MinerModelInfo,
-    ModelRepositoryInfo,
+    generate_random_prompt,
+    random_seed, ModelRepositoryInfo,
 )
 from neuron.submissions import get_submission
+from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
+from .winner_selection import get_highest_uids, get_contestant_scores
+from ..base_validator.metrics import BenchmarkState, CheckpointBenchmark, BenchmarkingRequest
 
-VALIDATOR_VERSION = "3.5.0"
-WEIGHTS_VERSION = 35
+VALIDATOR_VERSION = "3.6.0"
+WEIGHTS_VERSION = 36
 
 COLLECTED_SUBMISSIONS_VERSION = 1
-
 
 logger = get_logger(__name__)
 
@@ -105,6 +105,8 @@ class Validator:
 
     benchmarks: list[CheckpointBenchmark | None]
     failed: set[int]
+    hash_prompt: str
+    hash_seed: int
     contest: Contest
 
     def __init__(self):
@@ -336,6 +338,8 @@ class Validator:
                     "hotkeys": self.hotkeys,
                     "benchmarks": self.benchmarks,
                     "failed": self.failed,
+                    "hash_prompt": self.hash_prompt,
+                    "hash_seed": self.hash_seed,
                     "last_day": self.last_day,
                     "contest_state": self.contest_state,
                     "benchmarking": self.benchmarking,
@@ -361,6 +365,8 @@ class Validator:
         self.hotkeys = state["hotkeys"]
         self.benchmarks = state.get("benchmarks", self.benchmarks)
         self.failed = state.get("failed", self.failed)
+        self.hash_prompt = state.get("hash_prompt", generate_random_prompt())
+        self.hash_seed = state.get("hash_seed", random_seed())
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
         self.benchmarking = state.get("benchmarking", self.benchmarking)
@@ -588,10 +594,16 @@ class Validator:
 
         await asyncio.gather(
             *[
-                api.start_benchmarking(dict(chunk))
+                api.start_benchmarking(
+                    BenchmarkingRequest(
+                        submissions=dict(chunk),
+                        hash_prompt=self.hash_prompt,
+                        hash_seed=self.hash_seed
+                    ),
+                )
                 for api, chunk in chunks
-            ]
-            )
+            ],
+        )
 
     def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         return self.send_submissions_to_api(self.benchmarking_apis, submissions)
@@ -734,8 +746,8 @@ class Validator:
             *[
                 api.state()
                 for api in self.benchmarking_apis
-            ]
-            )
+            ],
+        )
 
         by_state = {
             state: list(group)
@@ -837,8 +849,8 @@ class Validator:
                 *[
                     benchmarking_api(self.keypair, api, index)
                     for index, api in enumerate(self.benchmarking_api_urls)
-                ]
-                )
+                ],
+            )
         )
 
         while True:

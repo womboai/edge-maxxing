@@ -6,14 +6,12 @@ from asyncio import Task
 from collections.abc import Callable, Awaitable
 
 from aiohttp import ClientSession
-from base_validator import API_VERSION
-from base_validator.metrics import BenchmarkResults
 from fiber.logging_utils import get_logger
-from pydantic import RootModel
 from substrateinterface import Keypair
 from websockets import connect, ConnectionClosedError
 
-from neuron import Key, ModelRepositoryInfo
+from ..base_validator import API_VERSION
+from ..base_validator.metrics import BenchmarkResults, BenchmarkingRequest
 
 logger = get_logger(__name__)
 
@@ -57,7 +55,7 @@ class BenchmarkingApi:
 
         self._session = ClientSession()
 
-    async def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
+    async def start_benchmarking(self, submissions: BenchmarkingRequest):
         if self._task.done() and self._task.exception():
             logger.error("Error in log streaming", exc_info=self._task.exception())
 
@@ -69,15 +67,13 @@ class BenchmarkingApi:
 
         logger.info(f"Sending {submissions} for testing")
 
-        submissions_json = RootModel[dict[Key, ModelRepositoryInfo]](submissions).model_dump_json()
-
         request = self._session.post(
             f"{self._api}/start",
             headers={
                 "Content-Type": "application/json",
                 **_authentication_headers(self._keypair),
             },
-            data=submissions_json,
+            data=submissions.model_dump_json(),
         )
 
         async with request as state_response:
