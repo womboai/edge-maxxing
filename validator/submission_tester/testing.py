@@ -3,7 +3,6 @@ from os import urandom
 from time import perf_counter
 
 from base_validator.metrics import CheckpointBenchmark, MetricData
-from pipelines import TextToImageRequest
 
 from neuron import (
     Contest,
@@ -12,8 +11,10 @@ from neuron import (
     VRamMonitor,
     BENCHMARK_SAMPLE_COUNT,
     ModelRepositoryInfo,
+    InvalidSubmissionError,
 )
-from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
+from pipelines import TextToImageRequest
+from .inference_sandbox import InferenceSandbox
 
 logger = logging.getLogger(__name__)
 

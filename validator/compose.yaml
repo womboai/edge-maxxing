@@ -1,0 +1,46 @@
+services:
+  api-0:
+      build:
+        context: ../
+        dockerfile: ./validator/submission_tester/Dockerfile
+
+      volumes:
+        - ~/edge-maxxing/baseline-sandbox:/baseline-sandbox
+        - ~/edge-maxxing/pip:/home/sandbox/.cache/pip
+        - ~/edge-maxxing/lfs-cache:/home/sandbox/.cache/lfs-cache
+
+      ports:
+        - 127.0.0.1:8000:8000
+
+      environment:
+        VALIDATOR_HOTKEY_SS58_ADDRESS: $VALIDATOR_HOTKEY_SS58_ADDRESS
+        VALIDATOR_DEBUG: $VALIDATOR_DEBUG
+
+      deploy:
+        resources:
+          reservations:
+            devices:
+              - driver: nvidia
+                device_ids: [ '0' ]
+                capabilities: [ gpu ]
+
+  validator:
+      build:
+        context: ../
+        dockerfile: ./validator/weight_setting/Dockerfile
+      
+      volumes:
+        - ~/.bittensor:/home/validator/.bittensor
+        - ~/.netrc:/home/validator/.netrc
+
+      environment:
+        WANDB_API_KEY: $WANDB_API_KEY
+
+      command: --benchmarker_api http://localhost:8000 $VALIDATOR_ARGS
+      
+      network_mode: host
+      
+      depends_on:
+
+        api-0:
+          condition: service_healthy
