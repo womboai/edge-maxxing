@@ -55,7 +55,7 @@ class BenchmarkingApi:
 
         self._session = ClientSession()
 
-    async def start_benchmarking(self, submissions: BenchmarkingRequest):
+    async def start_benchmarking(self, request: BenchmarkingRequest):
         if self._task.done() and self._task.exception():
             logger.error("Error in log streaming", exc_info=self._task.exception())
 
@@ -65,7 +65,7 @@ class BenchmarkingApi:
 
             self._task = self._stream_logs()
 
-        logger.info(f"Sending {submissions} for testing")
+        logger.info(f"Sending {request.submissions} for testing")
 
         request = self._session.post(
             f"{self._api}/start",
@@ -73,7 +73,7 @@ class BenchmarkingApi:
                 "Content-Type": "application/json",
                 **_authentication_headers(self._keypair),
             },
-            data=submissions.model_dump_json(),
+            data=request.model_dump_json(),
         )
 
         async with request as state_response:
