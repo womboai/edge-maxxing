@@ -4,7 +4,7 @@ from base_validator.metrics import CheckpointBenchmark
 
 from neuron import Uid
 
-WINNER_SCORE_THRESHOLD = 1.05
+WINNERS_SCORE_THRESHOLD = 1.0225
 
 
 def get_contestant_scores(benchmarks: list[CheckpointBenchmark | None]):
@@ -25,17 +25,15 @@ def get_highest_uids(contestants: list[tuple[int, float]]) -> list[Uid]:
     if not contestants:
         return []
 
-    _, last_score = contestants[0]
+    _, top_score = contestants[0]
 
     for contestant in contestants:
         uid, score = contestant
 
-        if last_score > score * WINNER_SCORE_THRESHOLD:
+        if top_score > score * WINNERS_SCORE_THRESHOLD:
             # No longer in top threshold
             break
         else:
             highest_uids.append(uid)
-
-        last_score = score
 
     return highest_uids
