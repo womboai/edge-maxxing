@@ -2,6 +2,7 @@ import os
 import sys
 from os import urandom
 from random import sample, shuffle
+from zoneinfo import ZoneInfo
 
 import nltk
 
@@ -14,6 +15,7 @@ from nltk import pos_tag
 
 BENCHMARK_SAMPLE_COUNT = 35
 INFERENCE_SOCKET_TIMEOUT = 240
+TIMEZONE = ZoneInfo("US/Pacific")
 
 AVAILABLE_WORDS = [word for word, tag in pos_tag(words.words(), tagset='universal') if tag == "ADJ" or tag == "NOUN"]
 
