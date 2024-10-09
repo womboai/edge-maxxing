@@ -3,6 +3,8 @@ from collections.abc import Iterable
 from io import BytesIO
 from time import perf_counter
 
+from base_validator.hash import load_image_hash, save_image_hash, HASH_DIFFERENCE_THRESHOLD
+from base_validator.metrics import CheckpointBenchmark, MetricData
 import imagehash
 from PIL import Image
 
@@ -11,12 +13,15 @@ from neuron import (
     generate_random_prompt,
     VRamMonitor,
     BENCHMARK_SAMPLE_COUNT,
-    ModelRepositoryInfo, random_seed, CURRENT_CONTEST, Key,
+    ModelRepositoryInfo,
+    InvalidSubmissionError,
+    ModelRepositoryInfo,
+    random_seed,
+    CURRENT_CONTEST,
+    Key,
 )
 from pipelines import TextToImageRequest
 from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
-from base_validator.hash import load_image_hash, save_image_hash, HASH_DIFFERENCE_THRESHOLD
-from base_validator.metrics import CheckpointBenchmark, MetricData
 
 logger = logging.getLogger(__name__)
 
