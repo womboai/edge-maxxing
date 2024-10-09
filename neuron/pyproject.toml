@@ -38,6 +38,13 @@ GitPython = "3.1.43"
 nltk = "3.9.1"
 torch = "2.4.1"
 pynvml = "11.5.3"
+diffusers = "0.30.3"
+transformers = "4.44.2"
+accelerate = "0.34.2"
+omegaconf = "2.3.0"
+torchvision = "0.19.1"
+scikit-image = "0.24.0"
+opencv-python = "4.10.0.84"
 edge-maxxing-pipelines = { path = "../pipelines", develop = true }
 
 [tool.poetry.dev-dependencies]
