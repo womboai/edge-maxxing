@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 import time
+from io import TextIOWrapper
 from multiprocessing.connection import Client
 from os.path import abspath
 from pathlib import Path
@@ -94,8 +95,8 @@ class InferenceSandbox(Generic[RequestT]):
             text=True,
         )
 
-        Thread(target=self._stream_stdout_logs, daemon=True).start()
-        Thread(target=self._stream_stderr_logs, daemon=True).start()
+        Thread(target=self._stream_logs, args=(self._process.stdout, "STDOUT", sys.stdout), daemon=True).start()
+        Thread(target=self._stream_logs, args=(self._process.stderr, "STDERR", sys.stderr), daemon=True).start()
 
         logger.info(f"Inference process starting")
         socket_path = abspath(self._sandbox_directory / "inferences.sock")
@@ -176,13 +177,10 @@ class InferenceSandbox(Generic[RequestT]):
 
         return self._client.recv_bytes()
 
-    def _stream_stdout_logs(self):
-        for line in iter(self._process.stdout.readline, ""):
-            print(f"[INFERENCE - STDOUT] {line}", end="")
-
-    def _stream_stderr_logs(self):
-        for line in iter(self._process.stderr.readline, ""):
-            print(f"[INFERENCE - STDERR] {line}", end="", file=sys.stderr)
+    @staticmethod
+    def _stream_logs(stream: TextIOWrapper, prefix: str, output_stream: TextIOWrapper):
+        for line in iter(stream.readline, ""):
+            print(f"[INFERENCE - {prefix}] {line}", end="", file=output_stream)
 
     @property
     def model_size(self):
