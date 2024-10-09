@@ -4,7 +4,6 @@ from io import BytesIO
 from time import perf_counter
 
 import imagehash
-from safetensors import numpy
 from PIL import Image
 
 from neuron import (

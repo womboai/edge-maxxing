@@ -9,9 +9,8 @@ from time import perf_counter
 from zoneinfo import ZoneInfo
 
 from neuron import Key
-from validator.base_validator.metrics import BenchmarkingRequest
 from .testing import compare_checkpoints
-from ..base_validator.metrics import CheckpointBenchmark
+from ..base_validator.metrics import BenchmarkingRequest, CheckpointBenchmark
 
 logger = logging.getLogger(__name__)
 
