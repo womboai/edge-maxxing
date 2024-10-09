@@ -41,8 +41,8 @@ from neuron.submissions import get_submission
 from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_highest_uids, get_contestant_scores
-from validator.base_validator.hash import load_image_hash, HASH_DIFFERENCE_THRESHOLD
-from validator.base_validator.metrics import BenchmarkState, CheckpointBenchmark, BenchmarkingRequest
+from base_validator.hash import load_image_hash, HASH_DIFFERENCE_THRESHOLD
+from base_validator.metrics import BenchmarkState, CheckpointBenchmark, BenchmarkingRequest
 
 VALIDATOR_VERSION = "3.6.0"
 WEIGHTS_VERSION = 36

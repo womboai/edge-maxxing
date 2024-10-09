@@ -10,8 +10,8 @@ from fiber.logging_utils import get_logger
 from substrateinterface import Keypair
 from websockets import connect, ConnectionClosedError
 
-from validator.base_validator import API_VERSION
-from validator.base_validator.metrics import BenchmarkResults, BenchmarkingRequest
+from base_validator import API_VERSION
+from base_validator.metrics import BenchmarkResults, BenchmarkingRequest
 
 logger = get_logger(__name__)
 

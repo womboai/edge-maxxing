@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 
 from neuron import Key
 from .testing import compare_checkpoints
-from validator.base_validator.metrics import BenchmarkingRequest, CheckpointBenchmark
+from base_validator.metrics import BenchmarkingRequest, CheckpointBenchmark
 
 logger = logging.getLogger(__name__)
 
