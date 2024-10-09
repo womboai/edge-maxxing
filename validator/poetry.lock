@@ -1160,16 +1160,6 @@ files = [
 all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2)"]
 
 [[package]]
-name = "imageio"
-version = "2.35.1"
-description = "Library for reading and writing a wide range of image, video, scientific, and volumetric data formats."
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "imageio-2.35.1-py3-none-any.whl", hash = "sha256:6eb2e5244e7a16b85c10b5c2fe0f7bf961b40fcb9f1a9fd1bd1d2c2f8fb3cd65"},
-    {file = "imageio-2.35.1.tar.gz", hash = "sha256:4952dfeef3c3947957f6d5dedb1f4ca31c6e509a476891062396834048aeed2a"},
-]
-[[package]]
 name = "imagehash"
 version = "4.3.1"
 description = "Image Hashing library"
@@ -1178,6 +1168,23 @@ python-versions = "*"
 files = [
     {file = "ImageHash-4.3.1-py2.py3-none-any.whl", hash = "sha256:5ad9a5cde14fe255745a8245677293ac0d67f09c330986a351f34b614ba62fb5"},
     {file = "ImageHash-4.3.1.tar.gz", hash = "sha256:7038d1b7f9e0585beb3dd8c0a956f02b95a346c0b5f24a9e8cc03ebadaf0aa70"},
+]
+
+[package.dependencies]
+numpy = "*"
+pillow = "*"
+PyWavelets = "*"
+scipy = "*"
+
+[[package]]
+name = "imageio"
+version = "2.35.1"
+description = "Library for reading and writing a wide range of image, video, scientific, and volumetric data formats."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "imageio-2.35.1-py3-none-any.whl", hash = "sha256:6eb2e5244e7a16b85c10b5c2fe0f7bf961b40fcb9f1a9fd1bd1d2c2f8fb3cd65"},
+    {file = "imageio-2.35.1.tar.gz", hash = "sha256:4952dfeef3c3947957f6d5dedb1f4ca31c6e509a476891062396834048aeed2a"},
 ]
 
 [package.dependencies]
@@ -1201,9 +1208,6 @@ pyav = ["av"]
 rawpy = ["numpy (>2)", "rawpy"]
 test = ["fsspec[github]", "pytest", "pytest-cov"]
 tifffile = ["tifffile"]
-pillow = "*"
-PyWavelets = "*"
-scipy = "*"
 
 [[package]]
 name = "importlib-metadata"
@@ -4094,4 +4098,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "99c90428827014ac43c817e8bedbd782b547eee3a395356559d0dc3c2d0e25c6"
+content-hash = "9e4e60122afd673cb21ad7f4482ae6e19a17924c3560f2cc06554c03a3c7ed0b"
