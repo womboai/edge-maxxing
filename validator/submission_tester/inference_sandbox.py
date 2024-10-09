@@ -5,19 +5,19 @@ import time
 from multiprocessing.connection import Client
 from os.path import abspath
 from pathlib import Path
-from subprocess import Popen, run, TimeoutExpired, CalledProcessError
+from subprocess import Popen, run, TimeoutExpired
 from typing import Generic
 
-from neuron import RequestT, INFERENCE_SOCKET_TIMEOUT, ModelRepositoryInfo
-
-SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent / "setup_inference_sandbox.sh")
+from neuron import (
+    RequestT,
+    INFERENCE_SOCKET_TIMEOUT,
+    ModelRepositoryInfo,
+    setup_sandbox,
+    InvalidSubmissionError,
+)
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
-DEPENDENCY_BLACKLIST = abspath(Path(__file__).parent / "dependency_blacklist.txt")
-
-with open(DEPENDENCY_BLACKLIST, 'r') as blacklist_file:
-    BLACKLISTED_DEPENDENCIES = " ".join(blacklist_file.read().splitlines())
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +30,6 @@ def sandbox_args(user: str):
     ]
 
 
-class InvalidSubmissionError(Exception):
-    ...
-
-
 class InferenceSandbox(Generic[RequestT]):
     _repository: ModelRepositoryInfo
 
@@ -41,44 +37,17 @@ class InferenceSandbox(Generic[RequestT]):
     _process: Popen
 
     def __init__(self, repository_info: ModelRepositoryInfo, baseline: bool):
-        logger.info(f"Downloading {repository_info}")
-
         self._repository = repository_info
-
         self._baseline = baseline
 
-        start_process = None
         try:
-            start_process = run(
-                [
-                    *sandbox_args(self._user),
-                    SETUP_INFERENCE_SANDBOX_SCRIPT,
-                    self._sandbox_directory,
-                    repository_info.url,
-                    repository_info.revision,
-                    str(baseline).lower(),
-                    BLACKLISTED_DEPENDENCIES,
-                ],
-                capture_output=True,
-                encoding='utf-8',
-            )
-            start_process.check_returncode()
-
-        except CalledProcessError as e:
+            self._file_size = setup_sandbox(sandbox_args(self._user), self._sandbox_directory, baseline, repository_info.url,repository_info.revision)
+        except InvalidSubmissionError as e:
             if baseline:
                 self.clear_sandbox()
-                raise RuntimeError(f"Failed to setup baseline sandbox, cleared baseline sandbox directory: {e}")
+                raise RuntimeError(f"Failed to setup baseline sandbox, cleared baseline sandbox directory") from e
             else:
-                if e.returncode == 2:
-                    raise InvalidSubmissionError(f"Submission '{repository_info}' uses a blacklisted dependency. Skipping.")
-                else:
-                    raise InvalidSubmissionError(f"Failed to setup sandbox: {e}")
-        finally:
-            if start_process:
-                print(start_process.stdout)
-                print(start_process.stderr, file=sys.stderr)
-
-        self._file_size = sum(file.stat().st_size for file in self._sandbox_directory.rglob("*"))
+                raise e
 
         logger.info(f"Repository {repository_info} had size {self._file_size}")
 
@@ -104,7 +73,12 @@ class InferenceSandbox(Generic[RequestT]):
             raise InvalidSubmissionError(f"Socket file '{socket_path}' not found after {INFERENCE_SOCKET_TIMEOUT} seconds.")
 
         logger.info(f"Connecting to socket")
-        self._client = Client(socket_path)
+        try:
+            self._client = Client(socket_path)
+        except ConnectionRefusedError as e:
+            if baseline:
+                self.clear_sandbox()
+                raise InvalidSubmissionError(f"Failed to connect to socket, cleared baseline sandbox directory") from e
 
     @property
     def _user(self) -> str:

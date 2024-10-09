@@ -1,13 +1,11 @@
 import os
-import sys
 from multiprocessing.connection import Client
 from os.path import abspath
 from pathlib import Path
-from subprocess import run, Popen
+from subprocess import Popen
 from time import sleep, perf_counter
 
 from fiber.logging_utils import get_logger
-from pipelines import TextToImageRequest
 
 from neuron import (
     CheckpointSubmission,
@@ -19,11 +17,12 @@ from neuron import (
     VRamMonitor,
     INFERENCE_SOCKET_TIMEOUT,
     BENCHMARK_SAMPLE_COUNT,
+    setup_sandbox,
+    random_seed,
 )
+from pipelines import TextToImageRequest
 
 MODEL_DIRECTORY = Path("model")
-SETUP_INFERENCE_SANDBOX_SCRIPT = abspath(Path(__file__).parent.parent.parent / "validator/submission_tester/setup_inference_sandbox.sh")
-
 
 logger = get_logger(__name__)
 
@@ -40,7 +39,7 @@ def wait_for_socket(socket_path: str, process: Popen):
         if process.returncode:
             raise RuntimeError(f"Model crashed with exit code {process.returncode}")
     else:
-        raise RuntimeError(f"Socket file '{socket_path}' not found after {safe_timeout} seconds. Your pipeline is taking too long to load. Please optimize and and make sure to precompile anything.")
+        raise RuntimeError(f"Socket file '{socket_path}' not found after {safe_timeout} seconds. Your pipeline is taking too long to load. Please optimize and avoid precompiling if possible.")
 
 
 def test(contest: Contest, client: Client):
@@ -77,7 +76,7 @@ def benchmark(contest: Contest, client: Client):
     start = perf_counter()
 
     prompt = generate_random_prompt()
-    seed = int.from_bytes(os.urandom(4), "little")
+    seed = random_seed()
 
     request = TextToImageRequest(
         prompt=prompt,
@@ -111,18 +110,7 @@ def start_benchmarking(submission: CheckpointSubmission):
     if not MODEL_DIRECTORY.exists():
         MODEL_DIRECTORY.mkdir()
 
-    run(
-        [
-            SETUP_INFERENCE_SANDBOX_SCRIPT,
-            MODEL_DIRECTORY.absolute(),
-            submission.get_repo_link(),
-            submission.revision,
-            "true",
-        ],
-        stdout=sys.stdout,
-        stderr=sys.stderr,
-        check=True,
-    )
+    setup_sandbox([], MODEL_DIRECTORY, True, submission.get_repo_link(), submission.revision)
 
     socket_path = abspath(MODEL_DIRECTORY / "inferences.sock")
 

@@ -2,7 +2,7 @@ from enum import Enum
 
 from pydantic import BaseModel
 
-from neuron import Key
+from neuron import Key, ModelRepositoryInfo
 
 
 class MetricData(BaseModel):
@@ -16,9 +16,16 @@ class CheckpointBenchmark(BaseModel):
     baseline: MetricData
     model: MetricData
     similarity_score: float
+    image_hash: bytes
 
     def calculate_score(self) -> float:
         return (self.baseline.generation_time - self.model.generation_time) * self.similarity_score
+
+
+class BenchmarkingRequest(BaseModel):
+    submissions: dict[Key, ModelRepositoryInfo]
+    hash_prompt: str
+    hash_seed: int
 
 
 class BenchmarkState(Enum):
