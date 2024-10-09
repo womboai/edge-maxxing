@@ -8,8 +8,8 @@ from threading import Lock
 from time import perf_counter
 from zoneinfo import ZoneInfo
 
-from neuron import CURRENT_CONTEST, Key
-from validator.base_validator.metrics import BenchmarkingRequest
+from neuron import Key
+from validator.base_validator.metrics import BenchmarkingRequest, DuplicateBenchmark
 from .testing import compare_checkpoints
 from ..base_validator.metrics import CheckpointBenchmark
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class Benchmarker:
     request: BenchmarkingRequest | None
-    benchmarks: dict[Key, CheckpointBenchmark | None]
+    benchmarks: dict[Key, CheckpointBenchmark | DuplicateBenchmark | None]
     started: bool
     done: bool
     start_timestamp: int
@@ -38,17 +38,11 @@ class Benchmarker:
     def _benchmark_key(self, hotkey: Key):
         submission = self.request.submissions[hotkey]
 
-        hashes = [
-            benchmark.fingerprint
-            for benchmark in self.benchmarks.values()
-            if benchmark
-        ]
-
         try:
             start_time = perf_counter()
             benchmark = compare_checkpoints(
                 submission,
-                self.benchmarks.values(),
+                self.benchmarks.items(),
                 self.request.hash_prompt,
                 self.request.hash_seed,
             )

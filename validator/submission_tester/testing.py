@@ -58,7 +58,7 @@ def generate(
 
 def compare_checkpoints(
     submission: ModelRepositoryInfo,
-    existing_benchmarks: Iterable[tuple[Key, CheckpointBenchmark]],
+    existing_benchmarks: Iterable[tuple[Key, CheckpointBenchmark | DuplicateBenchmark | None]],
     hash_prompt: str,
     hash_seed: int,
 ) -> CheckpointBenchmark | DuplicateBenchmark | None:

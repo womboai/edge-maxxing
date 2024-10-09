@@ -41,5 +41,5 @@ class BenchmarkState(Enum):
 
 class BenchmarkResults(BaseModel):
     state: BenchmarkState
-    results: dict[Key, CheckpointBenchmark | None]
+    results: dict[Key, CheckpointBenchmark | DuplicateBenchmark | None]
     average_benchmark_time: float | None
