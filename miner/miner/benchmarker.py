@@ -29,7 +29,9 @@ logger = get_logger(__name__)
 
 
 def wait_for_socket(socket_path: str, process: Popen):
-    for _ in range(INFERENCE_SOCKET_TIMEOUT):
+    safe_timeout = int(INFERENCE_SOCKET_TIMEOUT / 1.5)
+
+    for _ in range(safe_timeout):
         if os.path.exists(socket_path):
             break
 
@@ -38,7 +40,7 @@ def wait_for_socket(socket_path: str, process: Popen):
         if process.returncode:
             raise RuntimeError(f"Model crashed with exit code {process.returncode}")
     else:
-        raise RuntimeError(f"Socket file '{socket_path}' not found after {INFERENCE_SOCKET_TIMEOUT} seconds. Your pipeline is taking too long to load. Please optimize and and make sure to precompile anything.")
+        raise RuntimeError(f"Socket file '{socket_path}' not found after {safe_timeout} seconds. Your pipeline is taking too long to load. Please optimize and and make sure to precompile anything.")
 
 
 def test(contest: Contest, client: Client):

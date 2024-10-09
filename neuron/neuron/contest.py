@@ -50,7 +50,6 @@ class Contest(ABC):
         ...
 
 
-@abstractmethod
 class ImageContestMixIn(Contest, ABC):
     device: str
 
@@ -92,7 +91,7 @@ class ImageContestMixIn(Contest, ABC):
             dim=0,
         )).item()
 
-        return (resnet_similarity ** 1024 * 0.9) + (flat_similarity ** 16 * 0.1)
+        return resnet_similarity * 0.5 + flat_similarity * 0.5
 
 
 class CudaContest(ImageContestMixIn, Contest):
