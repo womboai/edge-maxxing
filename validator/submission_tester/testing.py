@@ -85,7 +85,7 @@ def compare_checkpoints(
 
                 match = next(
                     (
-                        existing_benchmark
+                        (key, existing_benchmark)
                         for key, existing_benchmark in existing_benchmarks
                         if image_hash - load_image_hash(existing_benchmark.image_hash) < HASH_DIFFERENCE_THRESHOLD
                     ),
