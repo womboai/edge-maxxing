@@ -356,6 +356,9 @@ class Validator:
         path = self.state_path
 
         if not isfile(path):
+            self.hash_prompt = generate_random_prompt()
+            self.hash_seed = random_seed()
+
             return
 
         # Load the state of the validator from file.
