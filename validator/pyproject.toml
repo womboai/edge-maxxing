@@ -35,11 +35,6 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 wandb = "0.18.1"
-diffusers = "0.30.3"
-transformers = "4.44.2"
-accelerate = "0.34.2"
-omegaconf = "2.3.0"
-torchvision = "0.19.1"
 websockets = "13.1"
 aiohttp = "3.10.6"
 ImageHash = "4.3.1"

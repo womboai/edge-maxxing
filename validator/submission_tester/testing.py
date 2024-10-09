@@ -1,4 +1,6 @@
 import logging
+from os import urandom
+from statistics import mean
 from collections.abc import Iterable
 from io import BytesIO
 from time import perf_counter
@@ -145,8 +147,6 @@ def compare_checkpoints(
 
     baseline_outputs: list[GenerationOutput] = []
 
-    average_similarity = 1.0
-
     with InferenceSandbox(CURRENT_CONTEST.baseline_repository, True) as baseline_sandbox:
         baseline_size = baseline_sandbox.model_size
 
@@ -157,29 +157,34 @@ def compare_checkpoints(
                 output.seed,
             )
 
-            try:
-                similarity = CURRENT_CONTEST.compare_outputs(output.output, baseline.output)
-            except:
-                logger.info(
-                    f"Submission {submission.repository}'s output couldn't be compared in similarity",
-                    exc_info=True,
-                )
-
-                similarity = 0.0
-
             logger.info(
                 f"Baseline sample {i + 1} Generated\n"
                 f"Generation Time: {baseline.generation_time}s\n"
-                f"Similarity: {similarity}\n"
                 f"VRAM Usage: {baseline.vram_used}b\n"
                 f"Power Usage: {baseline.watts_used}W"
             )
 
             baseline_outputs.append(baseline)
 
-            average_similarity = (average_similarity * i + similarity) / (i + 1)
+    comparator = CURRENT_CONTEST.output_comparator()
 
-    baseline_average_time = sum(output.generation_time for output in baseline_outputs) / len(baseline_outputs)
+    def calculate_similarity(baseline_output: GenerationOutput, optimized_output: GenerationOutput):
+        try:
+            return comparator(baseline_output.output, optimized_output.output)
+        except:
+            logger.info(
+                f"Submission {submission.repository}'s output couldn't be compared in similarity",
+                exc_info=True,
+            )
+
+            return 0.0
+
+    average_similarity = mean(
+        calculate_similarity(baseline_output, output)
+        for baseline_output, output in zip(baseline_outputs, outputs)
+    )
+
+    baseline_average_time = mean(output.generation_time for output in baseline_outputs)
     baseline_vram_used = max(output.vram_used for output in baseline_outputs)
     baseline_watts_used = max(output.watts_used for output in baseline_outputs)
 

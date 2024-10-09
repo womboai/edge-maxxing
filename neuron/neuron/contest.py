@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
 from enum import Enum
+from functools import partial
 from io import BytesIO
-from typing import TypeVar
+from typing import TypeVar, Callable
 
 from pydantic import BaseModel
+from transformers import CLIPProcessor, CLIPVisionModelWithProjection
 
 RequestT = TypeVar("RequestT", bound=BaseModel)
 ResponseT = TypeVar("ResponseT")
@@ -20,17 +22,74 @@ class ContestId(Enum):
     FLUX_NVIDIA_4090 = 2
 
 
+class OutputComparator(ABC):
+    @abstractmethod
+    def compare(self, baseline: bytes, optimized: bytes) -> float:
+        pass
+
+    __call__ = compare
+
+
+class ImageOutputComparator(OutputComparator):
+    def __init__(self, device: str):
+        self.device = device
+        self.clip = CLIPVisionModelWithProjection.from_pretrained("laion/CLIP-ViT-bigG-14-laiofn2B-39B-b160k").to(self.device)
+        self.processor = CLIPProcessor.from_pretrained("laion/CLIP-ViT-bigG-14-laion2B-39B-b160k")
+
+    def compare(self, baseline: bytes, optimized: bytes):
+        from torch import manual_seed
+        from torch.nn.functional import cosine_similarity
+
+        from PIL import Image
+
+        from skimage import metrics
+        import cv2
+
+        import numpy
+
+        manual_seed(0)
+
+        def load_image(data: bytes):
+            with BytesIO(data) as fp:
+                return numpy.array(Image.open(fp).convert("RGB"))
+
+        def clip_embeddings(image: numpy.ndarray):
+            processed_input = self.processor(images=image, return_tensors="pt")
+
+            return self.clip(**processed_input).to(self.device).image_embeds
+
+        baseline_array = load_image(baseline)
+        optimized_array = load_image(optimized)
+
+        grayscale_baseline = cv2.cvtColor(baseline_array, cv2.COLOR_RGB2GRAY)
+        grayscale_optimized = cv2.cvtColor(optimized_array, cv2.COLOR_RGB2GRAY)
+
+        structural_similarity = metrics.structural_similarity(grayscale_baseline, grayscale_optimized, full=True)[0]
+
+        del grayscale_baseline
+        del grayscale_optimized
+
+        baseline_embeddings = clip_embeddings(baseline_array)
+        optimized_embeddings = clip_embeddings(optimized_array)
+
+        clip_similarity = cosine_similarity(baseline_embeddings, optimized_embeddings)[0].item()
+
+        return clip_similarity * 0.35 + structural_similarity * 0.65
+
+
 class Contest(ABC):
     id: ContestId
+    output_comparator: Callable[[], OutputComparator]
     baseline_repository: ModelRepositoryInfo
-    device_name: str | None
 
     def __init__(
         self,
         contest_id: ContestId,
+        output_comparator: Callable[[], OutputComparator],
         baseline_repository: ModelRepositoryInfo,
     ):
         self.id = contest_id
+        self.output_comparator = output_comparator
         self.baseline_repository = baseline_repository
 
     @abstractmethod
@@ -45,66 +104,15 @@ class Contest(ABC):
     def validate(self) -> None:
         ...
 
-    @abstractmethod
-    def compare_outputs(self, baseline: bytes, optimized: bytes) -> float:
-        ...
 
-
-@abstractmethod
-class ImageContestMixIn(Contest, ABC):
-    device: str
-
-    def compare_outputs(self, baseline: bytes, optimized: bytes) -> float:
-        from torch import Tensor, manual_seed
-        from torch.nn import Module, Sequential
-        from torch.nn.functional import cosine_similarity
-
-        from torchvision.models import resnet50, ResNet50_Weights
-        from torchvision.transforms.functional import pil_to_tensor
-
-        from PIL import Image
-
-        manual_seed(0)
-
-        resnet_embed = Sequential(*list(resnet50().eval().children())[:-1]).to(self.device)
-
-        transform: Module = ResNet50_Weights.DEFAULT.transforms()
-        transform = transform.to(self.device)
-
-        def load_image(data: bytes):
-            with BytesIO(data) as fp:
-                return pil_to_tensor(Image.open(fp)).to(self.device)
-
-        def resnet_embed_image(tensor: Tensor):
-            return resnet_embed(transform(tensor).unsqueeze(0))
-
-        baseline_tensor = load_image(baseline)
-        optimized_tensor = load_image(optimized)
-
-        resnet_similarity = cosine_similarity(
-            resnet_embed_image(baseline_tensor),
-            resnet_embed_image(optimized_tensor),
-        ).flatten().item()
-
-        flat_similarity = (cosine_similarity(
-            (baseline_tensor / 255.0).flatten(),
-            (optimized_tensor / 255.0).flatten(),
-            dim=0,
-        )).item()
-
-        return (resnet_similarity ** 1024 * 0.9) + (flat_similarity ** 16 * 0.1)
-
-
-class CudaContest(ImageContestMixIn, Contest):
-    device = "cuda"
-
+class CudaContest(Contest):
     def __init__(
         self,
         contest_id: ContestId,
         baseline_repository: ModelRepositoryInfo,
         expected_device_name: str,
     ):
-        super().__init__(contest_id, baseline_repository)
+        super().__init__(contest_id, partial(ImageOutputComparator, "cuda"), baseline_repository)
 
         self.expected_device_name = expected_device_name
 
@@ -131,7 +139,7 @@ class CudaContest(ImageContestMixIn, Contest):
     def validate(self):
         import torch
 
-        device_name = torch.cuda.get_device_name(self.device)
+        device_name = torch.cuda.get_device_name()
 
         if device_name != self.expected_device_name:
             raise ContestDeviceValidationError(
@@ -139,8 +147,13 @@ class CudaContest(ImageContestMixIn, Contest):
             )
 
 
-class AppleSiliconContest(ImageContestMixIn, Contest):
-    device = "mps"
+class AppleSiliconContest(Contest):
+    def __init__(
+        self,
+        contest_id: ContestId,
+        baseline_repository: ModelRepositoryInfo,
+    ):
+        super().__init__(contest_id, partial(ImageOutputComparator, "mps"), baseline_repository)
 
     def get_vram_used(self):
         import torch
