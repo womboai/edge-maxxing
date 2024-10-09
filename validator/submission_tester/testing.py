@@ -15,8 +15,8 @@ from neuron import (
 )
 from pipelines import TextToImageRequest
 from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
-from ..base_validator.hash import load_image_hash, save_image_hash, HASH_DIFFERENCE_THRESHOLD
-from ..base_validator.metrics import CheckpointBenchmark, MetricData
+from validator.base_validator.hash import load_image_hash, save_image_hash, HASH_DIFFERENCE_THRESHOLD
+from validator.base_validator.metrics import CheckpointBenchmark, MetricData
 
 logger = logging.getLogger(__name__)
 
