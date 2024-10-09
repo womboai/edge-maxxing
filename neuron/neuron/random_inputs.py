@@ -1,3 +1,5 @@
+import os
+import sys
 from os import urandom
 from random import sample, shuffle
 
@@ -21,3 +23,7 @@ def generate_random_prompt():
     shuffle(sampled_words)
 
     return ", ".join(sampled_words)
+
+
+def random_seed():
+    return int.from_bytes(os.urandom(4), sys.byteorder)
