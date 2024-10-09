@@ -2,11 +2,13 @@ import logging
 import os
 import sys
 import time
+from io import TextIOWrapper
 from multiprocessing.connection import Client
 from os.path import abspath
 from pathlib import Path
-from subprocess import Popen, run, TimeoutExpired
+from subprocess import Popen, run, TimeoutExpired, CalledProcessError, PIPE
 from typing import Generic
+from threading import Thread
 
 from neuron import (
     RequestT,
@@ -57,7 +59,13 @@ class InferenceSandbox(Generic[RequestT]):
                 abspath(self._sandbox_directory / ".venv" / "bin" / "start_inference")
             ],
             cwd=self._sandbox_directory,
+            stdout=PIPE,
+            stderr=PIPE,
+            text=True,
         )
+
+        Thread(target=self._stream_logs, args=(self._process.stdout, "STDOUT", sys.stdout), daemon=True).start()
+        Thread(target=self._stream_logs, args=(self._process.stderr, "STDERR", sys.stderr), daemon=True).start()
 
         logger.info(f"Inference process starting")
         socket_path = abspath(self._sandbox_directory / "inferences.sock")
@@ -142,6 +150,11 @@ class InferenceSandbox(Generic[RequestT]):
         self._client.send_bytes(data)
 
         return self._client.recv_bytes()
+
+    @staticmethod
+    def _stream_logs(stream: TextIOWrapper, prefix: str, output_stream: TextIOWrapper):
+        for line in iter(stream.readline, ""):
+            print(f"[INFERENCE - {prefix}] {line}", end="", file=output_stream)
 
     @property
     def model_size(self):
