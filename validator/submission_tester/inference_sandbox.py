@@ -5,8 +5,9 @@ import time
 from multiprocessing.connection import Client
 from os.path import abspath
 from pathlib import Path
-from subprocess import Popen, run, TimeoutExpired, CalledProcessError
+from subprocess import Popen, run, TimeoutExpired, CalledProcessError, PIPE
 from typing import Generic
+from threading import Thread
 
 from neuron import RequestT, INFERENCE_SOCKET_TIMEOUT, ModelRepositoryInfo
 
@@ -88,7 +89,13 @@ class InferenceSandbox(Generic[RequestT]):
                 abspath(self._sandbox_directory / ".venv" / "bin" / "start_inference")
             ],
             cwd=self._sandbox_directory,
+            stdout=PIPE,
+            stderr=PIPE,
+            text=True,
         )
+
+        Thread(target=self._stream_stdout_logs, daemon=True).start()
+        Thread(target=self._stream_stderr_logs, daemon=True).start()
 
         logger.info(f"Inference process starting")
         socket_path = abspath(self._sandbox_directory / "inferences.sock")
@@ -168,6 +175,14 @@ class InferenceSandbox(Generic[RequestT]):
         self._client.send_bytes(data)
 
         return self._client.recv_bytes()
+
+    def _stream_stdout_logs(self):
+        for line in iter(self._process.stdout.readline, ""):
+            print(f"[INFERENCE - STDOUT] {line}", end="")
+
+    def _stream_stderr_logs(self):
+        for line in iter(self._process.stderr.readline, ""):
+            print(f"[INFERENCE - STDERR] {line}", end="", file=sys.stderr)
 
     @property
     def model_size(self):
