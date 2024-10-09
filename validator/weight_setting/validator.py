@@ -116,7 +116,7 @@ class Validator:
         from .diagnostics import save_validator_diagnostics
         save_validator_diagnostics(self.config)
 
-        logger.info("Setting up bittensor objects")
+        logger.info(f"Validator version {VALIDATOR_VERSION}! Loading...")
 
         self.substrate = get_substrate(
             subtensor_network=self.config["subtensor.network"],
