@@ -60,3 +60,6 @@ class MinerModelInfo:
     def __init__(self, repository: ModelRepositoryInfo, block: int):
         self.repository = repository
         self.block = block
+
+    def __repr__(self):
+        return f"MinerModelInfo(repository={repr(self.repository)}, block={self.block})"

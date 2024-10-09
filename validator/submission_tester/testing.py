@@ -1,37 +1,55 @@
 import logging
 from os import urandom
+from statistics import mean
+from collections.abc import Iterable
+from io import BytesIO
 from time import perf_counter
 
+from base_validator.hash import load_image_hash, save_image_hash, HASH_DIFFERENCE_THRESHOLD
 from base_validator.metrics import CheckpointBenchmark, MetricData
-from pipelines import TextToImageRequest
+import imagehash
+from PIL import Image
 
 from neuron import (
-    Contest,
     GenerationOutput,
     generate_random_prompt,
     VRamMonitor,
     BENCHMARK_SAMPLE_COUNT,
     ModelRepositoryInfo,
+    InvalidSubmissionError,
+    ModelRepositoryInfo,
+    random_seed,
+    CURRENT_CONTEST,
+    Key,
 )
+from pipelines import TextToImageRequest
 from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
 
 logger = logging.getLogger(__name__)
 
 
-def generate(contest: Contest, container: InferenceSandbox, prompt: str, seed: int) -> GenerationOutput:
-    start_joules = contest.get_joules()
-    vram_monitor = VRamMonitor(contest)
+def generate(
+    container: InferenceSandbox,
+    prompt: str,
+    seed: int,
+    width: int | None = None,
+    height: int | None = None,
+) -> GenerationOutput:
+    start_joules = CURRENT_CONTEST.get_joules()
+    vram_monitor = VRamMonitor(CURRENT_CONTEST)
     start = perf_counter()
 
     output = container(
         TextToImageRequest(
             prompt=prompt,
             seed=seed,
+            width=width,
+            height=height,
         )
     )
 
     generation_time = perf_counter() - start
-    joules_used = contest.get_joules() - start_joules
+    joules_used = CURRENT_CONTEST.get_joules() - start_joules
     watts_used = joules_used / generation_time
     vram_used = vram_monitor.complete()
 
@@ -45,7 +63,12 @@ def generate(contest: Contest, container: InferenceSandbox, prompt: str, seed: i
     )
 
 
-def compare_checkpoints(contest: Contest, submission: ModelRepositoryInfo) -> CheckpointBenchmark | None:
+def compare_checkpoints(
+    submission: ModelRepositoryInfo,
+    existing_benchmarks: Iterable[tuple[Key, CheckpointBenchmark | None]],
+    hash_prompt: str,
+    hash_seed: int,
+) -> CheckpointBenchmark | None:
     logger.info("Generating model samples")
 
     outputs: list[GenerationOutput] = []
@@ -54,15 +77,43 @@ def compare_checkpoints(contest: Contest, submission: ModelRepositoryInfo) -> Ch
         with InferenceSandbox(submission, False) as sandbox:
             size = sandbox.model_size
 
+            hash_output = generate(
+                sandbox,
+                hash_prompt,
+                hash_seed,
+                width=512,
+                height=512,
+            )
+
+            with BytesIO(hash_output.output) as data:
+                image_hash = imagehash.average_hash(Image.open(data))
+
+                image_hash_bytes = save_image_hash(image_hash)
+
+                match = next(
+                    (
+                        (key, existing_benchmark)
+                        for key, existing_benchmark in existing_benchmarks
+                        if image_hash - load_image_hash(existing_benchmark.image_hash) < HASH_DIFFERENCE_THRESHOLD
+                    ),
+                    None,
+                )
+
+                if match:
+                    key, benchmark = match
+
+                    logger.info(f"Submission {submission} marked as duplicate of hotkey {key}'s submission")
+
+                    return benchmark
+
             f"Take {BENCHMARK_SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been"
             for i in range(BENCHMARK_SAMPLE_COUNT):
                 prompt = generate_random_prompt()
-                seed = int.from_bytes(urandom(4), "little")
+                seed = random_seed()
 
                 logger.info(f"Sample {i + 1}, prompt {prompt} and seed {seed}")
 
                 output = generate(
-                    contest,
                     sandbox,
                     prompt,
                     seed,
@@ -96,42 +147,44 @@ def compare_checkpoints(contest: Contest, submission: ModelRepositoryInfo) -> Ch
 
     baseline_outputs: list[GenerationOutput] = []
 
-    average_similarity = 1.0
-
-    with InferenceSandbox(contest.baseline_repository, True) as baseline_sandbox:
+    with InferenceSandbox(CURRENT_CONTEST.baseline_repository, True) as baseline_sandbox:
         baseline_size = baseline_sandbox.model_size
 
         for i, output in enumerate(outputs):
             baseline = generate(
-                contest,
                 baseline_sandbox,
                 output.prompt,
                 output.seed,
             )
 
-            try:
-                similarity = contest.compare_outputs(output.output, baseline.output)
-            except:
-                logger.info(
-                    f"Submission {submission.repository}'s output couldn't be compared in similarity",
-                    exc_info=True,
-                )
-
-                similarity = 0.0
-
             logger.info(
                 f"Baseline sample {i + 1} Generated\n"
                 f"Generation Time: {baseline.generation_time}s\n"
-                f"Similarity: {similarity}\n"
                 f"VRAM Usage: {baseline.vram_used}b\n"
                 f"Power Usage: {baseline.watts_used}W"
             )
 
             baseline_outputs.append(baseline)
 
-            average_similarity = (average_similarity * i + similarity) / (i + 1)
+    comparator = CURRENT_CONTEST.output_comparator()
 
-    baseline_average_time = sum(output.generation_time for output in baseline_outputs) / len(baseline_outputs)
+    def calculate_similarity(baseline_output: GenerationOutput, optimized_output: GenerationOutput):
+        try:
+            return comparator(baseline_output.output, optimized_output.output)
+        except:
+            logger.info(
+                f"Submission {submission.repository}'s output couldn't be compared in similarity",
+                exc_info=True,
+            )
+
+            return 0.0
+
+    average_similarity = mean(
+        calculate_similarity(baseline_output, output)
+        for baseline_output, output in zip(baseline_outputs, outputs)
+    )
+
+    baseline_average_time = mean(output.generation_time for output in baseline_outputs)
     baseline_vram_used = max(output.vram_used for output in baseline_outputs)
     baseline_watts_used = max(output.watts_used for output in baseline_outputs)
 
@@ -151,4 +204,5 @@ def compare_checkpoints(contest: Contest, submission: ModelRepositoryInfo) -> Ch
             watts_used=watts_used,
         ),
         similarity_score=average_similarity,
+        image_hash=image_hash_bytes,
     )
