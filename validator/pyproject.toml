@@ -42,6 +42,8 @@ omegaconf = "2.3.0"
 torchvision = "0.19.1"
 websockets = "13.1"
 aiohttp = "3.10.6"
+ImageHash = "4.3.1"
+safetensors = "0.4.5"
 edge-maxxing-neuron = { path = "../neuron", develop = true }
 
 [tool.poetry.scripts]

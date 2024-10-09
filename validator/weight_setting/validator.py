@@ -15,17 +15,14 @@ from zoneinfo import ZoneInfo
 
 import numpy
 import wandb
-from base_validator.metrics import BenchmarkState, CheckpointBenchmark
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
-from fiber.chain.weights import set_node_weights, get_node_weights
+from fiber.chain.weights import set_node_weights, get_weights_set_by_node
 from fiber.logging_utils import get_logger
 from substrateinterface import SubstrateInterface, Keypair
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
-from .benchmarking_api import BenchmarkingApi, benchmarking_api
-from .winner_selection import get_highest_uids, get_contestant_scores
 
 from neuron import (
     get_config,
@@ -37,16 +34,20 @@ from neuron import (
     Key,
     Uid,
     MinerModelInfo,
-    ModelRepositoryInfo,
+    generate_random_prompt,
+    random_seed, ModelRepositoryInfo,
 )
 from neuron.submissions import get_submission
+from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
+from .winner_selection import get_highest_uids, get_contestant_scores
+from base_validator.hash import load_image_hash, HASH_DIFFERENCE_THRESHOLD
+from base_validator.metrics import BenchmarkState, CheckpointBenchmark, BenchmarkingRequest
 
-VALIDATOR_VERSION = "3.5.1"
-WEIGHTS_VERSION = 35
+VALIDATOR_VERSION = "3.6.0"
+WEIGHTS_VERSION = 36
 
 COLLECTED_SUBMISSIONS_VERSION = 1
-
 
 logger = get_logger(__name__)
 
@@ -105,6 +106,8 @@ class Validator:
 
     benchmarks: list[CheckpointBenchmark | None]
     failed: set[int]
+    hash_prompt: str
+    hash_seed: int
     contest: Contest
 
     def __init__(self):
@@ -113,7 +116,7 @@ class Validator:
         from .diagnostics import save_validator_diagnostics
         save_validator_diagnostics(self.config)
 
-        logger.info("Setting up bittensor objects")
+        logger.info(f"Validator version {VALIDATOR_VERSION}! Loading...")
 
         self.substrate = get_substrate(
             subtensor_network=self.config["subtensor.network"],
@@ -336,6 +339,8 @@ class Validator:
                     "hotkeys": self.hotkeys,
                     "benchmarks": self.benchmarks,
                     "failed": self.failed,
+                    "hash_prompt": self.hash_prompt,
+                    "hash_seed": self.hash_seed,
                     "last_day": self.last_day,
                     "contest_state": self.contest_state,
                     "benchmarking": self.benchmarking,
@@ -351,6 +356,9 @@ class Validator:
         path = self.state_path
 
         if not isfile(path):
+            self.hash_prompt = generate_random_prompt()
+            self.hash_seed = random_seed()
+
             return
 
         # Load the state of the validator from file.
@@ -361,6 +369,8 @@ class Validator:
         self.hotkeys = state["hotkeys"]
         self.benchmarks = state.get("benchmarks", self.benchmarks)
         self.failed = state.get("failed", self.failed)
+        self.hash_prompt = state.get("hash_prompt", generate_random_prompt())
+        self.hash_seed = state.get("hash_seed", random_seed())
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
         self.benchmarking = state.get("benchmarking", self.benchmarking)
@@ -475,7 +485,7 @@ class Validator:
         if self.benchmarking:
             logger.info("Not setting new weights as benchmarking is not done, reusing old ones")
 
-            zipped_weights = get_node_weights(self.substrate, self.metagraph.netuid, self.uid, self.block)
+            zipped_weights = get_weights_set_by_node(self.substrate, self.metagraph.netuid, self.uid, self.block)
 
             if not zipped_weights:
                 return
@@ -588,10 +598,16 @@ class Validator:
 
         await asyncio.gather(
             *[
-                api.start_benchmarking(dict(chunk))
+                api.start_benchmarking(
+                    BenchmarkingRequest(
+                        submissions=dict(chunk),
+                        hash_prompt=self.hash_prompt,
+                        hash_seed=self.hash_seed
+                    ),
+                )
                 for api, chunk in chunks
-            ]
-            )
+            ],
+        )
 
     def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         return self.send_submissions_to_api(self.benchmarking_apis, submissions)
@@ -607,6 +623,23 @@ class Validator:
                 if self.contest_state.miner_info[uid] and not benchmark and uid not in self.failed
             }
         )
+
+    def deduplicate_benchmarks(self):
+        """
+        O(n^2) operation to detect duplicated benchmarks based on their hashes
+        """
+        hashes = [
+            (uid, load_image_hash(benchmark.image_hash), benchmark)
+            for uid, benchmark in enumerate(self.benchmarks)
+        ]
+
+        for uid_a, hash_a, benchmark in hashes:
+            for uid_b, hash_b, _ in hashes:
+                if uid_a == uid_b:
+                    continue
+
+                if hash_a - hash_b < HASH_DIFFERENCE_THRESHOLD:
+                    self.benchmarks[uid_b] = benchmark
 
     async def do_step(self, block: int):
         now = self.current_time()
@@ -734,8 +767,8 @@ class Validator:
             *[
                 api.state()
                 for api in self.benchmarking_apis
-            ]
-            )
+            ],
+        )
 
         by_state = {
             state: list(group)
@@ -809,6 +842,7 @@ class Validator:
             logger.info(self.benchmarks)
 
             self.benchmarking = False
+            self.deduplicate_benchmarks()
             self.step += 1
 
             self.save_state()
@@ -837,8 +871,8 @@ class Validator:
                 *[
                     benchmarking_api(self.keypair, api, index)
                     for index, api in enumerate(self.benchmarking_api_urls)
-                ]
-                )
+                ],
+            )
         )
 
         while True:

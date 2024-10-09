@@ -18,6 +18,7 @@ from neuron import (
     INFERENCE_SOCKET_TIMEOUT,
     BENCHMARK_SAMPLE_COUNT,
     setup_sandbox,
+    random_seed,
 )
 from pipelines import TextToImageRequest
 
@@ -73,7 +74,7 @@ def benchmark(contest: Contest, client: Client):
     start = perf_counter()
 
     prompt = generate_random_prompt()
-    seed = int.from_bytes(os.urandom(4), "little")
+    seed = random_seed()
 
     request = TextToImageRequest(
         prompt=prompt,
