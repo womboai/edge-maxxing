@@ -9,7 +9,7 @@ from time import perf_counter
 from zoneinfo import ZoneInfo
 
 from neuron import Key
-from validator.base_validator.metrics import BenchmarkingRequest, DuplicateBenchmark
+from validator.base_validator.metrics import BenchmarkingRequest
 from .testing import compare_checkpoints
 from ..base_validator.metrics import CheckpointBenchmark
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class Benchmarker:
     request: BenchmarkingRequest | None
-    benchmarks: dict[Key, CheckpointBenchmark | DuplicateBenchmark | None]
+    benchmarks: dict[Key, CheckpointBenchmark | None]
     started: bool
     done: bool
     start_timestamp: int

@@ -16,15 +16,10 @@ class CheckpointBenchmark(BaseModel):
     baseline: MetricData
     model: MetricData
     similarity_score: float
-    fingerprint: bytes
+    image_hash: bytes
 
     def calculate_score(self) -> float:
         return (self.baseline.generation_time - self.model.generation_time) * self.similarity_score
-
-
-class DuplicateBenchmark(BaseModel):
-    copy_of: Key
-    fingerprint: bytes
 
 
 class BenchmarkingRequest(BaseModel):
@@ -41,5 +36,5 @@ class BenchmarkState(Enum):
 
 class BenchmarkResults(BaseModel):
     state: BenchmarkState
-    results: dict[Key, CheckpointBenchmark | DuplicateBenchmark | None]
+    results: dict[Key, CheckpointBenchmark | None]
     average_benchmark_time: float | None

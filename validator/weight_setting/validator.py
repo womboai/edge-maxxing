@@ -38,6 +38,7 @@ from neuron import (
     random_seed, ModelRepositoryInfo,
 )
 from neuron.submissions import get_submission
+from validator.base_validator.hash import load_image_hash, HASH_DIFFERENCE_THRESHOLD
 from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_highest_uids, get_contestant_scores
@@ -620,6 +621,23 @@ class Validator:
             }
         )
 
+    def deduplicate_benchmarks(self):
+        """
+        O(n^2) operation to detect duplicated benchmarks based on their hashes
+        """
+        hashes = [
+            (uid, load_image_hash(benchmark.image_hash), benchmark)
+            for uid, benchmark in enumerate(self.benchmarks)
+        ]
+
+        for uid_a, hash_a, benchmark in hashes:
+            for uid_b, hash_b, _ in hashes:
+                if uid_a == uid_b:
+                    continue
+
+                if hash_a - hash_b < HASH_DIFFERENCE_THRESHOLD:
+                    self.benchmarks[uid_b] = benchmark
+
     async def do_step(self, block: int):
         now = self.current_time()
 
@@ -821,6 +839,7 @@ class Validator:
             logger.info(self.benchmarks)
 
             self.benchmarking = False
+            self.deduplicate_benchmarks()
             self.step += 1
 
             self.save_state()

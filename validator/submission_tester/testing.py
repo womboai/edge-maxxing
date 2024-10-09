@@ -16,7 +16,8 @@ from neuron import (
 )
 from pipelines import TextToImageRequest
 from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
-from ..base_validator.metrics import CheckpointBenchmark, MetricData, DuplicateBenchmark
+from ..base_validator.hash import load_image_hash, save_image_hash, HASH_DIFFERENCE_THRESHOLD
+from ..base_validator.metrics import CheckpointBenchmark, MetricData
 
 logger = logging.getLogger(__name__)
 
@@ -58,10 +59,10 @@ def generate(
 
 def compare_checkpoints(
     submission: ModelRepositoryInfo,
-    existing_benchmarks: Iterable[tuple[Key, CheckpointBenchmark | DuplicateBenchmark | None]],
+    existing_benchmarks: Iterable[tuple[Key, CheckpointBenchmark | None]],
     hash_prompt: str,
     hash_seed: int,
-) -> CheckpointBenchmark | DuplicateBenchmark | None:
+) -> CheckpointBenchmark | None:
     logger.info("Generating model samples")
 
     outputs: list[GenerationOutput] = []
@@ -78,33 +79,26 @@ def compare_checkpoints(
                 height=512,
             )
 
-            def load_hash(existing_hash: bytes):
-                return imagehash.ImageHash(numpy.load(existing_hash)["DEFAULT"])
-
             with BytesIO(hash_output.output) as data:
                 image_hash = imagehash.average_hash(Image.open(data))
 
-                image_hash_bytes = numpy.save(
-                    {
-                        "DEFAULT": image_hash.hash,
-                    }
-                )
+                image_hash_bytes = save_image_hash(image_hash)
 
                 match = next(
                     (
                         existing_benchmark
                         for key, existing_benchmark in existing_benchmarks
-                        if abs(image_hash - load_hash(existing_benchmark.fingerprint)) < 64
+                        if image_hash - load_image_hash(existing_benchmark.image_hash) < HASH_DIFFERENCE_THRESHOLD
                     ),
-                    None
+                    None,
                 )
 
                 if match:
-                    key, _ = match
+                    key, benchmark = match
 
                     logger.info(f"Submission {submission} marked as duplicate of hotkey {key}'s submission")
 
-                    return DuplicateBenchmark(copy_of=key, fingerprint=image_hash_bytes)
+                    return benchmark
 
             f"Take {BENCHMARK_SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been"
             for i in range(BENCHMARK_SAMPLE_COUNT):
@@ -201,5 +195,5 @@ def compare_checkpoints(
             watts_used=watts_used,
         ),
         similarity_score=average_similarity,
-        fingerprint=image_hash_bytes,
+        image_hash=image_hash_bytes,
     )
