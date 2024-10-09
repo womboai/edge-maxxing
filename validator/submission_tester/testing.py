@@ -12,11 +12,11 @@ from neuron import (
     generate_random_prompt,
     VRamMonitor,
     BENCHMARK_SAMPLE_COUNT,
-    ModelRepositoryInfo, random_seed, CURRENT_CONTEST,
+    ModelRepositoryInfo, random_seed, CURRENT_CONTEST, Key,
 )
 from pipelines import TextToImageRequest
 from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
-from ..base_validator.metrics import CheckpointBenchmark, MetricData
+from ..base_validator.metrics import CheckpointBenchmark, MetricData, DuplicateBenchmark
 
 logger = logging.getLogger(__name__)
 
@@ -58,10 +58,10 @@ def generate(
 
 def compare_checkpoints(
     submission: ModelRepositoryInfo,
-    existing_benchmarks: Iterable[CheckpointBenchmark],
+    existing_benchmarks: Iterable[tuple[Key, CheckpointBenchmark]],
     hash_prompt: str,
     hash_seed: int,
-) -> CheckpointBenchmark | None:
+) -> CheckpointBenchmark | DuplicateBenchmark | None:
     logger.info("Generating model samples")
 
     outputs: list[GenerationOutput] = []
@@ -84,21 +84,27 @@ def compare_checkpoints(
             with BytesIO(hash_output.output) as data:
                 image_hash = imagehash.average_hash(Image.open(data))
 
+                image_hash_bytes = numpy.save(
+                    {
+                        "DEFAULT": image_hash.hash,
+                    }
+                )
+
                 match = next(
                     (
                         existing_benchmark
-                        for existing_benchmark in existing_benchmarks
+                        for key, existing_benchmark in existing_benchmarks
                         if abs(image_hash - load_hash(existing_benchmark.fingerprint)) < 64
                     ),
                     None
                 )
 
                 if match:
-                    return match
+                    key, _ = match
 
-            image_hash_bytes = numpy.save({
-                "DEFAULT": image_hash.hash,
-            })
+                    logger.info(f"Submission {submission} marked as duplicate of hotkey {key}'s submission")
+
+                    return DuplicateBenchmark(copy_of=key, fingerprint=image_hash_bytes)
 
             f"Take {BENCHMARK_SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been"
             for i in range(BENCHMARK_SAMPLE_COUNT):

@@ -22,6 +22,11 @@ class CheckpointBenchmark(BaseModel):
         return (self.baseline.generation_time - self.model.generation_time) * self.similarity_score
 
 
+class DuplicateBenchmark(BaseModel):
+    copy_of: Key
+    fingerprint: bytes
+
+
 class BenchmarkingRequest(BaseModel):
     submissions: dict[Key, ModelRepositoryInfo]
     hash_prompt: str
