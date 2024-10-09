@@ -6,12 +6,11 @@ from datetime import timedelta, datetime
 from random import choice
 from threading import Lock
 from time import perf_counter
-from zoneinfo import ZoneInfo
 
 from base_validator.metrics import CheckpointBenchmark
 from submission_tester.testing import compare_checkpoints
 
-from neuron import CURRENT_CONTEST, Key, ModelRepositoryInfo
+from neuron import CURRENT_CONTEST, Key, ModelRepositoryInfo, TIMEZONE
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +73,7 @@ class Benchmarker:
                 eta = int(average_time * (len(self.submissions) - len(self.benchmarks)))
                 if eta > 0:
                     time_left = timedelta(seconds=eta)
-                    eta_date = datetime.now(tz=ZoneInfo("America/New_York")) + time_left
+                    eta_date = datetime.now(tz=TIMEZONE) + time_left
                     eta_time = eta_date.strftime("%Y-%m-%d %I:%M:%S %p")
 
                     logger.info(f"ETA: {eta_time} EST. Time remaining: {time_left}")

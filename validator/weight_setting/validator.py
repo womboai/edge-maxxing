@@ -11,7 +11,6 @@ from os.path import isfile
 from pathlib import Path
 from pickle import dump, load
 from typing import Any
-from zoneinfo import ZoneInfo
 
 import numpy
 import wandb
@@ -37,7 +36,7 @@ from neuron import (
     Key,
     Uid,
     MinerModelInfo,
-    ModelRepositoryInfo,
+    ModelRepositoryInfo, TIMEZONE,
 )
 from neuron.submissions import get_submission
 from .wandb_args import add_wandb_args
@@ -597,7 +596,7 @@ class Validator:
         return self.send_submissions_to_api(self.benchmarking_apis, submissions)
 
     def current_time(self):
-        return datetime.now(tz=ZoneInfo("America/New_York"))
+        return datetime.now(tz=TIMEZONE)
 
     def non_tested_miners(self):
         return list(

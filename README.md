@@ -66,7 +66,7 @@ By optimizing popular models like LLAMA3 and Stable Diffusion, we transform idle
 
 The EdgeMaxxing subnet defines specific models, pipelines, and target hardware for optimization. Miners and validators collaborate in a daily competition to improve AI model performance on consumer devices.
 
-Miners are incentivized through a winner-takes-all reward system. The best optimizations are grouped together, and the one submitted first is selected as winner. Every day at 12PM EST a contest is run.
+Miners are incentivized through a winner-takes-all reward system. The best optimizations are grouped together, and the one submitted first is selected as winner. Every day at 12 PM PST a contest is run.
 
 Validators receive rewards for their consistent operation and accurate scoring.
 
@@ -76,7 +76,7 @@ Validators receive rewards for their consistent operation and accurate scoring.
 ### Competition Structure
 1. Miners submit optimized models
 2. Validators score submissions
-3. Contest runs daily at 12 PM New York time
+3. Contest runs daily at 12 PM PST
 4. Miners receive rewards based on their ranking
 
 ### Miners
