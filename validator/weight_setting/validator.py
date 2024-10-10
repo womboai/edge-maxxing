@@ -46,7 +46,7 @@ from .winner_selection import get_highest_uids, get_contestant_scores
 from base_validator.hash import load_image_hash, HASH_DIFFERENCE_THRESHOLD
 from base_validator.metrics import BenchmarkState, CheckpointBenchmark, BenchmarkingRequest
 
-VALIDATOR_VERSION = "3.6.0"
+VALIDATOR_VERSION = "3.6.1"
 WEIGHTS_VERSION = 37
 
 COLLECTED_SUBMISSIONS_VERSION = 1
