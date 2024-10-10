@@ -36,7 +36,7 @@ class OutputComparator(ABC):
 class ImageOutputComparator(OutputComparator):
     def __init__(self, device: str):
         self.device = device
-        self.clip = CLIPVisionModelWithProjection.from_pretrained("laion/CLIP-ViT-bigG-14-laiofn2B-39B-b160k").to(self.device)
+        self.clip = CLIPVisionModelWithProjection.from_pretrained("laion/CLIP-ViT-bigG-14-laion2B-39B-b160k").to(self.device)
         self.processor = CLIPProcessor.from_pretrained("laion/CLIP-ViT-bigG-14-laion2B-39B-b160k")
 
     def compare(self, baseline: bytes, optimized: bytes):
@@ -57,9 +57,9 @@ class ImageOutputComparator(OutputComparator):
                 return numpy.array(Image.open(fp).convert("RGB"))
 
         def clip_embeddings(image: numpy.ndarray):
-            processed_input = self.processor(images=image, return_tensors="pt")
+            processed_input = self.processor(images=image, return_tensors="pt").to(self.device)
 
-            return self.clip(**processed_input).to(self.device).image_embeds
+            return self.clip(**processed_input).image_embeds.to(self.device)
 
         baseline_array = load_image(baseline)
         optimized_array = load_image(optimized)

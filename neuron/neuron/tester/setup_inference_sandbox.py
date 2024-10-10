@@ -1,5 +1,5 @@
-from fiber.logging_utils import get_logger
 import sys
+from logging import getLogger
 from os.path import abspath
 from pathlib import Path
 from subprocess import run, CalledProcessError
@@ -15,7 +15,7 @@ PIP_INSTALL_SCRIPT = abspath(Path(__file__).parent / "pip_install.sh")
 with open(DEPENDENCY_BLACKLIST, 'r') as blacklist_file:
     BLACKLISTED_DEPENDENCIES = " ".join(blacklist_file.read().splitlines())
 
-logger = get_logger(__name__)
+logger = getLogger(__name__)
 
 
 class InvalidSubmissionError(Exception):
@@ -66,7 +66,7 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
             [BLACKLISTED_DEPENDENCIES],
             f"Found blacklisted dependency in repository '{url}'"
         )
-        logger.info(f"Checked for blacklisted dependencies in {perf_counter() - start:.2f} seconds")
+        logger.info(f"Found no blacklisted dependencies after {perf_counter() - start:.2f} seconds")
 
     start = perf_counter()
     logger.info(f"Pulling LFS files...")

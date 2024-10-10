@@ -173,7 +173,7 @@ def compare_checkpoints(
             return comparator(baseline_output.output, optimized_output.output)
         except:
             logger.info(
-                f"Submission {submission.repository}'s output couldn't be compared in similarity",
+                f"Submission {submission.url}'s output couldn't be compared in similarity",
                 exc_info=True,
             )
 
