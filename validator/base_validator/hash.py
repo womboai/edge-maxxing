@@ -5,7 +5,7 @@ from safetensors import numpy
 __KEY = "DEFAULT"
 
 
-HASH_DIFFERENCE_THRESHOLD = 64
+HASH_DIFFERENCE_THRESHOLD = 8
 
 
 def save_image_hash(image_hash: ImageHash) -> bytes:
