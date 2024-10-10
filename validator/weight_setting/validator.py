@@ -47,7 +47,7 @@ from base_validator.hash import load_image_hash, HASH_DIFFERENCE_THRESHOLD
 from base_validator.metrics import BenchmarkState, CheckpointBenchmark, BenchmarkingRequest
 
 VALIDATOR_VERSION = "3.6.0"
-WEIGHTS_VERSION = 36
+WEIGHTS_VERSION = 37
 
 COLLECTED_SUBMISSIONS_VERSION = 1
 

@@ -27,7 +27,10 @@ class OutputComparator(ABC):
     def compare(self, baseline: bytes, optimized: bytes) -> float:
         pass
 
-    __call__ = compare
+    def __wrapped_compare(self, baseline: bytes, optimized: bytes):
+        return self.compare(baseline, optimized)
+
+    __call__ = __wrapped_compare
 
 
 class ImageOutputComparator(OutputComparator):
