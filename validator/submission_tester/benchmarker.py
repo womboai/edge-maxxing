@@ -83,7 +83,7 @@ class Benchmarker:
                     eta_date = datetime.now(tz=TIMEZONE) + time_left
                     eta_time = eta_date.strftime("%Y-%m-%d %I:%M:%S %p")
 
-                    logger.info(f"ETA: {eta_time} EST. Time remaining: {time_left}")
+                    logger.info(f"ETA: {eta_time} PST. Time remaining: {time_left}")
 
         self.done = True
 
