@@ -46,8 +46,11 @@ from .winner_selection import get_highest_uids, get_contestant_scores
 from base_validator.hash import load_image_hash, HASH_DIFFERENCE_THRESHOLD
 from base_validator.metrics import BenchmarkState, CheckpointBenchmark, BenchmarkingRequest
 
-VALIDATOR_VERSION = "3.6.3"
-WEIGHTS_VERSION = 40
+VALIDATOR_VERSION: tuple[int, int, int] = (3, 6, 4)
+VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
+
+WEIGHTS_VERSION = 10000 * VALIDATOR_VERSION[0] + 100 * VALIDATOR_VERSION[1] + VALIDATOR_VERSION[2]
+BENCHMARKS_VERSION = 1
 
 COLLECTED_SUBMISSIONS_VERSION = 1
 
@@ -66,7 +69,7 @@ class ContestState:
         miner_info: list[MinerModelInfo | None],
     ):
         self.id = contest_id
-        self.miner_score_version = WEIGHTS_VERSION
+        self.miner_score_version = BENCHMARKS_VERSION
         self.miner_info = miner_info
 
     # Backwards compatibility
@@ -379,15 +382,15 @@ class Validator:
         self.last_metagraph_sync = state.get("last_metagraph_sync", self.last_metagraph_sync)
 
         if self.contest_state:
-            if self.contest_state.miner_score_version != WEIGHTS_VERSION:
+            if self.contest_state.miner_score_version != BENCHMARKS_VERSION:
                 logger.warning(
                     f"Contest state has outdated weights version: {self.contest_state.miner_score_version}, "
-                    f"current version: {WEIGHTS_VERSION}. Resetting benchmarks."
+                    f"current version: {BENCHMARKS_VERSION}. Resetting benchmarks."
                 )
 
                 self.benchmarks = self.clear_benchmarks()
                 self.failed.clear()
-                self.contest_state.miner_score_version = WEIGHTS_VERSION
+                self.contest_state.miner_score_version = BENCHMARKS_VERSION
 
             if self.contest_state.submission_spec_version != COLLECTED_SUBMISSIONS_VERSION:
                 logger.warning(

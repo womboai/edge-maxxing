@@ -94,7 +94,10 @@ def compare_checkpoints(
                     (
                         (key, existing_benchmark)
                         for key, existing_benchmark in existing_benchmarks
-                        if image_hash - load_image_hash(existing_benchmark.image_hash) < HASH_DIFFERENCE_THRESHOLD
+                        if (
+                            existing_benchmark and
+                            image_hash - load_image_hash(existing_benchmark.image_hash) < HASH_DIFFERENCE_THRESHOLD
+                        )
                     ),
                     None,
                 )
