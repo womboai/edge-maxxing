@@ -46,7 +46,7 @@ from .winner_selection import get_highest_uids, get_contestant_scores
 from base_validator.hash import load_image_hash, HASH_DIFFERENCE_THRESHOLD
 from base_validator.metrics import BenchmarkState, CheckpointBenchmark, BenchmarkingRequest
 
-VALIDATOR_VERSION: tuple[int, int, int] = (3, 6, 4)
+VALIDATOR_VERSION: tuple[int, int, int] = (3, 6, 5)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = 10000 * VALIDATOR_VERSION[0] + 100 * VALIDATOR_VERSION[1] + VALIDATOR_VERSION[2]
