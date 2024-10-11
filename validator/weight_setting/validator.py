@@ -121,7 +121,7 @@ class Validator:
         from .diagnostics import save_validator_diagnostics
         save_validator_diagnostics(self.config)
 
-        logger.info(f"Validator version {VALIDATOR_VERSION}! Loading...")
+        logger.info(f"Validator version {VALIDATOR_VERSION_STRING}! Loading...")
 
         self.substrate = get_substrate(
             subtensor_network=self.config["subtensor.network"],
@@ -200,7 +200,7 @@ class Validator:
             allow_val_change=True,
             anonymous="allow",
             tags=[
-                f"version_{VALIDATOR_VERSION}",
+                f"version_{VALIDATOR_VERSION_STRING}",
                 f"sn{netuid}",
             ],
         )
