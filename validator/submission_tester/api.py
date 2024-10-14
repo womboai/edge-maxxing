@@ -12,10 +12,10 @@ from fastapi import FastAPI, WebSocket, Request, Header, HTTPException
 from starlette import status
 from substrateinterface import Keypair
 
-from neuron import CURRENT_CONTEST
+from neuron import CURRENT_CONTEST, Key, ModelRepositoryInfo
 from .benchmarker import Benchmarker
 from base_validator import API_VERSION
-from base_validator.metrics import BenchmarkState, BenchmarkResults, BenchmarkingRequest
+from base_validator.metrics import BenchmarkState, BenchmarkResults
 
 hotkey = os.getenv("VALIDATOR_HOTKEY_SS58_ADDRESS")
 debug = int(os.getenv("VALIDATOR_DEBUG", 0)) > 0
@@ -95,7 +95,7 @@ def _authenticate_request(nonce: int, signature: str):
 
 @app.post("/start")
 async def start_benchmarking(
-    submissions: BenchmarkingRequest,
+    submissions: dict[Key, ModelRepositoryInfo],
     x_nonce: Annotated[int, Header()],
     signature: Annotated[str, Header()],
     request: Request,

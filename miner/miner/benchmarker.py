@@ -13,12 +13,10 @@ from neuron import (
     Contest,
     GenerationOutput,
     get_config,
-    generate_random_prompt,
     VRamMonitor,
     INFERENCE_SOCKET_TIMEOUT,
-    BENCHMARK_SAMPLE_COUNT,
     setup_sandbox,
-    random_seed,
+    random_inputs,
 )
 from pipelines import TextToImageRequest
 
@@ -44,11 +42,13 @@ def wait_for_socket(socket_path: str, process: Popen):
 
 def test(contest: Contest, client: Client):
     outputs: list[GenerationOutput] = []
-    for i in range(BENCHMARK_SAMPLE_COUNT):
-        output = benchmark(contest, client)
+    inputs = random_inputs()
+
+    for index, request in enumerate(inputs):
+        output = benchmark(contest, client, request)
 
         logger.info(
-            f"Sample {i} Generated\n"
+            f"Sample {index + 1} Generated\n"
             f"Generation Time: {output.generation_time}s\n"
             f"VRAM Usage: {output.vram_used}b\n"
             f"Power Usage: {output.watts_used}W"
@@ -62,7 +62,7 @@ def test(contest: Contest, client: Client):
     watts_used = max(output.watts_used for output in outputs)
 
     logger.info(
-        f"\n\nTested {BENCHMARK_SAMPLE_COUNT} Samples\n"
+        f"\n\nTested {len(inputs)} Samples\n"
         f"Average Generation Time: {average_time}s\n"
         f"Model Size: {size}b\n"
         f"Max VRAM Usage: {vram_used}b\n"
@@ -70,18 +70,10 @@ def test(contest: Contest, client: Client):
     )
 
 
-def benchmark(contest: Contest, client: Client):
+def benchmark(contest: Contest, client: Client, request: TextToImageRequest):
     start_joules = contest.get_joules()
     vram_monitor = VRamMonitor(contest)
     start = perf_counter()
-
-    prompt = generate_random_prompt()
-    seed = random_seed()
-
-    request = TextToImageRequest(
-        prompt=prompt,
-        seed=seed,
-    )
 
     data = request.model_dump_json().encode("utf-8")
     client.send_bytes(data)
@@ -93,8 +85,6 @@ def benchmark(contest: Contest, client: Client):
     vram_used = vram_monitor.complete()
 
     return GenerationOutput(
-        prompt=prompt,
-        seed=seed,
         output=output,
         generation_time=generation_time,
         vram_used=vram_used,

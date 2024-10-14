@@ -7,7 +7,6 @@ from itertools import islice, groupby
 from math import ceil
 from operator import itemgetter, attrgetter
 from os import makedirs
-from os.path import isfile
 from pathlib import Path
 from pickle import dump, load
 from typing import Any
@@ -33,10 +32,7 @@ from neuron import (
     Key,
     Uid,
     MinerModelInfo,
-    ModelRepositoryInfo,
     TIMEZONE,
-    generate_random_prompt,
-    random_seed,
     ModelRepositoryInfo,
 )
 from neuron.submissions import get_submission
@@ -44,7 +40,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_highest_uids, get_contestant_scores
 from base_validator.hash import load_image_hash, HASH_DIFFERENCE_THRESHOLD
-from base_validator.metrics import BenchmarkState, CheckpointBenchmark, BenchmarkingRequest
+from base_validator.metrics import BenchmarkState, CheckpointBenchmark
 
 VALIDATOR_VERSION: tuple[int, int, int] = (3, 6, 5)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
@@ -360,12 +356,6 @@ class Validator:
 
         path = self.state_path
 
-        if not isfile(path):
-            self.hash_prompt = generate_random_prompt()
-            self.hash_seed = random_seed()
-
-            return
-
         # Load the state of the validator from file.
         with open(path, "rb") as file:
             state = load(file)
@@ -374,8 +364,6 @@ class Validator:
         self.hotkeys = state["hotkeys"]
         self.benchmarks = state.get("benchmarks", self.benchmarks)
         self.failed = state.get("failed", self.failed)
-        self.hash_prompt = state.get("hash_prompt", generate_random_prompt())
-        self.hash_seed = state.get("hash_seed", random_seed())
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
         self.benchmarking = state.get("benchmarking", self.benchmarking)
@@ -603,13 +591,7 @@ class Validator:
 
         await asyncio.gather(
             *[
-                api.start_benchmarking(
-                    BenchmarkingRequest(
-                        submissions=dict(chunk),
-                        hash_prompt=self.hash_prompt,
-                        hash_seed=self.hash_seed
-                    ),
-                )
+                api.start_benchmarking(dict(chunk))
                 for api, chunk in chunks
             ],
         )

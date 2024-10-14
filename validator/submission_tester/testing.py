@@ -1,5 +1,4 @@
 import logging
-from os import urandom
 from statistics import mean
 from collections.abc import Iterable
 from io import BytesIO
@@ -12,13 +11,8 @@ from PIL import Image
 
 from neuron import (
     GenerationOutput,
-    generate_random_prompt,
     VRamMonitor,
-    BENCHMARK_SAMPLE_COUNT,
     ModelRepositoryInfo,
-    InvalidSubmissionError,
-    ModelRepositoryInfo,
-    random_seed,
     CURRENT_CONTEST,
     Key,
 )
@@ -30,23 +24,13 @@ logger = logging.getLogger(__name__)
 
 def generate(
     container: InferenceSandbox,
-    prompt: str,
-    seed: int,
-    width: int | None = None,
-    height: int | None = None,
+    request: TextToImageRequest,
 ) -> GenerationOutput:
     start_joules = CURRENT_CONTEST.get_joules()
     vram_monitor = VRamMonitor(CURRENT_CONTEST)
     start = perf_counter()
 
-    output = container(
-        TextToImageRequest(
-            prompt=prompt,
-            seed=seed,
-            width=width,
-            height=height,
-        )
-    )
+    output = container(request)
 
     generation_time = perf_counter() - start
     joules_used = CURRENT_CONTEST.get_joules() - start_joules
@@ -54,8 +38,6 @@ def generate(
     vram_used = vram_monitor.complete()
 
     return GenerationOutput(
-        prompt=prompt,
-        seed=seed,
         output=output,
         generation_time=generation_time,
         vram_used=vram_used,
@@ -66,8 +48,7 @@ def generate(
 def compare_checkpoints(
     submission: ModelRepositoryInfo,
     existing_benchmarks: Iterable[tuple[Key, CheckpointBenchmark | None]],
-    hash_prompt: str,
-    hash_seed: int,
+    inputs: list[TextToImageRequest],
 ) -> CheckpointBenchmark | None:
     logger.info("Generating model samples")
 
@@ -77,53 +58,41 @@ def compare_checkpoints(
         with InferenceSandbox(submission, False) as sandbox:
             size = sandbox.model_size
 
-            hash_output = generate(
-                sandbox,
-                hash_prompt,
-                hash_seed,
-                width=512,
-                height=512,
-            )
+            image_hash = None
 
-            with BytesIO(hash_output.output) as data:
-                image_hash = imagehash.average_hash(Image.open(data))
+            f"Take {len(inputs)} samples, keeping track of how fast/accurate generations have been"
+            for index, request in enumerate(inputs):
+                logger.info(f"Sample {index + 1}, prompt {request.prompt} and seed {request.seed}")
 
-                image_hash_bytes = save_image_hash(image_hash)
+                output = generate(sandbox, request)
 
-                match = next(
-                    (
-                        (key, existing_benchmark)
-                        for key, existing_benchmark in existing_benchmarks
-                        if (
-                            existing_benchmark and
-                            image_hash - load_image_hash(existing_benchmark.image_hash) < HASH_DIFFERENCE_THRESHOLD
+                if not image_hash:
+                    with BytesIO(output.output) as data:
+                        image_hash = imagehash.average_hash(Image.open(data))
+
+                        image_hash_bytes = save_image_hash(image_hash)
+
+                        match = next(
+                            (
+                                (key, existing_benchmark)
+                                for key, existing_benchmark in existing_benchmarks
+                                if (
+                                    existing_benchmark and
+                                    image_hash - load_image_hash(existing_benchmark.image_hash) < HASH_DIFFERENCE_THRESHOLD
+                                )
+                            ),
+                            None,
                         )
-                    ),
-                    None,
-                )
 
-                if match:
-                    key, benchmark = match
+                        if match:
+                            key, benchmark = match
 
-                    logger.info(f"Submission {submission} marked as duplicate of hotkey {key}'s submission")
+                            logger.info(f"Submission {submission} marked as duplicate of hotkey {key}'s submission")
 
-                    return benchmark
-
-            f"Take {BENCHMARK_SAMPLE_COUNT} samples, keeping track of how fast/accurate generations have been"
-            for i in range(BENCHMARK_SAMPLE_COUNT):
-                prompt = generate_random_prompt()
-                seed = random_seed()
-
-                logger.info(f"Sample {i + 1}, prompt {prompt} and seed {seed}")
-
-                output = generate(
-                    sandbox,
-                    prompt,
-                    seed,
-                )
+                            return benchmark
 
                 logger.info(
-                    f"Sample {i} Generated\n"
+                    f"Sample {index + 1} Generated\n"
                     f"Generation Time: {output.generation_time}s\n"
                     f"VRAM Usage: {output.vram_used}b\n"
                     f"Power Usage: {output.watts_used}W"
@@ -139,7 +108,7 @@ def compare_checkpoints(
     watts_used = max(output.watts_used for output in outputs)
 
     logger.info(
-        f"Tested {BENCHMARK_SAMPLE_COUNT} Samples\n"
+        f"Tested {len(inputs)} Samples\n"
         f"Average Generation Time: {average_time}s\n"
         f"Model Size: {size}b\n"
         f"Max VRAM Usage: {vram_used}b\n"
@@ -153,12 +122,8 @@ def compare_checkpoints(
     with InferenceSandbox(CURRENT_CONTEST.baseline_repository, True) as baseline_sandbox:
         baseline_size = baseline_sandbox.model_size
 
-        for i, output in enumerate(outputs):
-            baseline = generate(
-                baseline_sandbox,
-                output.prompt,
-                output.seed,
-            )
+        for i, (request, output) in enumerate(zip(inputs, outputs)):
+            baseline = generate(baseline_sandbox, request)
 
             logger.info(
                 f"Baseline sample {i + 1} Generated\n"
