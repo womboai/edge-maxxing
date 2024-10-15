@@ -2,9 +2,7 @@ from operator import itemgetter
 
 from base_validator.metrics import CheckpointBenchmark
 
-from neuron import Uid
-
-TIER_SCORE_IMPROVEMENT_THRESHOLD = 1.05
+TIER_SCORE_IMPROVEMENT_THRESHOLD = 1.1
 
 
 def get_contestant_scores(benchmarks: list[CheckpointBenchmark | None]):
@@ -35,8 +33,7 @@ def get_scores(contestants: list[tuple[int, float]], node_count: int) -> list[fl
             # No longer in top threshold
             last_tier_score = score
             tier += 1
-            continue
         else:
-            scores[uid] = score * tier
+            scores[uid] = score ** tier
 
     return scores
