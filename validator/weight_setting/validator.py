@@ -643,57 +643,27 @@ class Validator:
 
             logger.info(f"Got {miner_info} submissions")
 
+            nodes = self.metagraph_nodes()
+
+            logger.info(f"Working on contest {self.contest.id.name} today's submissions")
+
+            submissions = {
+                nodes[uid].hotkey: submission.repository
+                for uid, submission in enumerate(miner_info)
+                if submission
+            }
+
+            await self.start_benchmarking(submissions)
+
+            self.benchmarks = self.clear_benchmarks()
+            self.failed.clear()
+
             if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
                 # New contest, restart
-                logger.info(f"Working on contest {self.contest.id.name} today's submissions")
-
-                nodes = self.metagraph_nodes()
-
-                submissions = {
-                    nodes[uid].hotkey: submission.repository
-                    for uid, submission in enumerate(miner_info)
-                    if submission
-                }
-
-                await self.start_benchmarking(submissions)
-
                 self.contest = CURRENT_CONTEST
-
-                self.benchmarks = self.clear_benchmarks()
-                self.failed.clear()
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
             else:
-                def should_update(old_info: MinerModelInfo | None, new_info: MinerModelInfo | None):
-                    if old_info is None and new_info is None:
-                        return False
-
-                    if (old_info is None) != (new_info is None):
-                        return True
-
-                    return old_info.repository != new_info.repository
-
-                updated_uids = [
-                    uid
-                    for uid in range(len(self.metagraph.nodes))
-                    if should_update(self.contest_state.miner_info[uid], miner_info[uid])
-                ] + self.non_tested_miners()
-
-                nodes = self.metagraph_nodes()
-
-                submissions = {
-                    nodes[uid].hotkey: miner_info[uid].repository
-                    for uid in set(updated_uids)
-                    if miner_info[uid]
-                }
-
-                await self.start_benchmarking(submissions)
-
-                logger.info(f"Miners {updated_uids} changed their submissions or have not been tested yet")
-
-                for uid in updated_uids:
-                    self.reset_miner(uid)
-
                 self.contest_state.miner_info = miner_info
 
             self.last_day = now.date()
