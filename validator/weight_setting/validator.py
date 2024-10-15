@@ -252,6 +252,9 @@ class Validator:
                 "hotkey": self.hotkeys[uid],
             }
 
+            if self.baseline_metrics:
+                data["score"] = benchmark.calculate_score(self.baseline_metrics)
+
             benchmark_data[str(uid)] = data
 
         log_data = {
