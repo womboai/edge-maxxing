@@ -175,12 +175,11 @@ class Validator:
 
         contest_id = self.contest_state.id if self.contest_state else CURRENT_CONTEST.id
 
-        signing_message = f"{self.uid}:{hotkey}:{contest_id.name}"
+        signing_message = f"{name}:{hotkey}:{contest_id.name}"
         signature = f"0x{self.keypair.sign(signing_message).hex()}"
 
         self.wandb_run = wandb.init(
             name=name,
-            id=name,
             resume="allow",
             mode="offline" if self.config["wandb.offline"] else "online",
             project=self.config["wandb.project_name"],
