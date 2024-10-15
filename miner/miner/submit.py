@@ -15,8 +15,8 @@ from neuron import (
     CONTESTS,
     ContestId,
     REVISION_LENGTH,
+    make_submission,
 )
-from neuron.submissions import make_submission
 from .benchmarker import start_benchmarking
 
 VALID_PROVIDER_REGEX = r'^[a-zA-Z0-9-.]+$'

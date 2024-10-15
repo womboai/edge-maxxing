@@ -38,9 +38,10 @@ from neuron import (
     Uid,
     MinerModelInfo,
     TIMEZONE,
-    ModelRepositoryInfo, SPEC_VERSION,
+    ModelRepositoryInfo,
+    SPEC_VERSION,
+    get_submission,
 )
-from neuron.submissions import get_submission
 from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores
