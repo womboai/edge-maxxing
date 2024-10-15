@@ -33,7 +33,7 @@ def get_scores(contestants: list[tuple[int, float]], node_count: int) -> list[fl
             # No longer in top threshold
             last_tier_score = score
             tier += 1
-        else:
-            scores[uid] = score ** tier
+
+        scores[uid] = score ** (tier * 0.75)
 
     return scores
