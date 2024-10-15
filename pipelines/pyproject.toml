@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "edge-maxxing-pipelines"
 
-version = "1.1.0"
+version = "1.0.0"
 
 description = "Holder for models & constants to be accessed by multiple repositories"
 

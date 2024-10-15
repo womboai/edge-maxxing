@@ -15,9 +15,8 @@ from neuron import (
     INFERENCE_SOCKET_TIMEOUT,
     ModelRepositoryInfo,
     setup_sandbox,
-    InvalidSubmissionError,
+    InvalidSubmissionError, SPEC_VERSION,
 )
-from pipelines import SUBMISSION_SPEC_VERSION
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
@@ -91,8 +90,8 @@ class InferenceSandbox(Generic[RequestT]):
 
         version = self._client.recv_bytes(1)[0]
 
-        if version != SUBMISSION_SPEC_VERSION:
-            raise InvalidSubmissionError(f"Submission is at version {version} while expected version is {SUBMISSION_SPEC_VERSION}")
+        if version != SPEC_VERSION:
+            raise InvalidSubmissionError(f"Submission is at version {version} while expected version is {SPEC_VERSION}")
 
     @property
     def _user(self) -> str:

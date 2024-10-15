@@ -2,8 +2,7 @@ from fiber.chain.commitments import publish_raw_commitment, get_raw_commitment
 from fiber.logging_utils import get_logger
 from substrateinterface import SubstrateInterface, Keypair
 
-from pipelines import SUBMISSION_SPEC_VERSION
-from .checkpoint import CheckpointSubmission, Key, MinerModelInfo
+from .checkpoint import CheckpointSubmission, SPEC_VERSION, Key, MinerModelInfo
 from .contest import CURRENT_CONTEST, ModelRepositoryInfo
 from .network_commitments import Encoder, Decoder
 
@@ -19,7 +18,7 @@ def make_submission(
 ):
     encoder = Encoder()
 
-    encoder.write_uint16(SUBMISSION_SPEC_VERSION)
+    encoder.write_uint16(SPEC_VERSION)
 
     for submission in submissions:
         submission.encode(encoder)
@@ -50,7 +49,7 @@ def get_submission(
 
         spec_version = decoder.read_uint16()
 
-        if spec_version != SUBMISSION_SPEC_VERSION:
+        if spec_version != SPEC_VERSION:
             return None
 
         while not decoder.eof:
