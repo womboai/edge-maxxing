@@ -22,14 +22,12 @@ class CheckpointBenchmark(BaseModel):
     image_hash: bytes
 
     def calculate_score(self) -> float:
-        scale = 1 / (1 - SIMILARITY_SCORE_THRESHOLD)
-
         if self.similarity_score < SIMILARITY_SCORE_THRESHOLD:
             return 0.0
 
+        scale = 1 / (1 - SIMILARITY_SCORE_THRESHOLD)
         similarity = sqrt((self.similarity_score - SIMILARITY_SCORE_THRESHOLD) * scale)
-
-        return (self.baseline.generation_time / self.model.generation_time) * similarity
+        return (self.baseline.generation_time - self.model.generation_time) * similarity
 
 
 class BenchmarkState(Enum):
