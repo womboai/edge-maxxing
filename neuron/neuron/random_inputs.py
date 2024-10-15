@@ -1,3 +1,4 @@
+import os
 from zoneinfo import ZoneInfo
 
 import requests
@@ -7,11 +8,12 @@ from pipelines import TextToImageRequest
 
 INFERENCE_SOCKET_TIMEOUT = 240
 TIMEZONE = ZoneInfo("US/Pacific")
+INPUTS_ENDPOINT = os.getenv("INPUTS_ENDPOINT", "https://edge-inputs.wombo.ai")
 
 
 def random_inputs() -> list[TextToImageRequest]:
     response = requests.get(
-        "https://edge-inputs.wombo.ai/current_batch", headers={
+        f"{INPUTS_ENDPOINT}/current_batch", headers={
             "Content-Type": "application/json"
         },
     )

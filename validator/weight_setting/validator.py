@@ -41,12 +41,12 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores
 
-VALIDATOR_VERSION: tuple[int, int, int] = (3, 6, 5)
+VALIDATOR_VERSION: tuple[int, int, int] = (4, 0, 0)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = 10000 * VALIDATOR_VERSION[0] + 100 * VALIDATOR_VERSION[1] + VALIDATOR_VERSION[2]
-BENCHMARKS_VERSION = 1
 
+BENCHMARKS_VERSION = 2
 COLLECTED_SUBMISSIONS_VERSION = 1
 
 logger = get_logger(__name__)
