@@ -2,7 +2,7 @@ from operator import itemgetter
 
 from base_validator.metrics import CheckpointBenchmark, MetricData
 
-TIER_SCORE_IMPROVEMENT_THRESHOLD = 1.1
+TIER_SCORE_IMPROVEMENT_THRESHOLD = 1.05
 
 
 def get_contestant_scores(benchmarks: list[CheckpointBenchmark | None], baseline_metrics: MetricData):
