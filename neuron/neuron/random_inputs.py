@@ -8,7 +8,7 @@ from pipelines import TextToImageRequest
 
 INFERENCE_SOCKET_TIMEOUT = 240
 TIMEZONE = ZoneInfo("US/Pacific")
-INPUTS_ENDPOINT = os.getenv("INPUTS_ENDPOINT", "https://edge-inputs.wombo.ai")
+INPUTS_ENDPOINT = os.getenv("INPUTS_ENDPOINT", "https://edge-inputs.api.wombo.ai")
 
 
 def random_inputs() -> list[TextToImageRequest]:
