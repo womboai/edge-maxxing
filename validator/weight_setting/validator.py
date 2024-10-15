@@ -7,13 +7,14 @@ from itertools import islice
 from math import ceil
 from operator import itemgetter, attrgetter
 from os import makedirs
+from os.path import isfile
 from pathlib import Path
 from pickle import dump, load
 from typing import Any
 
 import wandb
 from base_validator.hash import load_image_hash, HASH_DIFFERENCE_THRESHOLD
-from base_validator.metrics import BenchmarkState, CheckpointBenchmark
+from base_validator.metrics import BenchmarkState, CheckpointBenchmark, BenchmarkResults, MetricData
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
@@ -105,6 +106,7 @@ class Validator:
     attempted_set_weights: bool = False
 
     benchmarks: list[CheckpointBenchmark | None]
+    baseline_metrics: MetricData | None
     failed: set[int]
     hash_prompt: str
     hash_seed: int
@@ -153,6 +155,7 @@ class Validator:
         self.wandb_run_date = None
 
         self.benchmarks = self.clear_benchmarks()
+        self.baseline_metrics = None
         self.failed = set()
 
         self.load_state()
@@ -241,14 +244,10 @@ class Validator:
                 continue
 
             data = {
-                "baseline_generation_time": benchmark.baseline.generation_time,
                 "generation_time": benchmark.model.generation_time,
                 "similarity": benchmark.similarity_score,
-                "baseline_size": benchmark.baseline.size,
                 "size": benchmark.model.size,
-                "baseline_vram_used": benchmark.baseline.vram_used,
                 "vram_used": benchmark.model.vram_used,
-                "baseline_watts_used": benchmark.baseline.watts_used,
                 "watts_used": benchmark.model.watts_used,
                 "hotkey": self.hotkeys[uid],
             }
@@ -263,6 +262,14 @@ class Validator:
 
         if average_time:
             log_data["average_benchmark_time"] = average_time
+
+        if self.baseline_metrics:
+            log_data["baseline"] = {
+                "generation_time": self.baseline_metrics.generation_time,
+                "size": self.baseline_metrics.size,
+                "vram_used": self.baseline_metrics.vram_used,
+                "watts_used": self.baseline_metrics.watts_used,
+            }
 
         self.wandb_run.log(data=log_data)
 
@@ -334,6 +341,7 @@ class Validator:
                     "step": self.step,
                     "hotkeys": self.hotkeys,
                     "benchmarks": self.benchmarks,
+                    "baseline_benchmarks": self.baseline_metrics,
                     "failed": self.failed,
                     "last_day": self.last_day,
                     "contest_state": self.contest_state,
@@ -349,6 +357,9 @@ class Validator:
 
         path = self.state_path
 
+        if not isfile(path):
+            return
+
         # Load the state of the validator from file.
         with open(path, "rb") as file:
             state = load(file)
@@ -356,6 +367,7 @@ class Validator:
         self.step = state["step"]
         self.hotkeys = state["hotkeys"]
         self.benchmarks = state.get("benchmarks", self.benchmarks)
+        self.baseline_metrics = state.get("baseline_benchmarks", self.baseline_metrics)
         self.failed = state.get("failed", self.failed)
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
@@ -468,6 +480,10 @@ class Validator:
             logger.info("Will not set weights as the contest state has not been set")
             return
 
+        if not self.baseline_metrics:
+            logger.info("Will not set weights as the baseline benchmarks have not been set")
+            return
+
         if self.benchmarking:
             logger.info("Not setting new weights as benchmarking is not done, reusing old ones")
 
@@ -494,7 +510,7 @@ class Validator:
 
         logger.info("Setting weights")
 
-        weights = get_scores(get_contestant_scores(self.benchmarks), len(self.metagraph.nodes))
+        weights = get_scores(get_contestant_scores(self.benchmarks, self.baseline_metrics), len(self.metagraph.nodes))
 
         self.send_wandb_metrics()
 
@@ -720,7 +736,7 @@ class Validator:
 
             return
 
-        states = await asyncio.gather(
+        states: tuple[BenchmarkResults] = await asyncio.gather(
             *[
                 api.state()
                 for api in self.benchmarking_apis
@@ -739,6 +755,9 @@ class Validator:
                     in_progress.append((index, result))
                 case BenchmarkState.FINISHED:
                     finished.append((index, result))
+            if result.baseline_metrics and self.baseline_metrics != result.baseline_metrics:
+                self.baseline_metrics = result.baseline_metrics
+                logger.info(f"Updated baseline benchmarks to {result.baseline_metrics}")
 
         with_results = in_progress + finished
 

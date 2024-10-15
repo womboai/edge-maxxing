@@ -140,6 +140,7 @@ def state(request: Request) -> BenchmarkResults:
     return BenchmarkResults(
         state=benchmark_state,
         results=benchmarker.benchmarks,
+        baseline_metrics=benchmarker.get_baseline_metrics(),
         average_benchmark_time=average_benchmark_time,
     )
 

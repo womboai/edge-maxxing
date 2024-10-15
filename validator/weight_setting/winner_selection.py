@@ -1,13 +1,13 @@
 from operator import itemgetter
 
-from base_validator.metrics import CheckpointBenchmark
+from base_validator.metrics import CheckpointBenchmark, MetricData
 
 TIER_SCORE_IMPROVEMENT_THRESHOLD = 1.1
 
 
-def get_contestant_scores(benchmarks: list[CheckpointBenchmark | None]):
+def get_contestant_scores(benchmarks: list[CheckpointBenchmark | None], baseline_metrics: MetricData):
     contestants = [
-        (uid, metric_data.calculate_score())
+        (uid, metric_data.calculate_score(baseline_metrics))
         for uid, metric_data in enumerate(benchmarks)
         if metric_data
     ]
