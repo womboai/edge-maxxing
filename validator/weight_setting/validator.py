@@ -3,7 +3,7 @@ import random
 import time
 from argparse import ArgumentParser
 from datetime import date, datetime
-from itertools import islice, groupby
+from itertools import islice, groupby, chain
 from math import ceil
 from operator import itemgetter, attrgetter
 from os import makedirs
@@ -603,13 +603,12 @@ class Validator:
         )
 
     def deduplicate_benchmarks(self):
-        """
-        O(n^2) operation to detect duplicated benchmarks based on their hashes
-        """
         hashes = [
             (uid, load_image_hash(benchmark.image_hash), benchmark)
             for uid, benchmark in enumerate(self.benchmarks)
         ]
+
+        duplicate_buckets: list[set[int]] = []
 
         for uid_a, hash_a, benchmark in hashes:
             for uid_b, hash_b, _ in hashes:
@@ -617,7 +616,21 @@ class Validator:
                     continue
 
                 if hash_a - hash_b < HASH_DIFFERENCE_THRESHOLD:
-                    self.benchmarks[uid_b] = benchmark
+                    matching_buckets = [bucket for bucket in duplicate_buckets if uid_a in bucket or uid_b in bucket]
+                    if len(matching_buckets):
+                        bucket = matching_buckets[0]
+                        bucket.add(uid_a)
+                        bucket.add(uid_b)
+                    else:
+                        matching_buckets.append({uid_a, uid_b})
+
+        for bucket in duplicate_buckets:
+            oldest = min(bucket, key=lambda uid: self.contest_state.miner_info[uid].block)
+
+            for uid in bucket:
+                if uid != oldest:
+                    self.benchmarks[uid] = None
+                    self.failed.add(uid)
 
     async def do_step(self, block: int):
         now = self.current_time()
