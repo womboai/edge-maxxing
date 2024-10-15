@@ -3,7 +3,7 @@ import random
 import time
 from argparse import ArgumentParser
 from datetime import date, datetime
-from itertools import islice, groupby, chain
+from itertools import islice
 from math import ceil
 from operator import itemgetter, attrgetter
 from os import makedirs
@@ -11,8 +11,9 @@ from pathlib import Path
 from pickle import dump, load
 from typing import Any
 
-import numpy
 import wandb
+from base_validator.hash import load_image_hash, HASH_DIFFERENCE_THRESHOLD
+from base_validator.metrics import BenchmarkState, CheckpointBenchmark
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
@@ -39,8 +40,6 @@ from neuron.submissions import get_submission
 from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores
-from base_validator.hash import load_image_hash, HASH_DIFFERENCE_THRESHOLD
-from base_validator.metrics import BenchmarkState, CheckpointBenchmark
 
 VALIDATOR_VERSION: tuple[int, int, int] = (3, 6, 5)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
@@ -730,17 +729,18 @@ class Validator:
             ],
         )
 
-        by_state = {
-            state: list(group)
-            for state, group in groupby(
-                enumerate(states),
-                key=lambda result: result[1].state,
-            )
-        }
+        not_started = []
+        in_progress = []
+        finished = []
 
-        not_started = by_state.get(BenchmarkState.NOT_STARTED, [])
-        in_progress = by_state.get(BenchmarkState.IN_PROGRESS, [])
-        finished = by_state.get(BenchmarkState.FINISHED, [])
+        for index, result in enumerate(states):
+            match result.state:
+                case BenchmarkState.NOT_STARTED:
+                    not_started.append((index, result))
+                case BenchmarkState.IN_PROGRESS:
+                    in_progress.append((index, result))
+                case BenchmarkState.FINISHED:
+                    finished.append((index, result))
 
         with_results = in_progress + finished
 
