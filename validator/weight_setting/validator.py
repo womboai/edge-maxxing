@@ -38,7 +38,7 @@ from neuron import (
 from neuron.submissions import get_submission
 from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
-from .winner_selection import get_highest_uids, get_contestant_scores
+from .winner_selection import get_scores, get_contestant_scores
 from base_validator.hash import load_image_hash, HASH_DIFFERENCE_THRESHOLD
 from base_validator.metrics import BenchmarkState, CheckpointBenchmark
 
@@ -216,7 +216,7 @@ class Validator:
 
         self.new_wandb_run()
 
-    def send_wandb_metrics(self, average_time: float | None = None, winner: Uid | None = None):
+    def send_wandb_metrics(self, average_time: float | None = None):
         if not self.wandb_run:
             return
 
@@ -256,9 +256,6 @@ class Validator:
             }
 
             benchmark_data[str(uid)] = data
-
-        if winner:
-            benchmark_data[str(winner)]["winner"] = True
 
         log_data = {
             "submissions": submission_data,
@@ -501,24 +498,18 @@ class Validator:
 
         logger.info("Setting weights")
 
-        highest_uids = get_highest_uids(get_contestant_scores(self.benchmarks))
-        winner = min(highest_uids, key=lambda uid: self.contest_state.miner_info[uid].block) if highest_uids else None
+        weights = get_scores(get_contestant_scores(self.benchmarks), len(self.metagraph.nodes))
 
-        self.send_wandb_metrics(winner=winner)
+        self.send_wandb_metrics()
 
-        if winner:
-            weights = numpy.zeros(len(self.metagraph.nodes))
-            weights[winner] = 1.0
-        else:
-            weights = numpy.ones(len(self.metagraph.nodes))
-
-        uids = numpy.indices(weights.shape)[0]
+        if sum(weights) <= 0.0:
+            weights = [1.0] * len(self.metagraph.nodes)
 
         set_node_weights(
             self.substrate,
             self.keypair,
-            node_ids=list(uids),
-            node_weights=list(weights),
+            node_ids=list(range(len(self.metagraph.nodes))),
+            node_weights=weights,
             netuid=self.metagraph.netuid,
             validator_node_id=self.uid,
             version_key=WEIGHTS_VERSION,
