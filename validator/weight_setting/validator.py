@@ -335,8 +335,6 @@ class Validator:
                     "hotkeys": self.hotkeys,
                     "benchmarks": self.benchmarks,
                     "failed": self.failed,
-                    "hash_prompt": self.hash_prompt,
-                    "hash_seed": self.hash_seed,
                     "last_day": self.last_day,
                     "contest_state": self.contest_state,
                     "benchmarking": self.benchmarking,
