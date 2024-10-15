@@ -14,7 +14,7 @@ from typing import Any
 
 import requests
 import wandb
-from base_validator.hash import load_image_hash, HASH_DIFFERENCE_THRESHOLD
+from base_validator.hash import load_image_hash
 from base_validator.metrics import BenchmarkState, CheckpointBenchmark, BenchmarkResults, MetricData
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
@@ -24,6 +24,7 @@ from fiber.logging_utils import get_logger
 from substrateinterface import SubstrateInterface, Keypair
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
+from weight_setting.deduplication import find_duplicates
 
 from neuron import (
     get_config,
@@ -40,7 +41,6 @@ from neuron import (
     ModelRepositoryInfo, SPEC_VERSION,
 )
 from neuron.submissions import get_submission
-from validator.weight_setting.deduplication import find_duplicates
 from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores
@@ -496,7 +496,7 @@ class Validator:
             return
 
         if self.benchmarking:
-            logger.info("Not setting new weights as benchmarking is not done, reusing old ones")
+            logger.info("Not setting new weights as benchmarking is not done, reusing old weights")
 
             zipped_weights = get_weights_set_by_node(self.substrate, self.metagraph.netuid, self.uid, self.block)
 
@@ -625,7 +625,8 @@ class Validator:
     def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         return self.send_submissions_to_api(self.benchmarking_apis, submissions)
 
-    def current_time(self):
+    @staticmethod
+    def current_time():
         return datetime.now(tz=TIMEZONE)
 
     def non_tested_miners(self):
@@ -801,7 +802,7 @@ class Validator:
                 if hotkey in self.hotkeys:
                     self.set_miner_benchmarks(self.hotkeys.index(hotkey), benchmark)
 
-        average_time = sum(benchmark_times) / len(benchmark_times) if benchmark_times else None
+        average_time = (sum(benchmark_times) / len(benchmark_times)) if benchmark_times else None
 
         self.send_wandb_metrics(average_time=average_time)
 
