@@ -38,6 +38,7 @@ from neuron import (
     ModelRepositoryInfo, SPEC_VERSION,
 )
 from neuron.submissions import get_submission
+from validator.weight_setting.deduplication import find_duplicates
 from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores
@@ -45,7 +46,7 @@ from .winner_selection import get_scores, get_contestant_scores
 VALIDATOR_VERSION: tuple[int, int, int] = (4, 0, 0)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
-BENCHMARKS_VERSION = 2
+BENCHMARKS_VERSION = 3
 
 WEIGHTS_VERSION = (
     VALIDATOR_VERSION[0] * 10000 +
@@ -622,36 +623,6 @@ class Validator:
             }
         )
 
-    def deduplicate_benchmarks(self):
-        hashes = [
-            (uid, load_image_hash(benchmark.image_hash), benchmark)
-            for uid, benchmark in enumerate(self.benchmarks)
-        ]
-
-        duplicate_buckets: list[set[int]] = []
-
-        for uid_a, hash_a, benchmark in hashes:
-            for uid_b, hash_b, _ in hashes:
-                if uid_a == uid_b:
-                    continue
-
-                if hash_a - hash_b < HASH_DIFFERENCE_THRESHOLD:
-                    matching_buckets = [bucket for bucket in duplicate_buckets if uid_a in bucket or uid_b in bucket]
-                    if len(matching_buckets):
-                        bucket = matching_buckets[0]
-                        bucket.add(uid_a)
-                        bucket.add(uid_b)
-                    else:
-                        matching_buckets.append({uid_a, uid_b})
-
-        for bucket in duplicate_buckets:
-            oldest = min(bucket, key=lambda uid: self.contest_state.miner_info[uid].block)
-
-            for uid in bucket:
-                if uid != oldest:
-                    self.benchmarks[uid] = None
-                    self.failed.add(uid)
-
     async def do_step(self, block: int):
         now = self.current_time()
 
@@ -763,6 +734,7 @@ class Validator:
                     in_progress.append((index, result))
                 case BenchmarkState.FINISHED:
                     finished.append((index, result))
+
             if result.baseline_metrics and self.baseline_metrics != result.baseline_metrics:
                 self.baseline_metrics = result.baseline_metrics
                 logger.info(f"Updated baseline benchmarks to {result.baseline_metrics}")
@@ -826,8 +798,16 @@ class Validator:
             )
             logger.info(self.benchmarks)
 
+            benchmark_duplicate_info = [
+                (load_image_hash(benchmark.image_hash), self.contest_state.miner_info[uid].block) if benchmark else None
+                for uid, benchmark in enumerate(self.benchmarks)
+            ]
+
+            for duplicate_uid in find_duplicates(benchmark_duplicate_info):
+                self.benchmarks[duplicate_uid] = None
+                self.failed.add(duplicate_uid)
+
             self.benchmarking = False
-            self.deduplicate_benchmarks()
             self.step += 1
 
             self.save_state()
