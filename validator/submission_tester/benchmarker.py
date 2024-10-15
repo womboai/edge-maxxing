@@ -7,12 +7,11 @@ from random import choice
 from threading import Lock
 from time import perf_counter
 
-from base_validator.metrics import CheckpointBenchmark
-from submission_tester.testing import compare_checkpoints
+from base_validator.metrics import CheckpointBenchmark, BaselineBenchmark, MetricData
 
 from neuron import Key, ModelRepositoryInfo, TIMEZONE, random_inputs
 from pipelines import TextToImageRequest
-from .testing import compare_checkpoints
+from .testing import compare_checkpoints, generate_baseline
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +19,7 @@ logger = logging.getLogger(__name__)
 class Benchmarker:
     submissions: dict[Key, ModelRepositoryInfo]
     benchmarks: dict[Key, CheckpointBenchmark | None]
+    baseline: BaselineBenchmark | None
     inputs: list[TextToImageRequest]
     started: bool
     done: bool
@@ -31,6 +31,7 @@ class Benchmarker:
     def __init__(self):
         self.submissions = {}
         self.benchmarks = {}
+        self.baseline = None
         self.inputs = []
         self.started = False
         self.done = True
@@ -48,6 +49,7 @@ class Benchmarker:
                 submission,
                 self.benchmarks.items(),
                 self.inputs,
+                self.baseline,
             )
 
             self.submission_times.append(perf_counter() - start_time)
@@ -67,6 +69,10 @@ class Benchmarker:
         self.inputs = random_inputs()
         self.started = True
         self.done = False
+
+        if not self.baseline or self.baseline.inputs != self.inputs:
+            logger.info("Generating baseline samples to compare")
+            self.baseline = generate_baseline(self.inputs)
 
         while len(self.benchmarks) != len(self.submissions):
             hotkey = choice(list(self.submissions.keys() - self.benchmarks.keys()))
@@ -99,3 +105,6 @@ class Benchmarker:
             self.benchmarks = {}
 
         self.benchmark_task = asyncio.create_task(self._start_benchmarking(submissions))
+
+    def get_baseline_metrics(self) -> MetricData | None:
+        return self.baseline.metric_data if self.baseline else None

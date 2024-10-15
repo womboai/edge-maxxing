@@ -5,7 +5,7 @@ from io import BytesIO
 from time import perf_counter
 
 from base_validator.hash import load_image_hash, save_image_hash, HASH_DIFFERENCE_THRESHOLD
-from base_validator.metrics import CheckpointBenchmark, MetricData
+from base_validator.metrics import CheckpointBenchmark, MetricData, BaselineBenchmark
 import imagehash
 from PIL import Image
 
@@ -45,10 +45,44 @@ def generate(
     )
 
 
+def generate_baseline(inputs: list[TextToImageRequest]) -> BaselineBenchmark:
+    outputs: list[GenerationOutput] = []
+    with InferenceSandbox(CURRENT_CONTEST.baseline_repository, True) as sandbox:
+        size = sandbox.model_size
+
+        for index, request in enumerate(inputs):
+            output = generate(sandbox, request)
+
+            logger.info(
+                f"Sample {index + 1} Generated\n"
+                f"Generation Time: {output.generation_time}s\n"
+                f"VRAM Usage: {output.vram_used}b\n"
+                f"Power Usage: {output.watts_used}W"
+            )
+
+            outputs.append(output)
+
+    generation_time = mean(output.generation_time for output in outputs)
+    vram_used = max(output.vram_used for output in outputs)
+    watts_used = max(output.watts_used for output in outputs)
+
+    return BaselineBenchmark(
+        inputs=inputs,
+        outputs=outputs,
+        metric_data=MetricData(
+            generation_time=generation_time,
+            size=size,
+            vram_used=vram_used,
+            watts_used=watts_used,
+        ),
+    )
+
+
 def compare_checkpoints(
     submission: ModelRepositoryInfo,
     existing_benchmarks: Iterable[tuple[Key, CheckpointBenchmark | None]],
     inputs: list[TextToImageRequest],
+    baseline: BaselineBenchmark,
 ) -> CheckpointBenchmark | None:
     logger.info("Generating model samples")
 
@@ -115,25 +149,6 @@ def compare_checkpoints(
         f"Max Power Usage: {watts_used}W"
     )
 
-    logger.info("Generating baseline samples to compare")
-
-    baseline_outputs: list[GenerationOutput] = []
-
-    with InferenceSandbox(CURRENT_CONTEST.baseline_repository, True) as baseline_sandbox:
-        baseline_size = baseline_sandbox.model_size
-
-        for i, (request, output) in enumerate(zip(inputs, outputs)):
-            baseline = generate(baseline_sandbox, request)
-
-            logger.info(
-                f"Baseline sample {i + 1} Generated\n"
-                f"Generation Time: {baseline.generation_time}s\n"
-                f"VRAM Usage: {baseline.vram_used}b\n"
-                f"Power Usage: {baseline.watts_used}W"
-            )
-
-            baseline_outputs.append(baseline)
-
     comparator = CURRENT_CONTEST.output_comparator()
 
     def calculate_similarity(baseline_output: GenerationOutput, optimized_output: GenerationOutput):
@@ -149,22 +164,10 @@ def compare_checkpoints(
 
     average_similarity = mean(
         calculate_similarity(baseline_output, output)
-        for baseline_output, output in zip(baseline_outputs, outputs)
+        for baseline_output, output in zip(baseline.outputs, outputs)
     )
 
-    baseline_average_time = mean(output.generation_time for output in baseline_outputs)
-    baseline_vram_used = max(output.vram_used for output in baseline_outputs)
-    baseline_watts_used = max(output.watts_used for output in baseline_outputs)
-
-    logger.info(f"Average Similarity: {average_similarity}")
-
-    return CheckpointBenchmark(
-        baseline=MetricData(
-            generation_time=baseline_average_time,
-            size=baseline_size,
-            vram_used=baseline_vram_used,
-            watts_used=baseline_watts_used,
-        ),
+    benchmark = CheckpointBenchmark(
         model=MetricData(
             generation_time=average_time,
             size=size,
@@ -174,3 +177,7 @@ def compare_checkpoints(
         similarity_score=average_similarity,
         image_hash=image_hash_bytes,
     )
+
+    logger.info(f"Average Similarity: {average_similarity}")
+    logger.info(f"Score: {benchmark.calculate_score(baseline.metric_data)}")
+    return benchmark
