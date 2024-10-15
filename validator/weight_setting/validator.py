@@ -12,6 +12,7 @@ from pathlib import Path
 from pickle import dump, load
 from typing import Any
 
+import requests
 import wandb
 from base_validator.hash import load_image_hash, HASH_DIFFERENCE_THRESHOLD
 from base_validator.metrics import BenchmarkState, CheckpointBenchmark, BenchmarkResults, MetricData
@@ -28,6 +29,7 @@ from neuron import (
     get_config,
     ContestId,
     CURRENT_CONTEST,
+    INPUTS_ENDPOINT,
     find_contest,
     ContestDeviceValidationError,
     Contest,
@@ -538,16 +540,28 @@ class Validator:
 
         self.metagraph.sync_nodes()
 
+    @staticmethod
+    def get_blacklisted_keys():
+        response = requests.get(
+            f"{INPUTS_ENDPOINT}/blacklist", headers={
+                "Content-Type": "application/json"
+            },
+        )
+
+        response.raise_for_status()
+        return response.json()
+
     def get_miner_submissions(self):
         visited_repositories: dict[str, tuple[Uid, int]] = {}
         visited_revisions: dict[str, tuple[Uid, int]] = {}
+        blacklisted_keys = self.get_blacklisted_keys()
 
         miner_info: list[MinerModelInfo | None] = []
 
         for hotkey, node in tqdm(self.metagraph.nodes.items()):
             if (
-                hotkey in self.config["blacklist.hotkeys"] or
-                node.coldkey in self.config["blacklist.coldkeys"]
+                hotkey in blacklisted_keys["hotkeys"] or
+                node.coldkey in blacklisted_keys["coldkeys"]
             ):
                 miner_info.append(None)
                 continue
