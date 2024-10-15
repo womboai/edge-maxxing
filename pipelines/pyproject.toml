@@ -1,9 +1,9 @@
 [tool.poetry]
 name = "edge-maxxing-pipelines"
 
-version = "1.0.0"
+version = "1.1.0"
 
-description = "The base neuron which validators & miners inherent from"
+description = "Holder for models & constants to be accessed by multiple repositories"
 
 readme = "../README.md"
 

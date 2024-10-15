@@ -17,6 +17,7 @@ from neuron import (
     setup_sandbox,
     InvalidSubmissionError,
 )
+from pipelines import SUBMISSION_SPEC_VERSION
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
@@ -47,7 +48,7 @@ class InferenceSandbox(Generic[RequestT]):
         except InvalidSubmissionError as e:
             if baseline:
                 self.clear_sandbox()
-                raise RuntimeError(f"Failed to setup baseline sandbox, cleared baseline sandbox directory") from e
+                raise RuntimeError("Failed to setup baseline sandbox, cleared baseline sandbox directory") from e
             else:
                 raise e
 
@@ -67,7 +68,7 @@ class InferenceSandbox(Generic[RequestT]):
         Thread(target=self._stream_logs, args=(self._process.stdout, "STDOUT", sys.stdout), daemon=True).start()
         Thread(target=self._stream_logs, args=(self._process.stderr, "STDERR", sys.stderr), daemon=True).start()
 
-        logger.info(f"Inference process starting")
+        logger.info("Inference process starting")
         socket_path = abspath(self._sandbox_directory / "inferences.sock")
 
         for _ in range(INFERENCE_SOCKET_TIMEOUT):
@@ -80,13 +81,18 @@ class InferenceSandbox(Generic[RequestT]):
         else:
             raise InvalidSubmissionError(f"Socket file '{socket_path}' not found after {INFERENCE_SOCKET_TIMEOUT} seconds.")
 
-        logger.info(f"Connecting to socket")
+        logger.info("Connecting to socket")
         try:
             self._client = Client(socket_path)
         except ConnectionRefusedError as e:
             if baseline:
                 self.clear_sandbox()
-                raise InvalidSubmissionError(f"Failed to connect to socket, cleared baseline sandbox directory") from e
+                raise InvalidSubmissionError("Failed to connect to socket, cleared baseline sandbox directory") from e
+
+        version = self._client.recv_bytes(1)[0]
+
+        if version != SUBMISSION_SPEC_VERSION:
+            raise InvalidSubmissionError(f"Submission is at version {version} while expected version is {SUBMISSION_SPEC_VERSION}")
 
     @property
     def _user(self) -> str:
