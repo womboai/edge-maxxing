@@ -35,7 +35,7 @@ from neuron import (
     Uid,
     MinerModelInfo,
     TIMEZONE,
-    ModelRepositoryInfo,
+    ModelRepositoryInfo, SPEC_VERSION,
 )
 from neuron.submissions import get_submission
 from .benchmarking_api import BenchmarkingApi, benchmarking_api
@@ -45,10 +45,15 @@ from .winner_selection import get_scores, get_contestant_scores
 VALIDATOR_VERSION: tuple[int, int, int] = (4, 0, 0)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
-WEIGHTS_VERSION = 10000 * VALIDATOR_VERSION[0] + 100 * VALIDATOR_VERSION[1] + VALIDATOR_VERSION[2]
-
 BENCHMARKS_VERSION = 2
-COLLECTED_SUBMISSIONS_VERSION = 1
+
+WEIGHTS_VERSION = (
+    VALIDATOR_VERSION[0] * 10000 +
+    VALIDATOR_VERSION[1] * 100 +
+    VALIDATOR_VERSION[2]
+)
+
+COLLECTED_SUBMISSIONS_VERSION = SPEC_VERSION * 10 + 1
 
 logger = get_logger(__name__)
 
