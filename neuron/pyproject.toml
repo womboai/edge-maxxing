@@ -35,7 +35,6 @@ classifiers = [
 python = ">=3.10,<3.13"
 fiber = { git = "https://github.com/womboai/fiber", branch = "weights" }
 GitPython = "3.1.43"
-nltk = "3.9.1"
 torch = "2.4.1"
 pynvml = "11.5.3"
 diffusers = "0.30.3"

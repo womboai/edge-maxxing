@@ -1,12 +1,13 @@
 import logging
 import os
+import socket
 import sys
 import time
 from io import TextIOWrapper
-from multiprocessing.connection import Client
+from multiprocessing.connection import Client, Connection
 from os.path import abspath
 from pathlib import Path
-from subprocess import Popen, run, TimeoutExpired, CalledProcessError, PIPE
+from subprocess import Popen, run, TimeoutExpired, PIPE
 from typing import Generic
 from threading import Thread
 
@@ -15,7 +16,7 @@ from neuron import (
     INFERENCE_SOCKET_TIMEOUT,
     ModelRepositoryInfo,
     setup_sandbox,
-    InvalidSubmissionError,
+    InvalidSubmissionError, SPEC_VERSION,
 )
 
 SANDBOX_DIRECTORY = Path("/sandbox")
@@ -35,7 +36,7 @@ def sandbox_args(user: str):
 class InferenceSandbox(Generic[RequestT]):
     _repository: ModelRepositoryInfo
 
-    _client: Client
+    _client: Connection
     _process: Popen
 
     def __init__(self, repository_info: ModelRepositoryInfo, baseline: bool):
@@ -47,7 +48,7 @@ class InferenceSandbox(Generic[RequestT]):
         except InvalidSubmissionError as e:
             if baseline:
                 self.clear_sandbox()
-                raise RuntimeError(f"Failed to setup baseline sandbox, cleared baseline sandbox directory") from e
+                raise RuntimeError("Failed to setup baseline sandbox, cleared baseline sandbox directory") from e
             else:
                 raise e
 
@@ -67,7 +68,7 @@ class InferenceSandbox(Generic[RequestT]):
         Thread(target=self._stream_logs, args=(self._process.stdout, "STDOUT", sys.stdout), daemon=True).start()
         Thread(target=self._stream_logs, args=(self._process.stderr, "STDERR", sys.stderr), daemon=True).start()
 
-        logger.info(f"Inference process starting")
+        logger.info("Inference process starting")
         socket_path = abspath(self._sandbox_directory / "inferences.sock")
 
         for _ in range(INFERENCE_SOCKET_TIMEOUT):
@@ -80,13 +81,13 @@ class InferenceSandbox(Generic[RequestT]):
         else:
             raise InvalidSubmissionError(f"Socket file '{socket_path}' not found after {INFERENCE_SOCKET_TIMEOUT} seconds.")
 
-        logger.info(f"Connecting to socket")
+        logger.info("Connecting to socket")
         try:
             self._client = Client(socket_path)
         except ConnectionRefusedError as e:
             if baseline:
                 self.clear_sandbox()
-                raise InvalidSubmissionError(f"Failed to connect to socket, cleared baseline sandbox directory") from e
+                raise InvalidSubmissionError("Failed to connect to socket, cleared baseline sandbox directory") from e
 
     @property
     def _user(self) -> str:

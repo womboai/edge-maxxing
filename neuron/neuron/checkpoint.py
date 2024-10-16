@@ -15,8 +15,6 @@ REVISION_LENGTH = 7
 
 @dataclass
 class GenerationOutput:
-    prompt: str
-    seed: int
     output: bytes
     generation_time: float
     vram_used: float

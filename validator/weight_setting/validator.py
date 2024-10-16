@@ -3,7 +3,7 @@ import random
 import time
 from argparse import ArgumentParser
 from datetime import date, datetime
-from itertools import islice, groupby
+from itertools import islice
 from math import ceil
 from operator import itemgetter, attrgetter
 from os import makedirs
@@ -12,8 +12,10 @@ from pathlib import Path
 from pickle import dump, load
 from typing import Any
 
-import numpy
+import requests
 import wandb
+from base_validator.hash import load_image_hash
+from base_validator.metrics import BenchmarkState, CheckpointBenchmark, BenchmarkResults, MetricData
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
@@ -22,37 +24,40 @@ from fiber.logging_utils import get_logger
 from substrateinterface import SubstrateInterface, Keypair
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
+from weight_setting.deduplication import find_duplicates
 
 from neuron import (
     get_config,
     ContestId,
     CURRENT_CONTEST,
+    INPUTS_ENDPOINT,
     find_contest,
     ContestDeviceValidationError,
     Contest,
     Key,
     Uid,
     MinerModelInfo,
-    ModelRepositoryInfo,
     TIMEZONE,
-    generate_random_prompt,
-    random_seed,
     ModelRepositoryInfo,
+    SPEC_VERSION,
+    get_submission,
 )
-from neuron.submissions import get_submission
 from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
-from .winner_selection import get_highest_uids, get_contestant_scores
-from base_validator.hash import load_image_hash, HASH_DIFFERENCE_THRESHOLD
-from base_validator.metrics import BenchmarkState, CheckpointBenchmark, BenchmarkingRequest
+from .winner_selection import get_scores, get_contestant_scores
 
-VALIDATOR_VERSION: tuple[int, int, int] = (3, 6, 5)
+VALIDATOR_VERSION: tuple[int, int, int] = (4, 0, 0)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
-WEIGHTS_VERSION = 10000 * VALIDATOR_VERSION[0] + 100 * VALIDATOR_VERSION[1] + VALIDATOR_VERSION[2]
-BENCHMARKS_VERSION = 1
+BENCHMARKS_VERSION = 3
 
-COLLECTED_SUBMISSIONS_VERSION = 1
+WEIGHTS_VERSION = (
+    VALIDATOR_VERSION[0] * 10000 +
+    VALIDATOR_VERSION[1] * 100 +
+    VALIDATOR_VERSION[2]
+)
+
+COLLECTED_SUBMISSIONS_VERSION = SPEC_VERSION * 10 + 1
 
 logger = get_logger(__name__)
 
@@ -110,6 +115,7 @@ class Validator:
     attempted_set_weights: bool = False
 
     benchmarks: list[CheckpointBenchmark | None]
+    baseline_metrics: MetricData | None
     failed: set[int]
     hash_prompt: str
     hash_seed: int
@@ -158,6 +164,7 @@ class Validator:
         self.wandb_run_date = None
 
         self.benchmarks = self.clear_benchmarks()
+        self.baseline_metrics = None
         self.failed = set()
 
         self.load_state()
@@ -179,12 +186,11 @@ class Validator:
 
         contest_id = self.contest_state.id if self.contest_state else CURRENT_CONTEST.id
 
-        signing_message = f"{self.uid}:{hotkey}:{contest_id.name}"
+        signing_message = f"{name}:{hotkey}:{contest_id.name}"
         signature = f"0x{self.keypair.sign(signing_message).hex()}"
 
         self.wandb_run = wandb.init(
             name=name,
-            id=name,
             resume="allow",
             mode="offline" if self.config["wandb.offline"] else "online",
             project=self.config["wandb.project_name"],
@@ -220,7 +226,7 @@ class Validator:
 
         self.new_wandb_run()
 
-    def send_wandb_metrics(self, average_time: float | None = None, winner: Uid | None = None):
+    def send_wandb_metrics(self, average_time: float | None = None):
         if not self.wandb_run:
             return
 
@@ -247,22 +253,18 @@ class Validator:
                 continue
 
             data = {
-                "baseline_generation_time": benchmark.baseline.generation_time,
                 "generation_time": benchmark.model.generation_time,
                 "similarity": benchmark.similarity_score,
-                "baseline_size": benchmark.baseline.size,
                 "size": benchmark.model.size,
-                "baseline_vram_used": benchmark.baseline.vram_used,
                 "vram_used": benchmark.model.vram_used,
-                "baseline_watts_used": benchmark.baseline.watts_used,
                 "watts_used": benchmark.model.watts_used,
                 "hotkey": self.hotkeys[uid],
             }
 
-            benchmark_data[str(uid)] = data
+            if self.baseline_metrics:
+                data["score"] = benchmark.calculate_score(self.baseline_metrics)
 
-        if winner:
-            benchmark_data[str(winner)]["winner"] = True
+            benchmark_data[str(uid)] = data
 
         log_data = {
             "submissions": submission_data,
@@ -272,6 +274,14 @@ class Validator:
 
         if average_time:
             log_data["average_benchmark_time"] = average_time
+
+        if self.baseline_metrics:
+            log_data["baseline"] = {
+                "generation_time": self.baseline_metrics.generation_time,
+                "size": self.baseline_metrics.size,
+                "vram_used": self.baseline_metrics.vram_used,
+                "watts_used": self.baseline_metrics.watts_used,
+            }
 
         self.wandb_run.log(data=log_data)
 
@@ -343,9 +353,8 @@ class Validator:
                     "step": self.step,
                     "hotkeys": self.hotkeys,
                     "benchmarks": self.benchmarks,
+                    "baseline_benchmarks": self.baseline_metrics,
                     "failed": self.failed,
-                    "hash_prompt": self.hash_prompt,
-                    "hash_seed": self.hash_seed,
                     "last_day": self.last_day,
                     "contest_state": self.contest_state,
                     "benchmarking": self.benchmarking,
@@ -361,9 +370,6 @@ class Validator:
         path = self.state_path
 
         if not isfile(path):
-            self.hash_prompt = generate_random_prompt()
-            self.hash_seed = random_seed()
-
             return
 
         # Load the state of the validator from file.
@@ -373,9 +379,8 @@ class Validator:
         self.step = state["step"]
         self.hotkeys = state["hotkeys"]
         self.benchmarks = state.get("benchmarks", self.benchmarks)
+        self.baseline_metrics = state.get("baseline_benchmarks", self.baseline_metrics)
         self.failed = state.get("failed", self.failed)
-        self.hash_prompt = state.get("hash_prompt", generate_random_prompt())
-        self.hash_seed = state.get("hash_seed", random_seed())
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
         self.benchmarking = state.get("benchmarking", self.benchmarking)
@@ -487,8 +492,12 @@ class Validator:
             logger.info("Will not set weights as the contest state has not been set")
             return
 
+        if not self.baseline_metrics:
+            logger.info("Will not set weights as the baseline benchmarks have not been set")
+            return
+
         if self.benchmarking:
-            logger.info("Not setting new weights as benchmarking is not done, reusing old ones")
+            logger.info("Not setting new weights as benchmarking is not done, reusing old weights")
 
             zipped_weights = get_weights_set_by_node(self.substrate, self.metagraph.netuid, self.uid, self.block)
 
@@ -513,24 +522,18 @@ class Validator:
 
         logger.info("Setting weights")
 
-        highest_uids = get_highest_uids(get_contestant_scores(self.benchmarks))
-        winner = min(highest_uids, key=lambda uid: self.contest_state.miner_info[uid].block) if highest_uids else None
+        weights = get_scores(get_contestant_scores(self.benchmarks, self.baseline_metrics), len(self.metagraph.nodes))
 
-        self.send_wandb_metrics(winner=winner)
+        self.send_wandb_metrics()
 
-        if winner:
-            weights = numpy.zeros(len(self.metagraph.nodes))
-            weights[winner] = 1.0
-        else:
-            weights = numpy.ones(len(self.metagraph.nodes))
-
-        uids = numpy.indices(weights.shape)[0]
+        if sum(weights) <= 0.0:
+            weights = [1.0] * len(self.metagraph.nodes)
 
         set_node_weights(
             self.substrate,
             self.keypair,
-            node_ids=list(uids),
-            node_weights=list(weights),
+            node_ids=list(range(len(self.metagraph.nodes))),
+            node_weights=weights,
             netuid=self.metagraph.netuid,
             validator_node_id=self.uid,
             version_key=WEIGHTS_VERSION,
@@ -538,16 +541,28 @@ class Validator:
 
         self.metagraph.sync_nodes()
 
+    @staticmethod
+    def get_blacklisted_keys():
+        response = requests.get(
+            f"{INPUTS_ENDPOINT}/blacklist", headers={
+                "Content-Type": "application/json"
+            },
+        )
+
+        response.raise_for_status()
+        return response.json()
+
     def get_miner_submissions(self):
         visited_repositories: dict[str, tuple[Uid, int]] = {}
         visited_revisions: dict[str, tuple[Uid, int]] = {}
+        blacklisted_keys = self.get_blacklisted_keys()
 
         miner_info: list[MinerModelInfo | None] = []
 
         for hotkey, node in tqdm(self.metagraph.nodes.items()):
             if (
-                hotkey in self.config["blacklist.hotkeys"] or
-                node.coldkey in self.config["blacklist.coldkeys"]
+                hotkey in blacklisted_keys["hotkeys"] or
+                node.coldkey in blacklisted_keys["coldkeys"]
             ):
                 miner_info.append(None)
                 continue
@@ -603,13 +618,7 @@ class Validator:
 
         await asyncio.gather(
             *[
-                api.start_benchmarking(
-                    BenchmarkingRequest(
-                        submissions=dict(chunk),
-                        hash_prompt=self.hash_prompt,
-                        hash_seed=self.hash_seed
-                    ),
-                )
+                api.start_benchmarking(dict(chunk))
                 for api, chunk in chunks
             ],
         )
@@ -617,7 +626,8 @@ class Validator:
     def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         return self.send_submissions_to_api(self.benchmarking_apis, submissions)
 
-    def current_time(self):
+    @staticmethod
+    def current_time():
         return datetime.now(tz=TIMEZONE)
 
     def non_tested_miners(self):
@@ -628,23 +638,6 @@ class Validator:
                 if self.contest_state.miner_info[uid] and not benchmark and uid not in self.failed
             }
         )
-
-    def deduplicate_benchmarks(self):
-        """
-        O(n^2) operation to detect duplicated benchmarks based on their hashes
-        """
-        hashes = [
-            (uid, load_image_hash(benchmark.image_hash), benchmark)
-            for uid, benchmark in enumerate(self.benchmarks)
-        ]
-
-        for uid_a, hash_a, benchmark in hashes:
-            for uid_b, hash_b, _ in hashes:
-                if uid_a == uid_b:
-                    continue
-
-                if hash_a - hash_b < HASH_DIFFERENCE_THRESHOLD:
-                    self.benchmarks[uid_b] = benchmark
 
     async def do_step(self, block: int):
         now = self.current_time()
@@ -657,57 +650,27 @@ class Validator:
 
             logger.info(f"Got {miner_info} submissions")
 
+            nodes = self.metagraph_nodes()
+
+            logger.info(f"Working on contest {self.contest.id.name} today's submissions")
+
+            submissions = {
+                nodes[uid].hotkey: submission.repository
+                for uid, submission in enumerate(miner_info)
+                if submission
+            }
+
+            await self.start_benchmarking(submissions)
+
+            self.benchmarks = self.clear_benchmarks()
+            self.failed.clear()
+
             if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
                 # New contest, restart
-                logger.info(f"Working on contest {self.contest.id.name} today's submissions")
-
-                nodes = self.metagraph_nodes()
-
-                submissions = {
-                    nodes[uid].hotkey: submission.repository
-                    for uid, submission in enumerate(miner_info)
-                    if submission
-                }
-
-                await self.start_benchmarking(submissions)
-
                 self.contest = CURRENT_CONTEST
-
-                self.benchmarks = self.clear_benchmarks()
-                self.failed.clear()
 
                 self.contest_state = ContestState(self.contest.id, miner_info)
             else:
-                def should_update(old_info: MinerModelInfo | None, new_info: MinerModelInfo | None):
-                    if old_info is None and new_info is None:
-                        return False
-
-                    if (old_info is None) != (new_info is None):
-                        return True
-
-                    return old_info.repository != new_info.repository
-
-                updated_uids = [
-                    uid
-                    for uid in range(len(self.metagraph.nodes))
-                    if should_update(self.contest_state.miner_info[uid], miner_info[uid])
-                ] + self.non_tested_miners()
-
-                nodes = self.metagraph_nodes()
-
-                submissions = {
-                    nodes[uid].hotkey: miner_info[uid].repository
-                    for uid in set(updated_uids)
-                    if miner_info[uid]
-                }
-
-                await self.start_benchmarking(submissions)
-
-                logger.info(f"Miners {updated_uids} changed their submissions or have not been tested yet")
-
-                for uid in updated_uids:
-                    self.reset_miner(uid)
-
                 self.contest_state.miner_info = miner_info
 
             self.last_day = now.date()
@@ -768,24 +731,29 @@ class Validator:
 
             return
 
-        states = await asyncio.gather(
+        states: tuple[BenchmarkResults] = await asyncio.gather(
             *[
                 api.state()
                 for api in self.benchmarking_apis
             ],
         )
 
-        by_state = {
-            state: list(group)
-            for state, group in groupby(
-                enumerate(states),
-                key=lambda result: result[1].state,
-            )
-        }
+        not_started = []
+        in_progress = []
+        finished = []
 
-        not_started = by_state.get(BenchmarkState.NOT_STARTED, [])
-        in_progress = by_state.get(BenchmarkState.IN_PROGRESS, [])
-        finished = by_state.get(BenchmarkState.FINISHED, [])
+        for index, result in enumerate(states):
+            match result.state:
+                case BenchmarkState.NOT_STARTED:
+                    not_started.append((index, result))
+                case BenchmarkState.IN_PROGRESS:
+                    in_progress.append((index, result))
+                case BenchmarkState.FINISHED:
+                    finished.append((index, result))
+
+            if result.baseline_metrics and self.baseline_metrics != result.baseline_metrics:
+                self.baseline_metrics = result.baseline_metrics
+                logger.info(f"Updated baseline benchmarks to {result.baseline_metrics}")
 
         with_results = in_progress + finished
 
@@ -835,7 +803,7 @@ class Validator:
                 if hotkey in self.hotkeys:
                     self.set_miner_benchmarks(self.hotkeys.index(hotkey), benchmark)
 
-        average_time = sum(benchmark_times) / len(benchmark_times) if benchmark_times else None
+        average_time = (sum(benchmark_times) / len(benchmark_times)) if benchmark_times else None
 
         self.send_wandb_metrics(average_time=average_time)
 
@@ -846,8 +814,16 @@ class Validator:
             )
             logger.info(self.benchmarks)
 
+            benchmark_duplicate_info = [
+                (load_image_hash(benchmark.image_hash), self.contest_state.miner_info[uid].block) if benchmark else None
+                for uid, benchmark in enumerate(self.benchmarks)
+            ]
+
+            for duplicate_uid in find_duplicates(benchmark_duplicate_info):
+                self.benchmarks[duplicate_uid] = None
+                self.failed.add(duplicate_uid)
+
             self.benchmarking = False
-            self.deduplicate_benchmarks()
             self.step += 1
 
             self.save_state()
