@@ -88,6 +88,8 @@ class InferenceSandbox(Generic[RequestT]):
                 self.clear_sandbox()
                 raise InvalidSubmissionError("Failed to connect to socket, cleared baseline sandbox directory") from e
 
+        logger.info("Checking submission version")
+
         version = self._client.recv_bytes(1)[0]
 
         if version != SPEC_VERSION:
