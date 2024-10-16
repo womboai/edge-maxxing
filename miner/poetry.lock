@@ -2156,7 +2156,7 @@ cli = ["click (>=5.0)"]
 
 [[package]]
 name = "pytype"
-version = "2024.4.11"
+version = "2024.10.11"
 description = "Python type inferencer"
 optional = false
 python-versions = ">=3.8"
