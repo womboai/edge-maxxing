@@ -1,12 +1,13 @@
 import logging
 import os
+import socket
 import sys
 import time
 from io import TextIOWrapper
-from multiprocessing.connection import Client
+from multiprocessing.connection import Client, Connection
 from os.path import abspath
 from pathlib import Path
-from subprocess import Popen, run, TimeoutExpired, CalledProcessError, PIPE
+from subprocess import Popen, run, TimeoutExpired, PIPE
 from typing import Generic
 from threading import Thread
 
@@ -35,7 +36,7 @@ def sandbox_args(user: str):
 class InferenceSandbox(Generic[RequestT]):
     _repository: ModelRepositoryInfo
 
-    _client: Client
+    _client: Connection
     _process: Popen
 
     def __init__(self, repository_info: ModelRepositoryInfo, baseline: bool):
@@ -87,13 +88,6 @@ class InferenceSandbox(Generic[RequestT]):
             if baseline:
                 self.clear_sandbox()
                 raise InvalidSubmissionError("Failed to connect to socket, cleared baseline sandbox directory") from e
-
-        logger.info("Checking submission version")
-
-        version = self._client.recv_bytes(1)[0]
-
-        if version != SPEC_VERSION:
-            raise InvalidSubmissionError(f"Submission is at version {version} while expected version is {SPEC_VERSION}")
 
     @property
     def _user(self) -> str:
