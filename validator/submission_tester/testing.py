@@ -167,6 +167,9 @@ def compare_checkpoints(
         for baseline_output, output in zip(baseline.outputs, outputs)
     )
 
+    del comparator
+    CURRENT_CONTEST.clear_cache()
+
     benchmark = CheckpointBenchmark(
         model=MetricData(
             generation_time=average_time,

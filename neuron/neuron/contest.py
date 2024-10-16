@@ -107,6 +107,10 @@ class Contest(ABC):
     def validate(self) -> None:
         ...
 
+    @abstractmethod
+    def clear_cache(self):
+        ...
+
 
 class CudaContest(Contest):
     def __init__(
@@ -149,6 +153,11 @@ class CudaContest(Contest):
                 f"Incompatible device {device_name} when {self.expected_device_name} is required.",
             )
 
+    def clear_cache(self):
+        import torch
+
+        torch.cuda.empty_cache()
+
 
 class AppleSiliconContest(Contest):
     def __init__(
@@ -171,6 +180,11 @@ class AppleSiliconContest(Contest):
 
         if not torch.backends.mps.is_available():
             raise ContestDeviceValidationError("MPS is not available but is required.")
+
+    def clear_cache(self):
+        import torch
+
+        torch.mps.empty_cache()
 
 
 class ContestDeviceValidationError(Exception):
