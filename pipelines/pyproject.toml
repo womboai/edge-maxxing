@@ -1,9 +1,9 @@
 [tool.poetry]
-name = "edge-maxxing-validator"
+name = "edge-maxxing-pipelines"
 
 version = "1.0.0"
 
-description = "The validator which checks models and checkpoints provided by miners"
+description = "Holder for models & constants to be accessed by multiple repositories"
 
 readme = "../README.md"
 
@@ -11,11 +11,7 @@ license = "MIT"
 
 authors = ["WOMBO <hello@w.ai>"]
 
-packages = [
-    { include = "base_validator" },
-    { include = "submission_tester" },
-    { include = "weight_setting" },
-]
+packages = [{ include = "pipelines" }]
 
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -30,19 +26,14 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Mathematics",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
-wandb = "0.18.1"
-websockets = "13.1"
-aiohttp = "3.10.6"
-ImageHash = "4.3.1"
-safetensors = "0.4.5"
-edge-maxxing-neuron = { path = "../neuron", develop = true }
-
-[tool.poetry.scripts]
-start_validator = 'weight_setting.validator:main'
+pydantic = ">=2"
 
 [tool.poetry.dev-dependencies]
 pytype = "2024.4.11"
@@ -54,4 +45,4 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry-monorepo.deps]
 
 [tool.pytype]
-inputs = ["validator"]
+inputs = ["pipelines"]

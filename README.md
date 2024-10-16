@@ -8,7 +8,7 @@
 
 #### *In the annals of the digital age, a grand saga unfolds. In a realm where the forces of artificial intelligence are harnessed by a select few, the question arises: shall this power remain concentrated, or shall it be distributed for the benefit of all humankind?*
 
-[![License](https://img.shields.io/github/license/womboai/edge-optimization-subnet)](https://github.com/womboai/edge-optimization-subnet/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/womboai/edge-maxxing)](https://github.com/womboai/edge-maxxing/blob/main/LICENSE)
 
 </div>
 
@@ -66,13 +66,7 @@ By optimizing popular models like LLAMA3 and Stable Diffusion, we transform idle
 
 The EdgeMaxxing subnet defines specific models, pipelines, and target hardware for optimization. Miners and validators collaborate in a daily competition to improve AI model performance on consumer devices.
 
-Miners are incentivized through a ranking-based reward system. The more effective their optimization, the higher their tier is. Every day at 12PM EST a contest is run, where:
-- 🥇 Golden Tier: 80% of the total reward pool
-- 🥈 Silver Tier: 16%
-- 🥉 Bronze Tier: 3.2%
-- 🎖️ All other tiers share the remaining pool
-
-Each tier's rewards are divided evenly among its contestants.
+Miners are rewarded based on how optimized their submissions are relative to other miners and the baseline . Every day at 12 PM PST a contest is run.
 
 Validators receive rewards for their consistent operation and accurate scoring.
 
@@ -82,7 +76,7 @@ Validators receive rewards for their consistent operation and accurate scoring.
 ### Competition Structure
 1. Miners submit optimized models
 2. Validators score submissions
-3. Contest runs daily at 12 PM New York time
+3. Contest runs daily at 12 PM PST
 4. Miners receive rewards based on their ranking
 
 ### Miners
@@ -115,65 +109,129 @@ pipx ensurepath
 pipx install poetry
 
 # Repository
-git clone https://github.com/womboai/edge-optimization-subnet
-cd edge-optimization-subnet
+git clone https://github.com/womboai/edge-maxxing
+cd edge-maxxing
 ```
 
 There is no need to manage venvs in any way, as poetry will handle that.
 
 ### Miner setup
-1. Go to the miner directory after cloning the repository,
-    ```bash
-    cd miner
-    poetry install
-    ```
-2. Clone the base model into a directory `model`
-    ```bash
-    git clone https://huggingface.co/stablediffusionapi/newdream-sdxl-20 model
-    ```
-3. Make your own repository on huggingface to optimize in
-4. Edit the miner/miner.py file, specifically the [optimize](https://github.com/womboai/edge-optimization-subnet/blob/main/miner/miner/miner.py#L20) function
-5. If you have methods of optimization that you do not wish to do through the aforementioned python function, optimize directly in the `model` directory
-6. Submit the model, changing the options as necessary
-    ```bash
-    poetry run python miner/miner.py \
-        --repository {huggingface-repository} \
-        --netuid {netuid} \
-        --subtensor.network finney \
-        --wallet.name {wallet} \
-        --wallet.hotkey {hotkey} \
-        --logging.trace \
-        --logging.debug
-    ```
-    Add `--no_optimizations` if you have not changed the `optimize` function, and `no_commit` if the optimizations are already in the repository, and you just want to make the submission.<br>
-    Additionally, you can pass `--commit_message` to add a commit message to the commit made if `no_commit` is not passed.
-7. Validators will collect your submission on 12PM New York time and tested in the remainder of the day
-
-### Validator setup
-All that is needed for a validator is running on the current contest's GPU with a registered hotkey;<br>
-
-This assumes using PM2, feel free to adjust for anything else
+1. Clone the [base inference repository](https://github.com/womboai/sdxl-newdream-20-inference)
 ```bash
-cd validator
-
+    git clone --recursive --depth 1 https://github.com/womboai/sdxl-newdream-20-inference model
+```
+2. Make your own repository on a git provider such as `GitHub` or `HuggingFace` to optimize in
+3. Edit the `src/pipeline.py` file to include any loading or inference optimizations, and save any changed models in `models` (use git submodules for referencing huggingface models or other git provider repositories) and commit
+4. After creating and optimizing your repository, run:
+```bash
+cd miner
 poetry install
-
-pm2 start poetry --name edge-validator --interpreter none -- \
-    run python validator/validator.py \
+```
+5. Submit the model, changing the options as necessary
+```bash
+poetry run submit_model \
     --netuid {netuid} \
-    --subtensor.network {network} \
+    --subtensor.network finney \
     --wallet.name {wallet} \
     --wallet.hotkey {hotkey} \
     --logging.trace \
     --logging.debug
 ```
+6. Follow the interactive prompts to submit the repository link, revision, and contest to participate in
+7. Optionally, benchmark your submission locally before submitting (make sure you have the right hardware e.g. NVIDIA GeForce RTX 4090).
+8. Validators will collect your submission on 12PM New York time and test it in the remainder of the day
+
+### Validator setup
+The validator setup requires two components, an API container and a scoring validator
+
+### Dedicated Hardware
+If your hardware is not accessed within a container(as in, can use Docker), then the easiest way to set the different components up is to use docker compose.
+
+To get started, go to the `validator`, and create a `.env` file with the following contents:
+```
+VALIDATOR_ARGS=--netuid {netuid} --subtensor.network {network} --wallet.name {wallet} --wallet.hotkey {hotkey} --logging.trace --logging.debug
+VALIDATOR_HOTKEY_SS58_ADDRESS={ss58-address}
+```
+
+Generate the compose file for the GPUs you have by editing `compose-gpu-layout.json` to include all CUDA device IDs and then running:
+```bash
+python3 ./generate_compose.py
+```
+
+And then start docker compose
+```bash
+docker compose up -d --build
+```
+
+To setup auto-updating, simply run
+```bash
+./initialize-docker-auto-update.sh
+```
+
+### RunPod/Containers
+If running in a containerized environment like RunPod(which does not support Docker), then you need to run 2 pods/containers. The following setup assumes using PM2.
+
+##### API Component
+In one pod/container with a GPU, we'll set up the API component, start as follows:
+
+```bash
+    git clone https://github.com/womboai/edge-maxxing /api
+    cd /api/validator
+    ./submission_tester/setup.sh
+```
+
+And then run as follows:
+```bash
+    su api -s /bin/bash
+
+    pipx ensurepath
+
+    export CUDA_VISIBLE_DEVICES=0
+
+    export VALIDATOR_HOTKEY_SS58_ADDRESS={ss58-address}
+
+    pm2 start poetry --name edge-maxxing-submission-tester --interpreter none -- \
+      run uvicorn \
+      --host 0.0.0.0 \
+      --port 8000 \
+      submission_tester:app
+```
+Make sure port 8000(or whichever you set) is exposed!
 
 If you want this to auto-update(which is recommended), start another pm2 process using `auto-update.sh` like the following:
 ```bash
-pm2 start auto-update.sh --name edge-validator-updater --interpreter bash -- edge-validator
+    pm2 start auto-update.sh --name edge-validator-updater --interpreter bash -- edge-maxxing-submission-tester
 ```
 
 The argument at the end is the name of the main PM2 process. This will keep your PM2 validator instance up to date as long as it is running.
+
+You can run more APIs(and are recommended to do so) and link the scoring validator to them.
+You can set which CUDA devices or ports to use along with that.
+
+#### Scoring Validator
+In the another pod/container without a GPU, to run the scoring validator, clone the repository as per the common instructions, then do as follows
+```bash
+    cd validator
+
+    poetry install
+
+    pm2 start poetry --name edge-validator --interpreter none -- \
+        run start_validator \
+        --netuid {netuid} \
+        --subtensor.network {network} \
+        --wallet.name {wallet} \
+        --wallet.hotkey {hotkey} \
+        --logging.trace \
+        --logging.debug \
+        --benchmarker_api {API component routes, space separated if multiple}
+```
+
+Make sure to replace the API component route with the routes to the API containers(which can be something in the format of `http://ip:port`), refer to the instructions above at [API Component](#api-component)
+
+Additionally, the auto-updating script can be used here
+```bash
+    pm2 start auto-update.sh --name edge-validator-updater --interpreter bash -- edge-validator
+```
 
 ## Proposals for Optimizations
 

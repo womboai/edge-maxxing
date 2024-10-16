@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "edge-optimization-subnet-miner"
+name = "edge-maxxing-miner"
 
 version = "1.0.0"
 
@@ -29,8 +29,11 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.11"
-edge-optimization-subnet-neuron = { path = "../neuron", develop = true }
+python = ">=3.10,<3.13"
+edge-maxxing-neuron = { path = "../neuron", develop = true }
+
+[tool.poetry.scripts]
+submit_model = 'miner.submit:main'
 
 [tool.poetry.dev-dependencies]
 pytype = "2024.4.11"

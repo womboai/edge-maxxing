@@ -1,21 +1,23 @@
-from os import urandom
-from random import sample, shuffle
+import os
+from zoneinfo import ZoneInfo
 
-import nltk
+import requests
+from pydantic import RootModel
 
-nltk.download('words')
-nltk.download('universal_tagset')
-nltk.download('averaged_perceptron_tagger')
+from pipelines import TextToImageRequest
 
-from nltk.corpus import words
-from nltk import pos_tag
-
-
-AVAILABLE_WORDS = [word for word, tag in pos_tag(words.words(), tagset='universal') if tag == "ADJ" or tag == "NOUN"]
+INFERENCE_SOCKET_TIMEOUT = 240
+TIMEZONE = ZoneInfo("US/Pacific")
+INPUTS_ENDPOINT = os.getenv("INPUTS_ENDPOINT", "https://edge-inputs.api.wombo.ai")
 
 
-def generate_random_prompt():
-    sampled_words = sample(AVAILABLE_WORDS, k=min(len(AVAILABLE_WORDS), min(urandom(1)[0] % 32, 8)))
-    shuffle(sampled_words)
+def random_inputs() -> list[TextToImageRequest]:
+    response = requests.get(
+        f"{INPUTS_ENDPOINT}/current_batch", headers={
+            "Content-Type": "application/json"
+        },
+    )
 
-    return ", ".join(sampled_words)
+    response.raise_for_status()
+
+    return RootModel[list[TextToImageRequest]].model_validate_json(response.text).root

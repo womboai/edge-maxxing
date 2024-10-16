@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "edge-optimization-subnet-neuron"
+name = "edge-maxxing-neuron"
 
 version = "1.0.0"
 
@@ -32,16 +32,19 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.11"
-torch = "2.2.0"
-bittensor = "7.3.1"
-loguru = "0.7.2"
-diffusers = "0.29.0"
-nltk = "3.8.1"
-transformers = "4.41.2"
-accelerate = "0.31.0"
+python = ">=3.10,<3.13"
+fiber = { git = "https://github.com/womboai/fiber", branch = "weights" }
+GitPython = "3.1.43"
+torch = "2.4.1"
+pynvml = "11.5.3"
+diffusers = "0.30.3"
+transformers = "4.44.2"
+accelerate = "0.34.2"
 omegaconf = "2.3.0"
-python_coreml_stable_diffusion = { git = "https://github.com/apple/ml-stable-diffusion", tag = "1.1.1" }
+torchvision = "0.19.1"
+scikit-image = "0.24.0"
+opencv-python = "4.10.0.84"
+edge-maxxing-pipelines = { path = "../pipelines", develop = true }
 
 [tool.poetry.dev-dependencies]
 pytype = "2024.4.11"
