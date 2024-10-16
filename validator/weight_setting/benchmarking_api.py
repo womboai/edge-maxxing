@@ -12,6 +12,7 @@ from fiber.logging_utils import get_logger
 from pydantic import RootModel
 from substrateinterface import Keypair
 from websockets import connect, ConnectionClosedError
+from websockets.protocol import State
 
 from neuron import ModelRepositoryInfo, Key
 
@@ -141,8 +142,14 @@ class BenchmarkingApiContextManager(Awaitable[BenchmarkingApi]):
                         output = sys.stderr if line.startswith("err:") else sys.stdout
 
                         print(f"[API - {self._index + 1}] - {line[4:]}", file=output)
-                except ConnectionClosedError:
-                    websocket = await self._connect_to_api()
+                except:
+                    if websocket.state is State.CLOSED or websocket.state is State.CLOSING:
+                        logger.error(f"Disconnected from API-{self._index + 1}'s logs, reconnecting", exc_info=True)
+
+                        await websocket.wait_closed()
+                        websocket = await self._connect_to_api()
+                    else:
+                        logger.error(f"Error occurred from API-{self._index + 1}'s logs", exc_info=True)
         finally:
             await websocket.close()
 
