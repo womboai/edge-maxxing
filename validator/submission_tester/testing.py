@@ -15,6 +15,7 @@ from neuron import (
     ModelRepositoryInfo,
     CURRENT_CONTEST,
     Key,
+    OutputComparator,
 )
 from pipelines import TextToImageRequest
 from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
@@ -149,9 +150,9 @@ def compare_checkpoints(
         f"Max Power Usage: {watts_used}W"
     )
 
-    comparator = CURRENT_CONTEST.output_comparator()
+    output_comparator = CURRENT_CONTEST.output_comparator()
 
-    def calculate_similarity(baseline_output: GenerationOutput, optimized_output: GenerationOutput):
+    def calculate_similarity(comparator: OutputComparator, baseline_output: GenerationOutput, optimized_output: GenerationOutput):
         try:
             return comparator(baseline_output.output, optimized_output.output)
         except:
@@ -163,11 +164,11 @@ def compare_checkpoints(
             return 0.0
 
     average_similarity = mean(
-        calculate_similarity(baseline_output, output)
+        calculate_similarity(output_comparator, baseline_output, output)
         for baseline_output, output in zip(baseline.outputs, outputs)
     )
 
-    del comparator
+    del output_comparator
     CURRENT_CONTEST.clear_cache()
 
     benchmark = CheckpointBenchmark(

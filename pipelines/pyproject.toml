@@ -36,7 +36,7 @@ python = ">=3.10,<3.13"
 pydantic = ">=2"
 
 [tool.poetry.dev-dependencies]
-pytype = "2024.4.11"
+pytype = "2024.10.11"
 
 [build-system]
 requires = ["poetry-core"]

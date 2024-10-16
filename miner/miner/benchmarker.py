@@ -1,5 +1,5 @@
 import os
-from multiprocessing.connection import Client
+from multiprocessing.connection import Client, Connection
 from os.path import abspath
 from pathlib import Path
 from subprocess import Popen
@@ -40,7 +40,7 @@ def wait_for_socket(socket_path: str, process: Popen):
         raise RuntimeError(f"Socket file '{socket_path}' not found after {safe_timeout} seconds. Your pipeline is taking too long to load. Please optimize and avoid precompiling if possible.")
 
 
-def test(contest: Contest, client: Client):
+def test(contest: Contest, client: Connection):
     outputs: list[GenerationOutput] = []
     inputs = random_inputs()
 
@@ -70,7 +70,7 @@ def test(contest: Contest, client: Client):
     )
 
 
-def benchmark(contest: Contest, client: Client, request: TextToImageRequest):
+def benchmark(contest: Contest, client: Connection, request: TextToImageRequest):
     start_joules = contest.get_joules()
     vram_monitor = VRamMonitor(contest)
     start = perf_counter()
