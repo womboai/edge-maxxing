@@ -1,6 +1,8 @@
+name: Test Validator Types
+
 on:
   pull_request:
-    type:
+    types:
       - opened
 
 jobs:
