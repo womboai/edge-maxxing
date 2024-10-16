@@ -162,10 +162,13 @@ def compare_checkpoints(
 
             return 0.0
 
-    average_similarity = mean(
+    similarities = [
         calculate_similarity(baseline_output, output)
         for baseline_output, output in zip(baseline.outputs, outputs)
-    )
+    ]
+
+    average_similarity = mean(similarities)
+    min_similarity = min(similarities)
 
     del comparator
     CURRENT_CONTEST.clear_cache()
@@ -177,7 +180,8 @@ def compare_checkpoints(
             vram_used=vram_used,
             watts_used=watts_used,
         ),
-        similarity_score=average_similarity,
+        average_similarity=average_similarity,
+        min_similarity=min_similarity,
         image_hash=image_hash_bytes,
     )
 

@@ -46,7 +46,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores
 
-VALIDATOR_VERSION: tuple[int, int, int] = (4, 0, 2)
+VALIDATOR_VERSION: tuple[int, int, int] = (4, 0, 3)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 BENCHMARKS_VERSION = 3
@@ -254,7 +254,8 @@ class Validator:
 
             data = {
                 "generation_time": benchmark.model.generation_time,
-                "similarity": benchmark.similarity_score,
+                "similarity": benchmark.average_similarity,
+                "min_similarity": benchmark.min_similarity,
                 "size": benchmark.model.size,
                 "vram_used": benchmark.model.vram_used,
                 "watts_used": benchmark.model.watts_used,
