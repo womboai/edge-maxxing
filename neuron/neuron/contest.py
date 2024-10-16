@@ -79,6 +79,17 @@ class ImageOutputComparator(OutputComparator):
 
         return clip_similarity * 0.35 + structural_similarity * 0.65
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        import torch
+
+        del self.clip
+        del self.processor
+        getattr(torch, self.device).empty_cache()
+
+
 
 class Contest(ABC):
     id: ContestId

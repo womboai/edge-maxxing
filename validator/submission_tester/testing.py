@@ -149,26 +149,22 @@ def compare_checkpoints(
         f"Max Power Usage: {watts_used}W"
     )
 
-    comparator = CURRENT_CONTEST.output_comparator()
+    with CURRENT_CONTEST.output_comparator() as comparator:
+        def calculate_similarity(baseline_output: GenerationOutput, optimized_output: GenerationOutput):
+            try:
+                return comparator(baseline_output.output, optimized_output.output)
+            except:
+                logger.info(
+                    f"Submission {submission.url}'s output couldn't be compared in similarity",
+                    exc_info=True,
+                )
 
-    def calculate_similarity(baseline_output: GenerationOutput, optimized_output: GenerationOutput):
-        try:
-            return comparator(baseline_output.output, optimized_output.output)
-        except:
-            logger.info(
-                f"Submission {submission.url}'s output couldn't be compared in similarity",
-                exc_info=True,
-            )
+                return 0.0
 
-            return 0.0
-
-    average_similarity = mean(
-        calculate_similarity(baseline_output, output)
-        for baseline_output, output in zip(baseline.outputs, outputs)
-    )
-
-    del comparator
-    CURRENT_CONTEST.clear_cache()
+        average_similarity = mean(
+            calculate_similarity(baseline_output, output)
+            for baseline_output, output in zip(baseline.outputs, outputs)
+        )
 
     benchmark = CheckpointBenchmark(
         model=MetricData(
