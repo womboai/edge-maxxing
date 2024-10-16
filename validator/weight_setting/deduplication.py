@@ -21,7 +21,7 @@ def find_duplicates(benchmark_hashes: list[tuple[ImageHash, int] | None]):
                 continue
 
             diff = hash_a - hash_b
-            print(f"{uid_a} - {uid_b}: {diff}")
+
             if diff < HASH_DIFFERENCE_THRESHOLD:
                 matching_buckets = [bucket for bucket in duplicate_buckets if uid_a in bucket or uid_b in bucket]
                 if len(matching_buckets):
