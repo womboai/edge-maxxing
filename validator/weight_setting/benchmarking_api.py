@@ -2,7 +2,7 @@ import asyncio
 import json
 import sys
 import time
-from asyncio import Task
+from asyncio import Task, CancelledError
 from collections.abc import Callable, Awaitable
 
 from aiohttp import ClientSession
@@ -11,7 +11,7 @@ from base_validator.metrics import BenchmarkResults
 from fiber.logging_utils import get_logger
 from pydantic import RootModel
 from substrateinterface import Keypair
-from websockets import connect, ConnectionClosedError
+from websockets import connect
 from websockets.protocol import State
 
 from neuron import ModelRepositoryInfo, Key
@@ -142,7 +142,10 @@ class BenchmarkingApiContextManager(Awaitable[BenchmarkingApi]):
                         output = sys.stderr if line.startswith("err:") else sys.stdout
 
                         print(f"[API - {self._index + 1}] - {line[4:]}", file=output)
-                except:
+                except Exception as e:
+                    if isinstance(e, (asyncio.TimeoutError, CancelledError)):
+                        break
+
                     if websocket.state is State.CLOSED or websocket.state is State.CLOSING:
                         logger.error(f"Disconnected from API-{self._index + 1}'s logs, reconnecting", exc_info=True)
 
