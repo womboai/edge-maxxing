@@ -14,7 +14,8 @@ from neuron import (
     GenerationOutput,
     ModelRepositoryInfo,
     CURRENT_CONTEST,
-    Key, OutputComparator,
+    Key,
+    OutputComparator,
 )
 from .vram_monitor import VRamMonitor
 from pipelines import TextToImageRequest
