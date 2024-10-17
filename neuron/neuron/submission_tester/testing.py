@@ -1,25 +1,28 @@
 import asyncio
 import logging
+from pathlib import Path
 from statistics import mean
 from collections.abc import Iterable
 from io import BytesIO
 from time import perf_counter
 
-from base_validator.hash import load_image_hash, save_image_hash, HASH_DIFFERENCE_THRESHOLD
-from base_validator.metrics import CheckpointBenchmark, MetricData, BaselineBenchmark
+from .hash import load_image_hash, save_image_hash, HASH_DIFFERENCE_THRESHOLD
+from .metrics import CheckpointBenchmark, MetricData, BaselineBenchmark
 import imagehash
 from PIL import Image
 
 from neuron import (
     GenerationOutput,
-    VRamMonitor,
     ModelRepositoryInfo,
     CURRENT_CONTEST,
-    Key,
-    OutputComparator,
+    Key, OutputComparator,
 )
+from .vram_monitor import VRamMonitor
 from pipelines import TextToImageRequest
-from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
+from neuron.submission_tester.inference_sandbox import InferenceSandbox, InvalidSubmissionError
+
+SANDBOX_DIRECTORY = Path("/sandbox")
+BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
 
 logger = logging.getLogger(__name__)
 
@@ -56,9 +59,14 @@ async def generate(
     return await loop.run_in_executor(None, __generate_sync, container, request)
 
 
-async def generate_baseline(inputs: list[TextToImageRequest]) -> BaselineBenchmark:
+async def generate_baseline(
+    inputs: list[TextToImageRequest],
+    sandbox_directory: Path = BASELINE_SANDBOX_DIRECTORY,
+    switch_user: bool = True,
+) -> BaselineBenchmark:
     outputs: list[GenerationOutput] = []
-    with InferenceSandbox(CURRENT_CONTEST.baseline_repository, True) as sandbox:
+
+    with InferenceSandbox(CURRENT_CONTEST.baseline_repository, True, sandbox_directory, switch_user) as sandbox:
         size = sandbox.model_size
 
         for index, request in enumerate(inputs):
@@ -94,13 +102,15 @@ async def compare_checkpoints(
     existing_benchmarks: Iterable[tuple[Key, CheckpointBenchmark | None]],
     inputs: list[TextToImageRequest],
     baseline: BaselineBenchmark,
+    sandbox_directory: Path = SANDBOX_DIRECTORY,
+    switch_user: bool = True,
 ) -> CheckpointBenchmark | None:
     logger.info("Generating model samples")
 
     outputs: list[GenerationOutput] = []
 
     try:
-        with InferenceSandbox(submission, False) as sandbox:
+        with InferenceSandbox(submission, False, sandbox_directory, switch_user) as sandbox:
             size = sandbox.model_size
 
             image_hash = None
@@ -152,41 +162,29 @@ async def compare_checkpoints(
     vram_used = max(output.vram_used for output in outputs)
     watts_used = max(output.watts_used for output in outputs)
 
-    logger.info(
-        f"Tested {len(inputs)} Samples\n"
-        f"Average Generation Time: {average_time}s\n"
-        f"Model Size: {size}b\n"
-        f"Max VRAM Usage: {vram_used}b\n"
-        f"Max Power Usage: {watts_used}W"
-    )
+    with CURRENT_CONTEST.output_comparator() as output_comparator:
+        async def calculate_similarity(comparator: OutputComparator, baseline_output: GenerationOutput, optimized_output: GenerationOutput):
+            loop = asyncio.get_running_loop()
 
-    output_comparator = CURRENT_CONTEST.output_comparator()
+            try:
+                return await loop.run_in_executor(
+                    None,
+                    comparator,
+                    baseline_output.output,
+                    optimized_output.output,
+                )
+            except:
+                logger.info(
+                    f"Submission {submission.url}'s output couldn't be compared in similarity",
+                    exc_info=True,
+                )
 
-    async def calculate_similarity(comparator: OutputComparator, baseline_output: GenerationOutput, optimized_output: GenerationOutput):
-        loop = asyncio.get_running_loop()
+                return 0.0
 
-        try:
-            return await loop.run_in_executor(
-                None,
-                comparator,
-                baseline_output.output,
-                optimized_output.output,
-            )
-        except:
-            logger.info(
-                f"Submission {submission.url}'s output couldn't be compared in similarity",
-                exc_info=True,
-            )
-
-            return 0.0
-
-    average_similarity = mean(
-        await calculate_similarity(output_comparator, baseline_output, output)
-        for baseline_output, output in zip(baseline.outputs, outputs)
-    )
-
-    del output_comparator
-    CURRENT_CONTEST.clear_cache()
+        average_similarity = mean(
+            await calculate_similarity(output_comparator, baseline_output, output)
+            for baseline_output, output in zip(baseline.outputs, outputs)
+        )
 
     benchmark = CheckpointBenchmark(
         model=MetricData(
@@ -199,6 +197,13 @@ async def compare_checkpoints(
         image_hash=image_hash_bytes,
     )
 
-    logger.info(f"Average Similarity: {average_similarity}")
-    logger.info(f"Score: {benchmark.calculate_score(baseline.metric_data)}")
+    logger.info(
+        f"Tested {len(inputs)} Samples\n"
+        f"Score: {benchmark.calculate_score(baseline.metric_data)}\n"
+        f"Average Similarity: {average_similarity}\n"
+        f"Average Generation Time: {average_time}s\n"
+        f"Model Size: {size}b\n"
+        f"Max VRAM Usage: {vram_used}b\n"
+        f"Max Power Usage: {watts_used}W"
+    )
     return benchmark

@@ -6,8 +6,7 @@ from asyncio import Task, CancelledError
 from collections.abc import Callable, Awaitable
 
 from aiohttp import ClientSession
-from base_validator import API_VERSION
-from base_validator.metrics import BenchmarkResults
+from base_validator import API_VERSION, BenchmarkResults
 from fiber.logging_utils import get_logger
 from pydantic import RootModel
 from substrateinterface import Keypair
