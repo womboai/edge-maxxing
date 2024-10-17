@@ -14,7 +14,6 @@ from typing import Any
 
 import requests
 import wandb
-from base_validator import BenchmarkState, BenchmarkResults
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
@@ -23,6 +22,7 @@ from fiber.logging_utils import get_logger
 from substrateinterface import SubstrateInterface, Keypair
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
+from .deduplication import find_duplicates
 
 from neuron import (
     get_config,
@@ -43,17 +43,17 @@ from neuron import (
 from neuron.submission_tester import (
     load_image_hash,
     CheckpointBenchmark,
-    MetricData,
+    MetricData
 )
+from base_validator import BenchmarkState, BenchmarkResults
 from .benchmarking_api import BenchmarkingApi, benchmarking_api
-from .deduplication import find_duplicates, PotentiallyDuplicateSubmissionInfo
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores
 
-VALIDATOR_VERSION: tuple[int, int, int] = (4, 1, 0)
+VALIDATOR_VERSION: tuple[int, int, int] = (4, 0, 5)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
-BENCHMARKS_VERSION = 4
+BENCHMARKS_VERSION = 3
 
 WEIGHTS_VERSION = (
     VALIDATOR_VERSION[0] * 10000 +
@@ -258,7 +258,8 @@ class Validator:
 
             data = {
                 "generation_time": benchmark.model.generation_time,
-                "similarity": benchmark.similarity_score,
+                "similarity": benchmark.average_similarity,
+                "min_similarity": benchmark.min_similarity,
                 "size": benchmark.model.size,
                 "vram_used": benchmark.model.vram_used,
                 "watts_used": benchmark.model.watts_used,
@@ -837,11 +838,7 @@ class Validator:
             logger.info(self.benchmarks)
 
             benchmark_duplicate_info = [
-                PotentiallyDuplicateSubmissionInfo(
-                    image_hash=load_image_hash(benchmark.image_hash),
-                    generation_time=benchmark.model.generation_time,
-                    block=self.contest_state.miner_info[uid].block,
-                ) if benchmark else None
+                (load_image_hash(benchmark.image_hash), self.contest_state.miner_info[uid].block) if benchmark else None
                 for uid, benchmark in enumerate(self.benchmarks)
             ]
 

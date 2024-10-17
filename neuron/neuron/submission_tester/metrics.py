@@ -23,13 +23,14 @@ class BaselineBenchmark(BaseModel):
 
 class CheckpointBenchmark(BaseModel):
     model: MetricData
-    similarity_score: float
+    average_similarity: float
+    min_similarity: float
     image_hash: bytes
 
     def calculate_score(self, baseline_metrics: MetricData) -> float:
-        if self.similarity_score < SIMILARITY_SCORE_THRESHOLD:
+        if self.min_similarity < SIMILARITY_SCORE_THRESHOLD:
             return 0.0
 
         scale = 1 / (1 - SIMILARITY_SCORE_THRESHOLD)
-        similarity = sqrt((self.similarity_score - SIMILARITY_SCORE_THRESHOLD) * scale)
+        similarity = sqrt((self.average_similarity - SIMILARITY_SCORE_THRESHOLD) * scale)
         return (baseline_metrics.generation_time - self.model.generation_time) * similarity
