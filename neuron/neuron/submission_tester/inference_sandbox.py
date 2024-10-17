@@ -7,16 +7,14 @@ from multiprocessing.connection import Client, Connection
 from os.path import abspath
 from pathlib import Path
 from subprocess import Popen, run, TimeoutExpired, PIPE
-from typing import Generic, TypeVar
 from threading import Thread
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
-from neuron import (
-    INFERENCE_SOCKET_TIMEOUT,
-    ModelRepositoryInfo,
-)
 from .setup_inference_sandbox import setup_sandbox, InvalidSubmissionError
+from ..contest import ModelRepositoryInfo
+from ..random_inputs import INFERENCE_SOCKET_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
