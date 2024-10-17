@@ -535,33 +535,6 @@ gmpy = ["gmpy"]
 gmpy2 = ["gmpy2"]
 
 [[package]]
-name = "edge-maxxing-neuron"
-version = "1.0.0"
-description = "The base neuron which validators & miners inherent from"
-optional = false
-python-versions = ">=3.10,<3.13"
-files = []
-develop = true
-
-[package.dependencies]
-accelerate = "0.34.2"
-diffusers = "0.30.3"
-edge-maxxing-pipelines = {path = "../pipelines", develop = true}
-fiber = {git = "https://github.com/womboai/fiber", branch = "weights"}
-GitPython = "3.1.43"
-omegaconf = "2.3.0"
-opencv-python = "4.10.0.84"
-pynvml = "11.5.3"
-scikit-image = "0.24.0"
-torch = "2.4.1"
-torchvision = "0.19.1"
-transformers = "4.44.2"
-
-[package.source]
-type = "directory"
-url = "../neuron"
-
-[[package]]
 name = "edge-maxxing-pipelines"
 version = "1.0.0"
 description = "Holder for models & constants to be accessed by multiple repositories"
@@ -3351,4 +3324,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "0dca59df246eb42d08f899346b3e15d391b52d395c7dadaa3cb640b800cde137"
+content-hash = "099a0df33a29ce899de613ec9e016bc55510811712715acad78afec458ca79d9"

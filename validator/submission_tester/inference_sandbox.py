@@ -1,6 +1,5 @@
 import logging
 import os
-import socket
 import sys
 import time
 from io import TextIOWrapper
@@ -8,21 +7,25 @@ from multiprocessing.connection import Client, Connection
 from os.path import abspath
 from pathlib import Path
 from subprocess import Popen, run, TimeoutExpired, PIPE
-from typing import Generic
 from threading import Thread
+from typing import Generic, TypeVar
+
+from pydantic import BaseModel
 
 from neuron import (
-    RequestT,
     INFERENCE_SOCKET_TIMEOUT,
     ModelRepositoryInfo,
     setup_sandbox,
-    InvalidSubmissionError, SPEC_VERSION,
+    InvalidSubmissionError,
 )
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
 
 logger = logging.getLogger(__name__)
+
+
+RequestT = TypeVar("RequestT", bound=BaseModel)
 
 
 def sandbox_args(user: str):

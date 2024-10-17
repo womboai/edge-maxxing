@@ -16,6 +16,7 @@ from neuron import (
     ModelRepositoryInfo,
     CURRENT_CONTEST,
     Key,
+    OutputComparator,
 )
 from pipelines import TextToImageRequest
 from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
@@ -159,9 +160,9 @@ async def compare_checkpoints(
         f"Max Power Usage: {watts_used}W"
     )
 
-    comparator = CURRENT_CONTEST.output_comparator()
+    output_comparator = CURRENT_CONTEST.output_comparator()
 
-    async def calculate_similarity(baseline_output: GenerationOutput, optimized_output: GenerationOutput):
+    async def calculate_similarity(comparator: OutputComparator, baseline_output: GenerationOutput, optimized_output: GenerationOutput):
         loop = asyncio.get_running_loop()
 
         try:
@@ -180,11 +181,11 @@ async def compare_checkpoints(
             return 0.0
 
     average_similarity = mean(
-        await calculate_similarity(baseline_output, output)
+        await calculate_similarity(output_comparator, baseline_output, output)
         for baseline_output, output in zip(baseline.outputs, outputs)
     )
 
-    del comparator
+    del output_comparator
     CURRENT_CONTEST.clear_cache()
 
     benchmark = CheckpointBenchmark(

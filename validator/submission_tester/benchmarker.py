@@ -33,7 +33,6 @@ class Benchmarker:
         self.benchmarks = {}
         self.baseline = None
         self.inputs = []
-        self.started = False
         self.done = True
         self.start_timestamp = 0
         self.lock = Lock()
@@ -62,7 +61,6 @@ class Benchmarker:
         self.benchmarks = {}
         self.submission_times = []
         self.inputs = random_inputs()
-        self.started = True
         self.done = False
 
         if not self.baseline or self.baseline.inputs != self.inputs:
@@ -93,8 +91,10 @@ class Benchmarker:
         self.done = True
 
     async def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
-        if not self.done and self.started:
-            self.benchmark_task.cancel()
+        benchmark_task = self.benchmark_task
+
+        if not self.done and benchmark_task:
+            benchmark_task.cancel()
 
             self.submissions = submissions
             self.benchmarks = {}

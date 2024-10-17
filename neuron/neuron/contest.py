@@ -1,14 +1,11 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from enum import Enum
 from functools import partial
 from io import BytesIO
-from typing import TypeVar, Callable
 
 from pydantic import BaseModel
 from transformers import CLIPProcessor, CLIPVisionModelWithProjection
-
-RequestT = TypeVar("RequestT", bound=BaseModel)
-ResponseT = TypeVar("ResponseT")
 
 
 class ModelRepositoryInfo(BaseModel):
