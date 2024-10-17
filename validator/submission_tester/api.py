@@ -14,8 +14,11 @@ from substrateinterface import Keypair
 
 from neuron import CURRENT_CONTEST, Key, ModelRepositoryInfo
 from .benchmarker import Benchmarker
-from base_validator import API_VERSION
-from base_validator.metrics import BenchmarkState, BenchmarkResults
+from base_validator import (
+    API_VERSION,
+    BenchmarkState,
+    BenchmarkResults,
+)
 
 hotkey = os.getenv("VALIDATOR_HOTKEY_SS58_ADDRESS")
 debug = int(os.getenv("VALIDATOR_DEBUG", 0)) > 0

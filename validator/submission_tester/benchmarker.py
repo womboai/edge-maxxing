@@ -7,11 +7,21 @@ from random import choice
 from threading import Lock
 from time import perf_counter
 
-from base_validator.metrics import CheckpointBenchmark, BaselineBenchmark, MetricData
+from neuron.submission_tester import (
+    CheckpointBenchmark,
+    BaselineBenchmark,
+    MetricData,
+    compare_checkpoints,
+    generate_baseline,
+)
 
-from neuron import Key, ModelRepositoryInfo, TIMEZONE, random_inputs
+from neuron import (
+    Key,
+    ModelRepositoryInfo,
+    TIMEZONE,
+    random_inputs,
+)
 from pipelines import TextToImageRequest
-from .testing import compare_checkpoints, generate_baseline
 
 logger = logging.getLogger(__name__)
 
