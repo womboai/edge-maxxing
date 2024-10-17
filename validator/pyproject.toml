@@ -37,7 +37,6 @@ python = ">=3.10,<3.13"
 wandb = "0.18.1"
 websockets = "13.1"
 aiohttp = "3.10.6"
-ImageHash = "4.3.1"
 safetensors = "0.4.5"
 edge-maxxing-neuron = { path = "../neuron", develop = true }
 

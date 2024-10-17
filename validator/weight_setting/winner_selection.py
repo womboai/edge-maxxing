@@ -1,6 +1,6 @@
 from operator import itemgetter
 
-from base_validator.metrics import CheckpointBenchmark, MetricData
+from neuron.submission_tester import CheckpointBenchmark, MetricData
 
 TIER_SCORE_IMPROVEMENT_THRESHOLD = 1.05
 

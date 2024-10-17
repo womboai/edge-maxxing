@@ -711,6 +711,7 @@ diffusers = "0.30.3"
 edge-maxxing-pipelines = {path = "../pipelines", develop = true}
 fiber = {git = "https://github.com/womboai/fiber", branch = "weights"}
 GitPython = "3.1.43"
+ImageHash = "4.3.1"
 omegaconf = "2.3.0"
 opencv-python = "4.10.0.84"
 pynvml = "11.5.3"
@@ -3189,13 +3190,13 @@ test = ["Cython", "array-api-strict (>=2.0)", "asv", "gmpy2", "hypothesis (>=6.3
 
 [[package]]
 name = "sentry-sdk"
-version = "2.16.0"
+version = "2.17.0"
 description = "Python client for Sentry (https://sentry.io)"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "sentry_sdk-2.16.0-py2.py3-none-any.whl", hash = "sha256:49139c31ebcd398f4f6396b18910610a0c1602f6e67083240c33019d1f6aa30c"},
-    {file = "sentry_sdk-2.16.0.tar.gz", hash = "sha256:90f733b32e15dfc1999e6b7aca67a38688a567329de4d6e184154a73f96c6892"},
+    {file = "sentry_sdk-2.17.0-py2.py3-none-any.whl", hash = "sha256:625955884b862cc58748920f9e21efdfb8e0d4f98cca4ab0d3918576d5b606ad"},
+    {file = "sentry_sdk-2.17.0.tar.gz", hash = "sha256:dd0a05352b78ffeacced73a94e86f38b32e2eae15fff5f30ca5abb568a72eacf"},
 ]
 
 [package.dependencies]
@@ -4300,4 +4301,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "d0a8f2754130ae24bffcbb0d805bbef38b86662277c0055cf76f028f3bd6f72d"
+content-hash = "806da67c57ca7b5518902ef72a7f94c54c71869f5b337c299d1a2477cee919aa"
