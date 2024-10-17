@@ -43,6 +43,9 @@ edge-maxxing-neuron = { path = "../neuron", develop = true }
 [tool.poetry.scripts]
 start_validator = 'weight_setting.validator:main'
 
+[tool.poetry.dev-dependencies]
+pytype = "2024.10.11"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
@@ -50,4 +53,4 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry-monorepo.deps]
 
 [tool.pytype]
-inputs = ["validator"]
+inputs = ["base_validator", "submission_tester", "weight_setting"]

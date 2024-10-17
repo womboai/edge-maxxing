@@ -50,7 +50,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores
 
-VALIDATOR_VERSION: tuple[int, int, int] = (4, 0, 2)
+VALIDATOR_VERSION: tuple[int, int, int] = (4, 0, 5)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 BENCHMARKS_VERSION = 3
@@ -492,17 +492,35 @@ class Validator:
         if self.attempted_set_weights:
             return
 
+        reuse_weights = False
+
         if not self.contest_state:
-            logger.info("Will not set weights as the contest state has not been set")
+            logger.info("Will not set new weights as the contest state has not been set, setting to all ones")
+
+            uids = list(range(len(self.metagraph.nodes)))
+            weights = [1.0] * len(self.metagraph.nodes)
+
+            set_node_weights(
+                self.substrate,
+                self.keypair,
+                node_ids=list(uids),
+                node_weights=list(weights),
+                netuid=self.metagraph.netuid,
+                validator_node_id=self.uid,
+                version_key=WEIGHTS_VERSION,
+            )
+
             return
 
         if not self.baseline_metrics:
-            logger.info("Will not set weights as the baseline benchmarks have not been set")
-            return
+            logger.info("Will not calculate weights as the baseline benchmarks have not been set, reusing old weights")
+            reuse_weights = True
 
         if self.benchmarking:
             logger.info("Not setting new weights as benchmarking is not done, reusing old weights")
+            reuse_weights = True
 
+        if reuse_weights:
             zipped_weights = get_weights_set_by_node(self.substrate, self.metagraph.netuid, self.uid, self.block)
 
             if not zipped_weights:

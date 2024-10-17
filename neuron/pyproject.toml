@@ -48,7 +48,7 @@ ImageHash = "4.3.1"
 edge-maxxing-pipelines = { path = "../pipelines", develop = true }
 
 [tool.poetry.dev-dependencies]
-pytype = "2024.4.11"
+pytype = "2024.10.11"
 
 [build-system]
 requires = ["poetry-core"]
