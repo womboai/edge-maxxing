@@ -1,28 +1,35 @@
-from neuron.submission_tester import HASH_DIFFERENCE_THRESHOLD
+from dataclasses import dataclass
+
 from imagehash import ImageHash
 
+from neuron import GENERATION_TIME_DIFFERENCE_THRESHOLD
 
-def find_duplicates(benchmark_hashes: list[tuple[ImageHash, int] | None]):
+
+@dataclass
+class PotentiallyDuplicateSubmissionInfo:
+    image_hash: ImageHash
+    generation_time: float
+    block: int
+
+
+def find_duplicates(benchmark_info: list[PotentiallyDuplicateSubmissionInfo | None]):
     duplicate_buckets: list[set[int]] = []
 
-    for uid_a, benchmark_a in enumerate(benchmark_hashes):
+    for uid_a, benchmark_a in enumerate(benchmark_info):
         if not benchmark_a:
             continue
 
-        hash_a, _ = benchmark_a
-
-        for uid_b, benchmark_b in enumerate(benchmark_hashes):
+        for uid_b, benchmark_b in enumerate(benchmark_info):
             if not benchmark_b:
                 continue
-
-            hash_b, _ = benchmark_b
 
             if uid_a == uid_b:
                 continue
 
-            diff = hash_a - hash_b
-
-            if diff < HASH_DIFFERENCE_THRESHOLD:
+            if (
+                not (benchmark_b.image_hash - benchmark_a.image_hash)
+                and abs(benchmark_b.generation_time - benchmark_a.generation_time) < GENERATION_TIME_DIFFERENCE_THRESHOLD
+            ):
                 matching_buckets = [bucket for bucket in duplicate_buckets if uid_a in bucket or uid_b in bucket]
                 if len(matching_buckets):
                     bucket = matching_buckets[0]
@@ -32,7 +39,7 @@ def find_duplicates(benchmark_hashes: list[tuple[ImageHash, int] | None]):
                     duplicate_buckets.append({uid_a, uid_b})
 
     for bucket in duplicate_buckets:
-        oldest = min(bucket, key=lambda uid: benchmark_hashes[uid][1])
+        oldest = min(bucket, key=lambda uid: benchmark_info[uid].block)
 
         for uid in bucket:
             if uid != oldest:

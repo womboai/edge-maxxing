@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from io import BytesIO
 from time import perf_counter
 
-from .hash import load_image_hash, save_image_hash, HASH_DIFFERENCE_THRESHOLD
+from .hash import load_image_hash, save_image_hash, GENERATION_TIME_DIFFERENCE_THRESHOLD
 from .metrics import CheckpointBenchmark, MetricData, BaselineBenchmark
 import imagehash
 from PIL import Image
@@ -19,7 +19,7 @@ from neuron import (
 )
 from .vram_monitor import VRamMonitor
 from pipelines import TextToImageRequest
-from neuron.submission_tester.inference_sandbox import InferenceSandbox, InvalidSubmissionError
+from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
@@ -133,7 +133,8 @@ async def compare_checkpoints(
                                 for key, existing_benchmark in existing_benchmarks
                                 if (
                                     existing_benchmark and
-                                    image_hash - load_image_hash(existing_benchmark.image_hash) < HASH_DIFFERENCE_THRESHOLD
+                                    not (image_hash - load_image_hash(existing_benchmark.image_hash)) and
+                                    abs(output.generation_time - existing_benchmark.model.generation_time) < GENERATION_TIME_DIFFERENCE_THRESHOLD
                                 )
                             ),
                             None,
