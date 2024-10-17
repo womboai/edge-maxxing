@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from pathlib import Path
 from statistics import mean
@@ -26,7 +27,7 @@ BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
 logger = logging.getLogger(__name__)
 
 
-def generate(
+def __generate_sync(
     container: InferenceSandbox,
     request: TextToImageRequest,
 ) -> GenerationOutput:
@@ -49,17 +50,27 @@ def generate(
     )
 
 
-def generate_baseline(
-        inputs: list[TextToImageRequest],
-        sandbox_directory: Path = BASELINE_SANDBOX_DIRECTORY,
-        switch_user: bool = True,
+async def generate(
+    container: InferenceSandbox,
+    request: TextToImageRequest,
+):
+    loop = asyncio.get_running_loop()
+
+    return await loop.run_in_executor(None, __generate_sync, container, request)
+
+
+async def generate_baseline(
+    inputs: list[TextToImageRequest],
+    sandbox_directory: Path = BASELINE_SANDBOX_DIRECTORY,
+    switch_user: bool = True,
 ) -> BaselineBenchmark:
     outputs: list[GenerationOutput] = []
+
     with InferenceSandbox(CURRENT_CONTEST.baseline_repository, True, sandbox_directory, switch_user) as sandbox:
         size = sandbox.model_size
 
         for index, request in enumerate(inputs):
-            output = generate(sandbox, request)
+            output = await generate(sandbox, request)
 
             logger.info(
                 f"Sample {index + 1} Generated\n"
@@ -86,7 +97,7 @@ def generate_baseline(
     )
 
 
-def compare_checkpoints(
+async def compare_checkpoints(
     submission: ModelRepositoryInfo,
     existing_benchmarks: Iterable[tuple[Key, CheckpointBenchmark | None]],
     inputs: list[TextToImageRequest],
@@ -108,7 +119,7 @@ def compare_checkpoints(
             for index, request in enumerate(inputs):
                 logger.info(f"Sample {index + 1}, prompt {request.prompt} and seed {request.seed}")
 
-                output = generate(sandbox, request)
+                output = await generate(sandbox, request)
 
                 if not image_hash:
                     with BytesIO(output.output) as data:
@@ -152,9 +163,16 @@ def compare_checkpoints(
     watts_used = max(output.watts_used for output in outputs)
 
     with CURRENT_CONTEST.output_comparator() as output_comparator:
-        def calculate_similarity(comparator: OutputComparator, baseline_output: GenerationOutput, optimized_output: GenerationOutput):
+        async def calculate_similarity(comparator: OutputComparator, baseline_output: GenerationOutput, optimized_output: GenerationOutput):
+            loop = asyncio.get_running_loop()
+
             try:
-                return comparator(baseline_output.output, optimized_output.output)
+                return await loop.run_in_executor(
+                    None,
+                    comparator,
+                    baseline_output.output,
+                    optimized_output.output,
+                )
             except:
                 logger.info(
                     f"Submission {submission.url}'s output couldn't be compared in similarity",
@@ -164,7 +182,7 @@ def compare_checkpoints(
                 return 0.0
 
         average_similarity = mean(
-            calculate_similarity(output_comparator, baseline_output, output)
+            await calculate_similarity(output_comparator, baseline_output, output)
             for baseline_output, output in zip(baseline.outputs, outputs)
         )
 
