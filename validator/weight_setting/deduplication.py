@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-from base_validator.hash import HASH_DIFFERENCE_THRESHOLD
 from imagehash import ImageHash
 
 
