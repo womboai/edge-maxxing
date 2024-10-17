@@ -1,14 +1,11 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from enum import Enum
 from functools import partial
 from io import BytesIO
-from typing import TypeVar, Callable
 
 from pydantic import BaseModel
 from transformers import CLIPProcessor, CLIPVisionModelWithProjection
-
-RequestT = TypeVar("RequestT", bound=BaseModel)
-ResponseT = TypeVar("ResponseT")
 
 
 class ModelRepositoryInfo(BaseModel):
@@ -78,6 +75,17 @@ class ImageOutputComparator(OutputComparator):
         clip_similarity = cosine_similarity(baseline_embeddings, optimized_embeddings)[0].item()
 
         return clip_similarity * 0.35 + structural_similarity * 0.65
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        import torch
+
+        del self.clip
+        del self.processor
+        getattr(torch, self.device).empty_cache()
+
 
 
 class Contest(ABC):

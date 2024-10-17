@@ -37,12 +37,14 @@ python = ">=3.10,<3.13"
 wandb = "0.18.1"
 websockets = "13.1"
 aiohttp = "3.10.6"
-ImageHash = "4.3.1"
 safetensors = "0.4.5"
 edge-maxxing-neuron = { path = "../neuron", develop = true }
 
 [tool.poetry.scripts]
 start_validator = 'weight_setting.validator:main'
+
+[tool.poetry.dev-dependencies]
+pytype = "2024.10.11"
 
 [build-system]
 requires = ["poetry-core"]
@@ -51,4 +53,4 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry-monorepo.deps]
 
 [tool.pytype]
-inputs = ["validator"]
+inputs = ["base_validator", "submission_tester", "weight_setting"]
