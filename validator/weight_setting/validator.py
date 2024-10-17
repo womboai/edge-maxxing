@@ -14,8 +14,7 @@ from typing import Any
 
 import requests
 import wandb
-from base_validator.hash import load_image_hash
-from base_validator.metrics import BenchmarkState, CheckpointBenchmark, BenchmarkResults, MetricData
+from base_validator import BenchmarkState, BenchmarkResults
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
@@ -24,7 +23,6 @@ from fiber.logging_utils import get_logger
 from substrateinterface import SubstrateInterface, Keypair
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
-from weight_setting.deduplication import find_duplicates, PotentiallyDuplicateSubmissionInfo
 
 from neuron import (
     get_config,
@@ -42,7 +40,13 @@ from neuron import (
     SPEC_VERSION,
     get_submission,
 )
+from neuron.submission_tester import (
+    load_image_hash,
+    CheckpointBenchmark,
+    MetricData,
+)
 from .benchmarking_api import BenchmarkingApi, benchmarking_api
+from .deduplication import find_duplicates, PotentiallyDuplicateSubmissionInfo
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores
 

@@ -1,5 +1,8 @@
+import asyncio
+import logging
 import re
 from argparse import ArgumentParser
+from pathlib import Path
 
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
@@ -16,13 +19,26 @@ from neuron import (
     ContestId,
     REVISION_LENGTH,
     make_submission,
+    random_inputs,
+    ModelRepositoryInfo,
 )
-from .benchmarker import start_benchmarking
+from neuron.submission_tester import (
+    generate_baseline,
+    compare_checkpoints,
+)
 
 VALID_PROVIDER_REGEX = r'^[a-zA-Z0-9-.]+$'
 VALID_REPO_REGEX = r'^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$'
 VALID_REVISION_REGEX = r"^[a-f0-9]{7}$"
 
+MODEL_DIRECTORY = Path("model")
+BASELINE_MODEL_DIRECTORY = Path("baseline-model")
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(filename)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 logger = get_logger(__name__)
 
 
@@ -56,6 +72,31 @@ def add_extra_args(argument_parser: ArgumentParser):
         action="store_true",
         help="Turn on benchmarking.",
         default=False,
+    )
+
+
+async def start_benchmarking(submission: CheckpointSubmission):
+    logger.info("Generating baseline samples to compare")
+    if not BASELINE_MODEL_DIRECTORY.exists():
+        BASELINE_MODEL_DIRECTORY.mkdir()
+    inputs = random_inputs()
+    baseline = await generate_baseline(
+        inputs,
+        BASELINE_MODEL_DIRECTORY,
+        False
+    )
+
+    logger.info("Comparing submission to baseline")
+    if not MODEL_DIRECTORY.exists():
+        MODEL_DIRECTORY.mkdir()
+
+    await compare_checkpoints(
+        ModelRepositoryInfo(url=submission.get_repo_link(), revision=submission.revision),
+        [],
+        inputs,
+        baseline,
+        MODEL_DIRECTORY,
+        False,
     )
 
 
@@ -154,7 +195,7 @@ def get_submission(config) -> CheckpointSubmission:
     )
 
 
-def main():
+async def main():
     config = get_config(add_extra_args)
 
     substrate = get_substrate(
@@ -168,7 +209,7 @@ def main():
     enable_benchmarking = config["benchmarking.on"]
 
     if enable_benchmarking or input("Benchmark submission before submitting? (y/N): ").strip().lower() in ("yes", "y"):
-        start_benchmarking(submission)
+        await start_benchmarking(submission)
 
     print(
         "\nSubmission info:\n"
@@ -191,4 +232,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

@@ -7,11 +7,21 @@ from random import choice
 from threading import Lock
 from time import perf_counter
 
-from base_validator.metrics import CheckpointBenchmark, BaselineBenchmark, MetricData
+from neuron.submission_tester import (
+    CheckpointBenchmark,
+    BaselineBenchmark,
+    MetricData,
+    compare_checkpoints,
+    generate_baseline,
+)
 
-from neuron import Key, ModelRepositoryInfo, TIMEZONE, random_inputs
+from neuron import (
+    Key,
+    ModelRepositoryInfo,
+    TIMEZONE,
+    random_inputs,
+)
 from pipelines import TextToImageRequest
-from .testing import compare_checkpoints, generate_baseline
 
 logger = logging.getLogger(__name__)
 
@@ -38,13 +48,13 @@ class Benchmarker:
         self.lock = Lock()
         self.submission_times = []
 
-    def _benchmark_key(self, hotkey: Key):
+    async def _benchmark_key(self, hotkey: Key):
         submission = self.submissions[hotkey]
 
         try:
             start_time = perf_counter()
 
-            benchmark = compare_checkpoints(
+            benchmark = await compare_checkpoints(
                 submission,
                 self.benchmarks.items(),
                 self.inputs,
@@ -56,11 +66,6 @@ class Benchmarker:
         except:
             traceback.print_exc()
 
-    async def _benchmark_key_async(self, hotkey: Key):
-        loop = asyncio.get_running_loop()
-
-        await loop.run_in_executor(None, self._benchmark_key, hotkey)
-
     async def _start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         self.submissions = submissions
         self.benchmarks = {}
@@ -70,13 +75,13 @@ class Benchmarker:
 
         if not self.baseline or self.baseline.inputs != self.inputs:
             logger.info("Generating baseline samples to compare")
-            self.baseline = generate_baseline(self.inputs)
+            self.baseline = await generate_baseline(self.inputs)
 
         while len(self.benchmarks) != len(self.submissions):
             hotkey = choice(list(self.submissions.keys() - self.benchmarks.keys()))
 
             try:
-                await self._benchmark_key_async(hotkey)
+                await self._benchmark_key(hotkey)
             except (asyncio.CancelledError, asyncio.TimeoutError):
                 return
 

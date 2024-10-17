@@ -7,33 +7,17 @@ from multiprocessing.connection import Client, Connection
 from os.path import abspath
 from pathlib import Path
 from subprocess import Popen, run, TimeoutExpired, PIPE
+from typing import Generic
 from threading import Thread
-from typing import Generic, TypeVar
-
-from pydantic import BaseModel
 
 from neuron import (
+    RequestT,
     INFERENCE_SOCKET_TIMEOUT,
     ModelRepositoryInfo,
-    setup_sandbox,
-    InvalidSubmissionError,
 )
-
-SANDBOX_DIRECTORY = Path("/sandbox")
-BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
+from .setup_inference_sandbox import setup_sandbox, InvalidSubmissionError
 
 logger = logging.getLogger(__name__)
-
-
-RequestT = TypeVar("RequestT", bound=BaseModel)
-
-
-def sandbox_args(user: str):
-    return [
-        "/bin/sudo",
-        "-u",
-        user,
-    ]
 
 
 class InferenceSandbox(Generic[RequestT]):
@@ -42,12 +26,14 @@ class InferenceSandbox(Generic[RequestT]):
     _client: Connection
     _process: Popen
 
-    def __init__(self, repository_info: ModelRepositoryInfo, baseline: bool):
+    def __init__(self, repository_info: ModelRepositoryInfo, baseline: bool, sandbox_directory: Path, switch_user: bool):
         self._repository = repository_info
         self._baseline = baseline
+        self._sandbox_directory = sandbox_directory
+        self.switch_user = switch_user
 
         try:
-            self._file_size = setup_sandbox(sandbox_args(self._user), self._sandbox_directory, baseline, repository_info.url,repository_info.revision)
+            self._file_size = setup_sandbox(self.sandbox_args(self._user), self._sandbox_directory, baseline, repository_info.url, repository_info.revision)
         except InvalidSubmissionError as e:
             if baseline:
                 self.clear_sandbox()
@@ -59,7 +45,7 @@ class InferenceSandbox(Generic[RequestT]):
 
         self._process = Popen(
             [
-                *sandbox_args(self._user),
+                *self.sandbox_args(self._user),
                 abspath(self._sandbox_directory / ".venv" / "bin" / "start_inference")
             ],
             cwd=self._sandbox_directory,
@@ -68,8 +54,8 @@ class InferenceSandbox(Generic[RequestT]):
             text=True,
         )
 
-        Thread(target=self._stream_logs, args=(self._process.stdout, "STDOUT", sys.stdout), daemon=True).start()
-        Thread(target=self._stream_logs, args=(self._process.stderr, "STDERR", sys.stderr), daemon=True).start()
+        Thread(target=self._stream_logs, args=(self._process.stdout, sys.stdout), daemon=True).start()
+        Thread(target=self._stream_logs, args=(self._process.stderr, sys.stderr), daemon=True).start()
 
         logger.info("Inference process starting")
         socket_path = abspath(self._sandbox_directory / "inferences.sock")
@@ -82,7 +68,11 @@ class InferenceSandbox(Generic[RequestT]):
 
             self._check_exit()
         else:
-            raise InvalidSubmissionError(f"Socket file '{socket_path}' not found after {INFERENCE_SOCKET_TIMEOUT} seconds.")
+            if baseline:
+                self.clear_sandbox()
+                raise RuntimeError(f"Baseline socket file '{socket_path}' not found after {INFERENCE_SOCKET_TIMEOUT} seconds. Cleared baseline sandbox directory")
+            else:
+                raise InvalidSubmissionError(f"Socket file '{socket_path}' not found after {INFERENCE_SOCKET_TIMEOUT} seconds.")
 
         logger.info("Connecting to socket")
         try:
@@ -90,24 +80,26 @@ class InferenceSandbox(Generic[RequestT]):
         except ConnectionRefusedError as e:
             if baseline:
                 self.clear_sandbox()
-                raise InvalidSubmissionError("Failed to connect to socket, cleared baseline sandbox directory") from e
+                raise RuntimeError("Failed to connect to socket, cleared baseline sandbox directory") from e
+            else:
+                raise InvalidSubmissionError("Failed to connect to socket") from e
 
     @property
     def _user(self) -> str:
         return "baseline-sandbox" if self._baseline else "sandbox"
 
-    @property
-    def _sandbox_directory(self) -> Path:
-        return BASELINE_SANDBOX_DIRECTORY if self._baseline else SANDBOX_DIRECTORY
-
     def _check_exit(self):
-        if self._process.returncode:
-            raise InvalidSubmissionError(f"'{self._repository}'s inference crashed, got exit code {self._process.returncode}")
+        if self._process.returncode and not self._process.poll():
+            if self._baseline:
+                self.clear_sandbox()
+                raise RuntimeError(f"Baseline inference crashed, got exit code {self._process.returncode}. Cleared baseline sandbox directory")
+            else:
+                raise InvalidSubmissionError(f"'{self._repository}'s inference crashed, got exit code {self._process.returncode}")
 
     def clear_sandbox(self):
         process = run(
             [
-                *sandbox_args(self._user),
+                *self.sandbox_args(self._user),
                 "find",
                 str(self._sandbox_directory),
                 "-mindepth",
@@ -155,11 +147,18 @@ class InferenceSandbox(Generic[RequestT]):
 
         return self._client.recv_bytes()
 
-    @staticmethod
-    def _stream_logs(stream: TextIOWrapper, prefix: str, output_stream: TextIOWrapper):
-        for line in iter(stream.readline, ""):
-            print(f"[INFERENCE - {prefix}] {line}", end="", file=output_stream)
-
     @property
     def model_size(self):
         return self._file_size
+
+    def sandbox_args(self, user: str) -> list[str]:
+        return [
+            "/bin/sudo",
+            "-u",
+            user,
+        ] if self.switch_user else []
+
+    @staticmethod
+    def _stream_logs(stream: TextIOWrapper, output_stream: TextIOWrapper):
+        for line in iter(stream.readline, ""):
+            print(f"[INFERENCE] {line}", end="", file=output_stream)
