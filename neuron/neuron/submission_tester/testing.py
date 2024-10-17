@@ -27,7 +27,7 @@ BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
 logger = logging.getLogger(__name__)
 
 
-def __generate_sync(
+async def generate(
     container: InferenceSandbox,
     request: TextToImageRequest,
 ) -> GenerationOutput:
@@ -48,15 +48,6 @@ def __generate_sync(
         vram_used=vram_used,
         watts_used=watts_used,
     )
-
-
-async def generate(
-    container: InferenceSandbox,
-    request: TextToImageRequest,
-):
-    loop = asyncio.get_running_loop()
-
-    return await loop.run_in_executor(None, __generate_sync, container, request)
 
 
 async def generate_baseline(
