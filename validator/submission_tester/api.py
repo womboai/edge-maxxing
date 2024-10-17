@@ -6,7 +6,7 @@ import time
 from contextlib import asynccontextmanager
 from io import TextIOWrapper
 from queue import Queue
-from typing import Annotated
+from typing import Annotated, TextIO
 
 from fastapi import FastAPI, WebSocket, Request, Header, HTTPException
 from starlette import status
@@ -14,8 +14,11 @@ from substrateinterface import Keypair
 
 from neuron import CURRENT_CONTEST, Key, ModelRepositoryInfo
 from .benchmarker import Benchmarker
-from base_validator import API_VERSION
-from base_validator.metrics import BenchmarkState, BenchmarkResults
+from base_validator import (
+    API_VERSION,
+    BenchmarkState,
+    BenchmarkResults,
+)
 
 hotkey = os.getenv("VALIDATOR_HOTKEY_SS58_ADDRESS")
 debug = int(os.getenv("VALIDATOR_DEBUG", 0)) > 0
@@ -29,10 +32,10 @@ logs = Queue()
 
 
 class LogsIO(TextIOWrapper):
-    old_stdout: TextIOWrapper
+    old_stdout: TextIO
     log_type: str
 
-    def __init__(self, old_stdout, log_type: str):
+    def __init__(self, old_stdout: TextIO, log_type: str):
         super().__init__(old_stdout.buffer, encoding=old_stdout.encoding, errors=old_stdout.errors, newline=old_stdout.newlines)
         self.old_stdout = old_stdout
         self.log_type = log_type
@@ -115,7 +118,7 @@ async def start_benchmarking(
 
         benchmarker.start_timestamp = timestamp
 
-    await benchmarker.start_benchmarking(submissions)
+        await benchmarker.start_benchmarking(submissions)
 
 
 @app.get("/state")
@@ -124,7 +127,7 @@ def state(request: Request) -> BenchmarkResults:
 
     benchmark_state: BenchmarkState
 
-    if not benchmarker.started:
+    if not benchmarker.benchmark_task:
         benchmark_state = BenchmarkState.NOT_STARTED
     elif benchmarker.done:
         benchmark_state = BenchmarkState.FINISHED

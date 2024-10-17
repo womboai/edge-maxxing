@@ -7,11 +7,21 @@ from random import choice
 from threading import Lock
 from time import perf_counter
 
-from base_validator.metrics import CheckpointBenchmark, BaselineBenchmark, MetricData
+from neuron.submission_tester import (
+    CheckpointBenchmark,
+    BaselineBenchmark,
+    MetricData,
+    compare_checkpoints,
+    generate_baseline,
+)
 
-from neuron import Key, ModelRepositoryInfo, TIMEZONE, random_inputs
+from neuron import (
+    Key,
+    ModelRepositoryInfo,
+    TIMEZONE,
+    random_inputs,
+)
 from pipelines import TextToImageRequest
-from .testing import compare_checkpoints, generate_baseline
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +43,6 @@ class Benchmarker:
         self.benchmarks = {}
         self.baseline = None
         self.inputs = []
-        self.started = False
         self.done = True
         self.start_timestamp = 0
         self.lock = Lock()
@@ -67,7 +76,6 @@ class Benchmarker:
         self.benchmarks = {}
         self.submission_times = []
         self.inputs = random_inputs()
-        self.started = True
         self.done = False
 
         if not self.baseline or self.baseline.inputs != self.inputs:
@@ -98,8 +106,10 @@ class Benchmarker:
         self.done = True
 
     async def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
-        if not self.done and self.started:
-            self.benchmark_task.cancel()
+        benchmark_task = self.benchmark_task
+
+        if not self.done and benchmark_task:
+            benchmark_task.cancel()
 
             self.submissions = submissions
             self.benchmarks = {}

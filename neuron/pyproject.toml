@@ -44,10 +44,11 @@ omegaconf = "2.3.0"
 torchvision = "0.19.1"
 scikit-image = "0.24.0"
 opencv-python = "4.10.0.84"
+ImageHash = "4.3.1"
 edge-maxxing-pipelines = { path = "../pipelines", develop = true }
 
 [tool.poetry.dev-dependencies]
-pytype = "2024.4.11"
+pytype = "2024.10.11"
 
 [build-system]
 requires = ["poetry-core"]
