@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from statistics import mean
 from collections.abc import Iterable
@@ -24,15 +25,17 @@ from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
 
+EXECUTOR = ThreadPoolExecutor(max_workers=2)
+
 logger = logging.getLogger(__name__)
 
 
-async def generate(
+def __generate_sync(
     container: InferenceSandbox,
     request: TextToImageRequest,
 ) -> GenerationOutput:
     start_joules = CURRENT_CONTEST.get_joules()
-    vram_monitor = VRamMonitor(CURRENT_CONTEST)
+    vram_monitor = VRamMonitor(CURRENT_CONTEST, EXECUTOR)
     start = perf_counter()
 
     output = container(request)
@@ -48,6 +51,15 @@ async def generate(
         vram_used=vram_used,
         watts_used=watts_used,
     )
+
+
+async def generate(
+    container: InferenceSandbox,
+    request: TextToImageRequest,
+):
+    loop = asyncio.get_running_loop()
+
+    return await loop.run_in_executor(EXECUTOR, __generate_sync, container, request)
 
 
 async def generate_baseline(
