@@ -47,6 +47,7 @@ class Benchmarker:
         self.start_timestamp = 0
         self.lock = Lock()
         self.submission_times = []
+        self.benchmark_task = None
 
     async def _benchmark_key(self, hotkey: Key):
         submission = self.submissions[hotkey]
