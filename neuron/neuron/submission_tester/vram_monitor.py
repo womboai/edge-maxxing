@@ -1,6 +1,5 @@
 import threading
 import time
-from concurrent.futures import Executor, Future
 
 from neuron import Contest
 
@@ -8,16 +7,17 @@ POLL_RATE_SECONDS = 0.1
 
 
 class VRamMonitor:
-    _future: Future
+    _thread: threading.Thread
     _contest: Contest
     _vram_usage: int = 0
     _stop_flag: threading.Event
 
-    def __init__(self, contest: Contest, executor: Executor):
+    def __init__(self, contest: Contest):
         self._contest = contest
         self._stop_flag = threading.Event()
 
-        self._future = executor.submit(self.monitor)
+        self._thread = threading.Thread(target=self.monitor)
+        self._thread.start()
 
     def monitor(self):
         while not self._stop_flag.is_set():
@@ -30,6 +30,6 @@ class VRamMonitor:
 
     def complete(self) -> int:
         self._stop_flag.set()
-        self._future.result()
+        self._thread.join()
 
         return self._vram_usage

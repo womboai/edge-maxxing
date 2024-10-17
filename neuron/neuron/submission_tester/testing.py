@@ -35,7 +35,7 @@ def __generate_sync(
     request: TextToImageRequest,
 ) -> GenerationOutput:
     start_joules = CURRENT_CONTEST.get_joules()
-    vram_monitor = VRamMonitor(CURRENT_CONTEST, EXECUTOR)
+    vram_monitor = VRamMonitor(CURRENT_CONTEST)
     start = perf_counter()
 
     output = container(request)
@@ -59,7 +59,7 @@ async def generate(
 ):
     loop = asyncio.get_running_loop()
 
-    return await loop.run_in_executor(EXECUTOR, __generate_sync, container, request)
+    return await loop.run_in_executor(None, __generate_sync, container, request)
 
 
 async def generate_baseline(
