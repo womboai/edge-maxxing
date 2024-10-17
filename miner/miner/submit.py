@@ -195,7 +195,7 @@ def get_submission(config) -> CheckpointSubmission:
     )
 
 
-async def main():
+async def submit():
     config = get_config(add_extra_args)
 
     substrate = get_substrate(
@@ -231,5 +231,9 @@ async def main():
     logger.info(f"Submitted {submission} as the info for this miner")
 
 
+def main():
+    asyncio.run(submit())
+
+
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()
