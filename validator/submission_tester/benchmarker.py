@@ -101,7 +101,7 @@ class Benchmarker:
 
         self.done = True
 
-    async def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
+    def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         benchmark_task = self.benchmark_task
 
         if not self.done and benchmark_task:
@@ -110,7 +110,7 @@ class Benchmarker:
             self.submissions = submissions
             self.benchmarks = {}
 
-        loop = asyncio.new_event_loop()
+        loop = asyncio.get_event_loop()
         self.benchmark_task = loop.create_task(self._start_benchmarking(submissions))
 
     def get_baseline_metrics(self) -> MetricData | None:

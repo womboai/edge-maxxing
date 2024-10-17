@@ -97,7 +97,7 @@ def _authenticate_request(nonce: int, signature: str):
 
 
 @app.post("/start")
-async def start_benchmarking(
+def start_benchmarking(
     submissions: dict[Key, ModelRepositoryInfo],
     x_nonce: Annotated[int, Header()],
     signature: Annotated[str, Header()],
@@ -118,7 +118,7 @@ async def start_benchmarking(
 
         benchmarker.start_timestamp = timestamp
 
-        await benchmarker.start_benchmarking(submissions)
+        benchmarker.start_benchmarking(submissions)
 
 
 @app.get("/state")
