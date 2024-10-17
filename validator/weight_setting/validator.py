@@ -24,7 +24,7 @@ from fiber.logging_utils import get_logger
 from substrateinterface import SubstrateInterface, Keypair
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
-from weight_setting.deduplication import find_duplicates
+from weight_setting.deduplication import find_duplicates, PotentiallyDuplicateSubmissionInfo
 
 from neuron import (
     get_config,
@@ -833,7 +833,11 @@ class Validator:
             logger.info(self.benchmarks)
 
             benchmark_duplicate_info = [
-                (load_image_hash(benchmark.image_hash), self.contest_state.miner_info[uid].block) if benchmark else None
+                PotentiallyDuplicateSubmissionInfo(
+                    image_hash=load_image_hash(benchmark.image_hash),
+                    generation_time=benchmark.model.generation_time,
+                    block=self.contest_state.miner_info[uid].block,
+                ) if benchmark else None
                 for uid, benchmark in enumerate(self.benchmarks)
             ]
 

@@ -1,8 +1,17 @@
+from dataclasses import dataclass
+
 from base_validator.hash import HASH_DIFFERENCE_THRESHOLD
 from imagehash import ImageHash
 
 
-def find_duplicates(benchmark_hashes: list[tuple[ImageHash, int] | None]):
+@dataclass
+class PotentiallyDuplicateSubmissionInfo:
+    image_hash: ImageHash
+    generation_time: float
+    block: int
+
+
+def find_duplicates(benchmark_hashes: list[PotentiallyDuplicateSubmissionInfo | None]):
     duplicate_buckets: list[set[int]] = []
 
     for uid_a, benchmark_a in enumerate(benchmark_hashes):
@@ -22,7 +31,7 @@ def find_duplicates(benchmark_hashes: list[tuple[ImageHash, int] | None]):
 
             diff = hash_a - hash_b
 
-            if diff < HASH_DIFFERENCE_THRESHOLD:
+            if not diff:
                 matching_buckets = [bucket for bucket in duplicate_buckets if uid_a in bucket or uid_b in bucket]
                 if len(matching_buckets):
                     bucket = matching_buckets[0]

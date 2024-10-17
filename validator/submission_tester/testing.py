@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from io import BytesIO
 from time import perf_counter
 
-from base_validator.hash import load_image_hash, save_image_hash, HASH_DIFFERENCE_THRESHOLD
+from base_validator.hash import load_image_hash, save_image_hash
 from base_validator.metrics import CheckpointBenchmark, MetricData, BaselineBenchmark
 import imagehash
 from PIL import Image
@@ -19,6 +19,7 @@ from neuron import (
 )
 from pipelines import TextToImageRequest
 from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
+from base_validator.hash import GENERATION_TIME_DIFFERENCE_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +114,8 @@ def compare_checkpoints(
                                 for key, existing_benchmark in existing_benchmarks
                                 if (
                                     existing_benchmark and
-                                    image_hash - load_image_hash(existing_benchmark.image_hash) < HASH_DIFFERENCE_THRESHOLD
+                                    not (image_hash - load_image_hash(existing_benchmark.image_hash)) and
+                                    abs(output.generation_time - existing_benchmark.model.generation_time) < GENERATION_TIME_DIFFERENCE_THRESHOLD
                                 )
                             ),
                             None,
