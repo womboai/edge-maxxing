@@ -82,7 +82,7 @@ class InferenceSandbox(Generic[RequestT]):
                 self.clear_sandbox()
                 raise RuntimeError(f"Baseline took too long to start, socket not found after {INFERENCE_SOCKET_TIMEOUT} seconds. Cleared baseline sandbox directory")
             else:
-                raise InvalidSubmissionError(f"'{self._repository}' took too long to start, socket not found after {INFERENCE_SOCKET_TIMEOUT} seconds")
+                raise InvalidSubmissionError(f"'{self._repository.url}' took too long to start, socket not found after {INFERENCE_SOCKET_TIMEOUT} seconds")
 
         logger.info("Connecting to socket")
         try:

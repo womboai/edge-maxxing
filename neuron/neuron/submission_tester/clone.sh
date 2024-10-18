@@ -6,7 +6,7 @@ REPOSITORY_URL=$1
 REVISION=$2
 CACHE=$3
 
-CACHE_FILE="ready.json"
+CACHE_FILE="cache_info.json"
 
 is_cached() {
   if [ ! -f "$CACHE_FILE" ]; then

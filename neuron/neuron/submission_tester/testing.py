@@ -204,6 +204,7 @@ async def compare_checkpoints(
         f"Tested {len(inputs)} Samples\n"
         f"Score: {benchmark.calculate_score(baseline.metric_data)}\n"
         f"Average Similarity: {average_similarity}\n"
+        f"Min Similarity: {min_similarity}\n"
         f"Average Generation Time: {average_time}s\n"
         f"Model Size: {size}b\n"
         f"Max VRAM Usage: {vram_used}b\n"
