@@ -20,6 +20,7 @@ from neuron import (
     ModelRepositoryInfo,
     TIMEZONE,
     random_inputs,
+    InvalidSubmissionError,
 )
 from pipelines import TextToImageRequest
 
@@ -29,6 +30,7 @@ logger = logging.getLogger(__name__)
 class Benchmarker:
     submissions: dict[Key, ModelRepositoryInfo]
     benchmarks: dict[Key, CheckpointBenchmark | None]
+    invalid: dict[Key, str]
     baseline: BaselineBenchmark | None
     inputs: list[TextToImageRequest]
     started: bool
@@ -41,6 +43,7 @@ class Benchmarker:
     def __init__(self):
         self.submissions = {}
         self.benchmarks = {}
+        self.invalid = {}
         self.baseline = None
         self.inputs = []
         self.done = True
@@ -52,20 +55,22 @@ class Benchmarker:
     async def _benchmark_key(self, hotkey: Key):
         submission = self.submissions[hotkey]
 
+        start_time = perf_counter()
         try:
-            start_time = perf_counter()
-
-            benchmark = await compare_checkpoints(
+            self.benchmarks[hotkey] = await compare_checkpoints(
                 submission,
                 self.benchmarks.items(),
                 self.inputs,
                 self.baseline,
             )
-
-            self.submission_times.append(perf_counter() - start_time)
-            self.benchmarks[hotkey] = benchmark
+        except InvalidSubmissionError as e:
+            logger.error(f"Skipping invalid submission '{submission}': '{e}'")
+            self.benchmarks[hotkey] = None
+            self.invalid[hotkey] = str(e)
         except:
             traceback.print_exc()
+        finally:
+            self.submission_times.append(perf_counter() - start_time)
 
     async def _start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         self.submissions = submissions

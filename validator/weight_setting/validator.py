@@ -50,7 +50,7 @@ from .deduplication import find_duplicates, PotentiallyDuplicateSubmissionInfo
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores
 
-VALIDATOR_VERSION: tuple[int, int, int] = (4, 1, 1)
+VALIDATOR_VERSION: tuple[int, int, int] = (4, 1, 2)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 BENCHMARKS_VERSION = 4
@@ -120,7 +120,8 @@ class Validator:
 
     benchmarks: list[CheckpointBenchmark | None]
     baseline_metrics: MetricData | None
-    failed: set[int]
+    failed: set[int] = set() # for backwards depickling compatibility
+    invalid: dict[int, str]
     hash_prompt: str
     hash_seed: int
     contest: Contest
@@ -169,7 +170,7 @@ class Validator:
 
         self.benchmarks = self.clear_benchmarks()
         self.baseline_metrics = None
-        self.failed = set()
+        self.invalid = {}
 
         self.load_state()
         self.start_wandb_run()
@@ -274,7 +275,7 @@ class Validator:
         log_data = {
             "submissions": submission_data,
             "benchmarks": benchmark_data,
-            "invalid": list(self.failed),
+            "invalid": self.invalid,
         }
 
         if average_time:
@@ -359,7 +360,7 @@ class Validator:
                     "hotkeys": self.hotkeys,
                     "benchmarks": self.benchmarks,
                     "baseline_benchmarks": self.baseline_metrics,
-                    "failed": self.failed,
+                    "invalid": self.invalid,
                     "last_day": self.last_day,
                     "contest_state": self.contest_state,
                     "benchmarking": self.benchmarking,
@@ -385,7 +386,7 @@ class Validator:
         self.hotkeys = state["hotkeys"]
         self.benchmarks = state.get("benchmarks", self.benchmarks)
         self.baseline_metrics = state.get("baseline_benchmarks", self.baseline_metrics)
-        self.failed = state.get("failed", self.failed)
+        self.invalid = state.get("invalid", self.invalid)
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
         self.benchmarking = state.get("benchmarking", self.benchmarking)
@@ -399,7 +400,7 @@ class Validator:
                 )
 
                 self.benchmarks = self.clear_benchmarks()
-                self.failed.clear()
+                self.invalid.clear()
                 self.contest_state.miner_score_version = BENCHMARKS_VERSION
 
             if self.contest_state.submission_spec_version != COLLECTED_SUBMISSIONS_VERSION:
@@ -409,7 +410,7 @@ class Validator:
                 )
 
                 self.benchmarks = self.clear_benchmarks()
-                self.failed.clear()
+                self.invalid.clear()
 
                 self.benchmarking = True
                 self.contest_state.miner_info = self.get_miner_submissions()
@@ -421,14 +422,8 @@ class Validator:
     def reset_miner(self, uid: Uid):
         self.benchmarks[uid] = None
 
-        if uid in self.failed:
-            self.failed.remove(uid)
-
-    def set_miner_benchmarks(self, uid: Uid, benchmark: CheckpointBenchmark | None):
-        self.benchmarks[uid] = benchmark
-
-        if not benchmark:
-            self.failed.add(uid)
+        if uid in self.invalid:
+            del self.invalid[uid]
 
     def resize(self):
         new_data = self.clear_benchmarks()
@@ -658,7 +653,7 @@ class Validator:
             {
                 uid
                 for uid, benchmark in enumerate(self.benchmarks)
-                if self.contest_state.miner_info[uid] and not benchmark and uid not in self.failed
+                if self.contest_state.miner_info[uid] and not benchmark and uid not in self.invalid
             }
         )
 
@@ -686,7 +681,7 @@ class Validator:
             await self.start_benchmarking(submissions)
 
             self.benchmarks = self.clear_benchmarks()
-            self.failed.clear()
+            self.invalid.clear()
 
             if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
                 # New contest, restart
@@ -822,9 +817,14 @@ class Validator:
 
         for _, result in with_results:
             for hotkey, benchmark in result.results.items():
-                logger.info(f"Updating {hotkey}'s benchmarks to {benchmark}")
+                if benchmark:
+                    logger.info(f"Updating {hotkey}'s benchmarks to {benchmark}")
                 if hotkey in self.hotkeys:
-                    self.set_miner_benchmarks(self.hotkeys.index(hotkey), benchmark)
+                    self.benchmarks[self.hotkeys.index(hotkey)] = benchmark
+            for hotkey, error_message in result.invalid.items():
+                logger.info(f"Marking {hotkey}'s submission as invalid: '{error_message}'")
+                if hotkey in self.hotkeys:
+                    self.invalid[self.hotkeys.index(hotkey)] = error_message
 
         average_time = (sum(benchmark_times) / len(benchmark_times)) if benchmark_times else None
 
@@ -848,7 +848,7 @@ class Validator:
 
             for duplicate_uid in find_duplicates(benchmark_duplicate_info):
                 self.benchmarks[duplicate_uid] = None
-                self.failed.add(duplicate_uid)
+                self.invalid[duplicate_uid] = "Duplicate submission"
 
             self.benchmarking = False
             self.step += 1
