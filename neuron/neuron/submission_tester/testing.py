@@ -134,7 +134,7 @@ async def compare_checkpoints(
                                 existing_benchmark and
                                 not (image_hash - load_image_hash(existing_benchmark.image_hash)) and
                                 abs(output.generation_time - existing_benchmark.model.generation_time) < GENERATION_TIME_DIFFERENCE_THRESHOLD
-                        )
+                            )
                         ),
                         None,
                     )
