@@ -19,7 +19,7 @@ from neuron import (
 )
 from .vram_monitor import VRamMonitor
 from pipelines import TextToImageRequest
-from .inference_sandbox import InferenceSandbox, InvalidSubmissionError
+from .inference_sandbox import InferenceSandbox
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
