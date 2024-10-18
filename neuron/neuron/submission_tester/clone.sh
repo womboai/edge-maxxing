@@ -4,18 +4,29 @@ set -e
 
 REPOSITORY_URL=$1
 REVISION=$2
-BASELINE=$3
+CACHE=$3
 
-READY_MARKER="ready"
+CACHE_FILE="ready.json"
 
-if $BASELINE && [ -f "$READY_MARKER" ]; then
-  git fetch
+is_cached() {
+  if [ ! -f "$CACHE_FILE" ]; then
+      return 1
+  fi
+
+    cached_repository=$(jq -r '.repository' "$CACHE_FILE")
+    cached_revision=$(jq -r '.revision' "$CACHE_FILE")
+
+  [ "$cached_repository" = "$REPOSITORY_URL" ] && [ "$cached_revision" = "$REVISION" ]
+}
+
+if $CACHE && is_cached; then
+  echo "Using cached repository"
 else
   find . -mindepth 1 -delete
 
   GIT_LFS_SKIP_SMUDGE=1 git clone --shallow-submodules "$REPOSITORY_URL" .
   git checkout "$REVISION"
-  if $BASELINE; then
-    touch "$READY_MARKER"
+  if $CACHE; then
+    echo "{\"repository\": \"$REPOSITORY_URL\", \"revision\": \"$REVISION\"}" > "$CACHE_FILE"
   fi
 fi

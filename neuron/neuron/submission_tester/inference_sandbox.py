@@ -27,14 +27,22 @@ class InferenceSandbox(Generic[RequestT]):
     _client: Connection
     _process: Popen
 
-    def __init__(self, repository_info: ModelRepositoryInfo, baseline: bool, sandbox_directory: Path, switch_user: bool):
+    def __init__(self, repository_info: ModelRepositoryInfo, baseline: bool, sandbox_directory: Path, switch_user: bool, cache: bool):
         self._repository = repository_info
         self._baseline = baseline
         self._sandbox_directory = sandbox_directory
-        self.switch_user = switch_user
+        self._switch_user = switch_user
+        self._cache = cache
 
         try:
-            self._file_size = setup_sandbox(self.sandbox_args(self._user), self._sandbox_directory, baseline, repository_info.url, repository_info.revision)
+            self._file_size = setup_sandbox(
+                self.sandbox_args(self._user),
+                self._sandbox_directory,
+                baseline,
+                cache,
+                repository_info.url,
+                repository_info.revision,
+            )
         except InvalidSubmissionError as e:
             if baseline:
                 self.clear_sandbox()
@@ -43,6 +51,8 @@ class InferenceSandbox(Generic[RequestT]):
                 raise e
 
         logger.info(f"Repository {repository_info} had size {self._file_size}b")
+        socket_path = abspath(self._sandbox_directory / "inferences.sock")
+        self.remove_socket(socket_path)
 
         self._process = Popen(
             [
@@ -59,7 +69,6 @@ class InferenceSandbox(Generic[RequestT]):
         Thread(target=self._stream_logs, args=(self._process.stderr, sys.stderr), daemon=True).start()
 
         logger.info("Inference process starting")
-        socket_path = abspath(self._sandbox_directory / "inferences.sock")
 
         for _ in range(INFERENCE_SOCKET_TIMEOUT):
             if os.path.exists(socket_path):
@@ -98,7 +107,7 @@ class InferenceSandbox(Generic[RequestT]):
                 raise InvalidSubmissionError(f"'{self._repository}'s inference crashed, got exit code {self._process.returncode}")
 
     def clear_sandbox(self):
-        process = run(
+        run(
             [
                 *self.sandbox_args(self._user),
                 "find",
@@ -107,13 +116,23 @@ class InferenceSandbox(Generic[RequestT]):
                 "1",
                 "-delete",
             ],
-            capture_output=True,
-            encoding='utf-8',
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            check=True,
         )
 
-        print(process.stdout)
-        print(process.stderr, file=sys.stderr)
-        process.check_returncode()
+    def remove_socket(self, socket_path: str):
+        run(
+            [
+                *self.sandbox_args(self._user),
+                "rm",
+                "-f",
+                socket_path,
+            ],
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            check=True,
+        )
 
     def __enter__(self):
         self._process.__enter__()
@@ -136,7 +155,7 @@ class InferenceSandbox(Generic[RequestT]):
 
         self._process.__exit__(exc_type, exc_val, exc_tb)
 
-        if not self._baseline:
+        if not self._cache:
             self.clear_sandbox()
 
     def __call__(self, request: RequestT):
@@ -157,7 +176,7 @@ class InferenceSandbox(Generic[RequestT]):
             "/bin/sudo",
             "-u",
             user,
-        ] if self.switch_user else []
+        ] if self._switch_user else []
 
     @staticmethod
     def _stream_logs(stream: TextIOWrapper, output_stream: TextIOWrapper):

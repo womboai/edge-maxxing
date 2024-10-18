@@ -83,7 +83,8 @@ async def start_benchmarking(submission: CheckpointSubmission):
     baseline = await generate_baseline(
         inputs,
         BASELINE_MODEL_DIRECTORY,
-        False
+        False,
+        True,
     )
 
     logger.info("Comparing submission to baseline")
@@ -97,6 +98,7 @@ async def start_benchmarking(submission: CheckpointSubmission):
         baseline,
         MODEL_DIRECTORY,
         False,
+        True,
     )
 
 

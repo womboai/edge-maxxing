@@ -4,7 +4,7 @@ set -e
 
 BLACKLISTED_DEPENDENCIES=$1
 
-find . -type f -not -path '*/\.git/*' -print0 | while IFS= read -r -d '' file; do
+find . -type f -not -path '*/\.git/*' -not -path '*/.venv/*' -not -path '*/models/*' -print0 | while IFS= read -r -d '' file; do
   for dependency in $BLACKLISTED_DEPENDENCIES; do
      if [[ "$file" == *"$dependency"* ]]; then
        echo "Found blacklisted dependency '$dependency' in filename '$file'"
