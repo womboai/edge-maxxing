@@ -846,9 +846,9 @@ class Validator:
                 for uid, benchmark in enumerate(self.benchmarks)
             ]
 
-            for duplicate_uid in find_duplicates(benchmark_duplicate_info):
+            for duplicate_uid, original_uid in find_duplicates(benchmark_duplicate_info):
                 self.benchmarks[duplicate_uid] = None
-                self.invalid[duplicate_uid] = "Duplicate submission"
+                self.invalid[duplicate_uid] = f"Duplicate submission of UID '{original_uid}'"
 
             self.benchmarking = False
             self.step += 1
