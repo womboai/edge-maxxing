@@ -42,7 +42,7 @@ class InferenceSandbox(Generic[RequestT]):
             else:
                 raise e
 
-        logger.info(f"Repository {repository_info} had size {self._file_size}")
+        logger.info(f"Repository {repository_info} had size {self._file_size}b")
 
         self._process = Popen(
             [
