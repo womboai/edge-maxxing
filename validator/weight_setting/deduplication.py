@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from collections.abc import Iterator
 
 from imagehash import ImageHash
 
@@ -12,7 +13,7 @@ class PotentiallyDuplicateSubmissionInfo:
     block: int
 
 
-def find_duplicates(benchmark_info: list[PotentiallyDuplicateSubmissionInfo | None]):
+def find_duplicates(benchmark_info: list[PotentiallyDuplicateSubmissionInfo | None]) -> Iterator[tuple[int, int]]:
     duplicate_buckets: list[set[int]] = []
 
     for uid_a, benchmark_a in enumerate(benchmark_info):
@@ -43,4 +44,4 @@ def find_duplicates(benchmark_info: list[PotentiallyDuplicateSubmissionInfo | No
 
         for uid in bucket:
             if uid != oldest:
-                yield uid
+                yield uid, oldest
