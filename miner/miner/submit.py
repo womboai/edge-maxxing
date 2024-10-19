@@ -92,7 +92,7 @@ def load_baseline_cache(inputs: list[TextToImageRequest]) -> BaselineBenchmark |
             data = json.load(f)
 
             benchmarks_version = data["benchmarks_version"]
-            if BENCHMARKS_VERSION > benchmarks_version:
+            if BENCHMARKS_VERSION == benchmarks_version:
                 logger.info(f"Baseline cache is outdated, regenerating baseline")
                 return None
 
