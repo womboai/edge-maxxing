@@ -65,7 +65,7 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
         sandbox_args,
         sandbox_directory,
         [url, revision, str(cache).lower(), str(is_cached(sandbox_directory, url, revision)).lower()],
-        f"Failed to clone repository '{url}'"
+        "Failed to clone repository"
     )
     logger.info(f"Cloned repository '{url}' in {perf_counter() - start:.2f} seconds")
 
@@ -77,7 +77,7 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
             sandbox_args,
             sandbox_directory,
             [BLACKLISTED_DEPENDENCIES],
-            f"Found blacklisted dependency in repository '{url}'"
+            "Detected a blacklisted dependency"
         )
         logger.info(f"Found no blacklisted dependencies after {perf_counter() - start:.2f} seconds")
 
@@ -88,7 +88,7 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
         sandbox_args,
         sandbox_directory,
         [],
-        f"Failed to pull LFS files from repository '{url}'"
+        "Failed to pull LFS files"
     )
     logger.info(f"Pulled LFS files in {perf_counter() - start:.2f} seconds")
 
@@ -104,7 +104,7 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
         sandbox_args,
         sandbox_directory,
         [],
-        f"Failed to install dependencies from repository '{url}'"
+        "Failed to install dependencies"
     )
     logger.info(f"Installed dependencies in {perf_counter() - start:.2f} seconds")
 

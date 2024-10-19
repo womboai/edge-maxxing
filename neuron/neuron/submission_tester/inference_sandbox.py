@@ -80,9 +80,9 @@ class InferenceSandbox(Generic[RequestT]):
         else:
             if baseline:
                 self.clear_sandbox()
-                raise RuntimeError(f"Baseline took too long to start, socket not found after {INFERENCE_SOCKET_TIMEOUT} seconds. Cleared baseline sandbox directory")
+                raise RuntimeError(f"Baseline timed out after {INFERENCE_SOCKET_TIMEOUT} seconds. Cleared baseline sandbox directory")
             else:
-                raise InvalidSubmissionError(f"'{self._repository.url}' took too long to start, socket not found after {INFERENCE_SOCKET_TIMEOUT} seconds")
+                raise InvalidSubmissionError(f"Timed out after {INFERENCE_SOCKET_TIMEOUT} seconds")
 
         logger.info("Connecting to socket")
         try:
@@ -102,9 +102,9 @@ class InferenceSandbox(Generic[RequestT]):
         if self._process.returncode and not self._process.poll():
             if self._baseline:
                 self.clear_sandbox()
-                raise RuntimeError(f"Baseline inference crashed, got exit code {self._process.returncode}. Cleared baseline sandbox directory")
+                raise RuntimeError(f"Baseline inference crashed with exit code {self._process.returncode}. Cleared baseline sandbox directory")
             else:
-                raise InvalidSubmissionError(f"'{self._repository}'s inference crashed, got exit code {self._process.returncode}")
+                raise InvalidSubmissionError(f"Inference crashed with exit code {self._process.returncode}")
 
     def clear_sandbox(self):
         run(
