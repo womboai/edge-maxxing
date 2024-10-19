@@ -10,7 +10,6 @@ from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.logging_utils import get_logger
 from git import GitCommandError, cmd
-from datetime import datetime, timedelta
 
 from neuron import (
     CheckpointSubmission,
@@ -23,12 +22,12 @@ from neuron import (
     REVISION_LENGTH,
     make_submission,
     random_inputs,
-    TIMEZONE,
     ModelRepositoryInfo,
     BaselineBenchmark,
     TextToImageRequest,
     MetricData,
     GenerationOutput,
+    BENCHMARKS_VERSION,
 )
 from neuron.submission_tester import (
     generate_baseline,
@@ -92,12 +91,9 @@ def load_baseline_cache(inputs: list[TextToImageRequest]) -> BaselineBenchmark |
         with open(BASELINE_CACHE_JSON, "r") as f:
             data = json.load(f)
 
-            timestamp = datetime.fromisoformat(data["timestamp"])
-            now = datetime.now(tz=TIMEZONE)
-            expiration_time = (timestamp + timedelta(days=1)).replace(hour=12, minute=0, second=0, microsecond=0)
-
-            if now >= expiration_time:
-                logger.info("Baseline is outdated, regenerating")
+            benchmarks_version = data["benchmarks_version"]
+            if BENCHMARKS_VERSION > benchmarks_version:
+                logger.info(f"Baseline cache is outdated, regenerating baseline")
                 return None
 
             cached_inputs = [TextToImageRequest(**input_data) for input_data in data["inputs"]]
@@ -124,7 +120,7 @@ def load_baseline_cache(inputs: list[TextToImageRequest]) -> BaselineBenchmark |
 def save_baseline_cache(baseline: BaselineBenchmark):
     with open(BASELINE_CACHE_JSON, "w") as f:
         data = {
-            "timestamp": datetime.now(tz=TIMEZONE).isoformat(),
+            "benchmarks_version": BENCHMARKS_VERSION,
             "inputs": [request.model_dump(exclude_none=True) for request in baseline.inputs],
             "outputs": [
                 {
