@@ -1,3 +1,4 @@
+import json
 import sys
 from logging import getLogger
 from os.path import abspath
@@ -46,6 +47,16 @@ def _run(script: str, sandbox_args: list[str], sandbox_directory: Path, args: li
                 print(process.stderr, file=sys.stderr)
 
 
+def is_cached(sandbox_directory: Path, url: str, revision: str) -> bool:
+    cache_file = sandbox_directory / "cache_info.json"
+    if not cache_file.exists():
+        return False
+
+    with open(cache_file, 'r') as file:
+        cache_info = json.load(file)
+        return cache_info["repository"] == url and cache_info["revision"] == revision
+
+
 def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bool, cache: bool, url: str, revision: str) -> int:
     start = perf_counter()
     logger.info(f"Cloning repository '{url}' with revision '{revision}'...")
@@ -53,7 +64,7 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
         CLONE_SCRIPT,
         sandbox_args,
         sandbox_directory,
-        [url, revision, str(cache).lower()],
+        [url, revision, str(cache).lower(), str(is_cached(sandbox_directory, url, revision)).lower()],
         f"Failed to clone repository '{url}'"
     )
     logger.info(f"Cloned repository '{url}' in {perf_counter() - start:.2f} seconds")

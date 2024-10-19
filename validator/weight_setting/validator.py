@@ -51,7 +51,7 @@ from .deduplication import find_duplicates, PotentiallyDuplicateSubmissionInfo
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores
 
-VALIDATOR_VERSION: tuple[int, int, int] = (4, 1, 3)
+VALIDATOR_VERSION: tuple[int, int, int] = (4, 1, 4)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
