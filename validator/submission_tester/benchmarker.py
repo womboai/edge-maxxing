@@ -58,6 +58,7 @@ class Benchmarker:
         submission = self.submissions[hotkey]
 
         start_time = perf_counter()
+
         try:
             self.benchmarks[hotkey] = compare_checkpoints(
                 submission,
