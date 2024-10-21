@@ -167,25 +167,13 @@ class BenchmarkingApiContextManager:
             websocket.close()
 
     def build(self):
-        self._benchmarking_api = BenchmarkingApi(
+        return BenchmarkingApi(
             self._keypair,
             self._api,
             self._index,
 
             self._stream_logs,
         )
-
-        return self._benchmarking_api
-
-    async def close(self):
-        if self._benchmarking_api:
-            await self._benchmarking_api.close()
-
-    async def __aenter__(self):
-        return self.build()
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.close()
 
 
 benchmarking_api = BenchmarkingApiContextManager

@@ -120,7 +120,7 @@ class Validator:
 
     benchmarks: list[CheckpointBenchmark | None]
     baseline_metrics: MetricData | None
-    failed: set[int] = set() # for backwards depickling compatibility
+    failed: set[int] = set()  # for backwards depickling compatibility
     invalid: dict[int, str]
     hash_prompt: str
     hash_seed: int
@@ -874,14 +874,10 @@ class Validator:
         return self.current_block
 
     async def run(self):
-        self.benchmarking_apis = list(
-            await asyncio.gather(
-                *[
-                    benchmarking_api(self.keypair, api, index)
-                    for index, api in enumerate(self.benchmarking_api_urls)
-                ],
-            )
-        )
+        self.benchmarking_apis = [
+            benchmarking_api(self.keypair, api, index).build()
+            for index, api in enumerate(self.benchmarking_api_urls)
+        ]
 
         while True:
             try:
