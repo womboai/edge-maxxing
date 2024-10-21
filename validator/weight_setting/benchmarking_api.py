@@ -62,12 +62,12 @@ class BenchmarkingApi:
 
     async def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         if self._future.done():
-            exception = self._future.exception()
-            if exception:
-                if isinstance(exception, InvalidAPIException):
-                    raise exception
-
-                logger.error("Error in log streaming", exc_info=self._future.exception())
+            try:
+                self._future.result()
+            except InvalidAPIException:
+                raise
+            except Exception as e:
+                logger.error("Error in log streaming", exc_info=e)
 
             self._future = self._stream_logs()
         elif self._future.cancelled():
