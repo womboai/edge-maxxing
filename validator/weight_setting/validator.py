@@ -761,7 +761,6 @@ class Validator:
         finished = []
 
         for index, result in enumerate(states):
-            print(f"{index}: {result}")
             match result.state:
                 case BenchmarkState.NOT_STARTED:
                     not_started.append((index, result))
