@@ -3,7 +3,6 @@ import sys
 import time
 from collections.abc import Callable
 from concurrent.futures import Future, Executor, ThreadPoolExecutor, CancelledError
-from typing import AsyncContextManager
 
 from aiohttp import ClientSession
 from base_validator import API_VERSION, BenchmarkResults
@@ -111,18 +110,18 @@ class BenchmarkingApiContextManager:
     _keypair: Keypair
     _api: str
     _index: int
-    _executor: Executor
 
-    _benchmarking_api: BenchmarkingApi | None
+    _executor: Executor
 
     def __init__(self, keypair: Keypair, api: str, index: int):
         self._keypair = keypair
         self._api = api
         self._index = index
         self._executor = ThreadPoolExecutor(1)
-        self._benchmarking_api = None
 
     def _connect_to_api(self):
+        name = f"API - {self._index + 1}"
+        logger.info(f"Connecting to {name}")
         url = self._api.replace("http", "ws")
 
         websocket = connect(f"{url}/logs", extra_headers=_authentication_headers(self._keypair))
@@ -130,11 +129,11 @@ class BenchmarkingApiContextManager:
         try:
             version = json.loads(websocket.recv())["version"]
         except:
-            raise InvalidAPIException("Validator API out of date")
+            raise InvalidAPIException(f"Validator {name} out of date")
 
         if version != API_VERSION:
             raise InvalidAPIException(
-                f"Validator API has mismatched version, received {version} but expected {API_VERSION}"
+                f"Validator {name} has mismatched version, received {version} but expected {API_VERSION}"
             )
 
         return websocket
