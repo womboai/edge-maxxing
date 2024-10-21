@@ -47,7 +47,7 @@ class Benchmarker:
         self.invalid = {}
         self.baseline = None
         self.inputs = []
-        self.done = True
+        self.done = False
         self.start_timestamp = 0
         self.lock = Lock()
         self.submission_times = []
