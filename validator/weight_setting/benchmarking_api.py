@@ -152,6 +152,8 @@ class BenchmarkingApiContextManager:
                         output = sys.stderr if line.startswith("err:") else sys.stdout
 
                         print(f"[API - {self._index + 1}] - {line[4:]}", file=output)
+
+                        websocket.ping()
                 except (TimeoutError, CancelledError):
                     raise
                 except Exception:
