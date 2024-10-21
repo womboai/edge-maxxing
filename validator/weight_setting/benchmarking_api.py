@@ -126,7 +126,7 @@ class BenchmarkingApiContextManager:
         logger.info(f"Connecting to {name}")
         url = self._api.replace("http", "ws")
 
-        websocket = connect(f"{url}/logs", extra_headers=_authentication_headers(self._keypair))
+        websocket = connect(f"{url}/logs", additional_headers=_authentication_headers(self._keypair))
 
         try:
             version = json.loads(websocket.recv())["version"]
