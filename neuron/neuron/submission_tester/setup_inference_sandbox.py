@@ -12,6 +12,7 @@ CLONE_SCRIPT = abspath(Path(__file__).parent / "clone.sh")
 BLACKLIST_SCRIPT = abspath(Path(__file__).parent / "blacklist.sh")
 LFS_PULL_SCRIPT = abspath(Path(__file__).parent / "lfs_pull.sh")
 PIP_INSTALL_SCRIPT = abspath(Path(__file__).parent / "pip_install.sh")
+CACHE_SCRIPT = abspath(Path(__file__).parent / "cache.sh")
 
 with open(DEPENDENCY_BLACKLIST, 'r') as blacklist_file:
     BLACKLISTED_DEPENDENCIES = " ".join(blacklist_file.read().splitlines())
@@ -113,5 +114,13 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
         "Failed to install dependencies"
     )
     logger.info(f"Installed dependencies in {perf_counter() - start:.2f} seconds")
+
+    _run(
+        CACHE_SCRIPT,
+        sandbox_args,
+        sandbox_directory,
+        [url, revision],
+        "Failed to create cache file"
+    )
 
     return get_submission_size(sandbox_directory)

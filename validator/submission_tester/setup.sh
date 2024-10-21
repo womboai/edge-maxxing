@@ -31,6 +31,7 @@ echo "Defaults env_keep += \"VALIDATOR_HOTKEY_SS58_ADDRESS VALIDATOR_DEBUG\"" >>
 
 git config --system lfs.concurrenttransfers 64
 git config --system advice.detachedHead false
+git config --global init.defaultBranch main
 
 sudo -u baseline-sandbox git lfs install
 sudo -u sandbox git lfs install

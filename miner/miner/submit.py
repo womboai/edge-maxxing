@@ -276,7 +276,10 @@ async def submit():
     enable_benchmarking = config["benchmarking.on"]
 
     if enable_benchmarking or input("Benchmark submission before submitting? (y/N): ").strip().lower() in ("yes", "y"):
-        await start_benchmarking(submission)
+        try:
+            await start_benchmarking(submission)
+        except Exception as e:
+            exit(f"Benchmarking failed, submission cancelled: {e}")
 
     print(
         "\nSubmission info:\n"

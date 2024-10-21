@@ -5,9 +5,9 @@ set -e
 REPOSITORY_URL=$1
 REVISION=$2
 
-CACHE_FILE="cache_info.json"
+find . -maxdepth 1 -not \( -name ".venv" -o -name "." \) -exec rm -rf {} +
 
-find . -mindepth 1 -delete
-GIT_LFS_SKIP_SMUDGE=1 git clone --shallow-submodules "$REPOSITORY_URL" .
-git checkout "$REVISION"
-echo "{\"repository\": \"$REPOSITORY_URL\", \"revision\": \"$REVISION\"}" > "$CACHE_FILE"
+git init
+git remote add origin "$REPOSITORY_URL"
+git fetch origin
+git switch --force --detach "$REVISION"
