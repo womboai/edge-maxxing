@@ -42,7 +42,7 @@ class InferenceSandbox(Generic[RequestT]):
             else:
                 raise e
 
-        logger.info(f"Repository {repository_info} had size {self._file_size}")
+        logger.info(f"Repository {repository_info} had size {self._file_size}b")
 
         self._process = Popen(
             [
@@ -71,9 +71,9 @@ class InferenceSandbox(Generic[RequestT]):
         else:
             if baseline:
                 self.clear_sandbox()
-                raise RuntimeError(f"Baseline socket file '{socket_path}' not found after {INFERENCE_SOCKET_TIMEOUT} seconds. Cleared baseline sandbox directory")
+                raise RuntimeError(f"Baseline took too long to start, socket not found after {INFERENCE_SOCKET_TIMEOUT} seconds. Cleared baseline sandbox directory")
             else:
-                raise InvalidSubmissionError(f"Socket file '{socket_path}' not found after {INFERENCE_SOCKET_TIMEOUT} seconds.")
+                raise InvalidSubmissionError(f"'{self._repository}' took too long to start, socket not found after {INFERENCE_SOCKET_TIMEOUT} seconds")
 
         logger.info("Connecting to socket")
         try:

@@ -79,7 +79,10 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
     )
     logger.info(f"Pulled LFS files in {perf_counter() - start:.2f} seconds")
 
-    file_size = sum(file.stat().st_size for file in sandbox_directory.rglob("*"))
+    file_size = sum(
+        file.stat().st_size for file in sandbox_directory.rglob("*")
+        if ".git" not in file.parts
+    )
 
     start = perf_counter()
     logger.info(f"Installing dependencies...")

@@ -34,6 +34,6 @@ def get_scores(contestants: list[tuple[int, float]], node_count: int) -> list[fl
             last_tier_score = score
             tier += 1
 
-        scores[uid] = score ** (tier * 0.75)
+        scores[uid] = (score + 1) ** (tier * 0.75)
 
     return scores

@@ -13,5 +13,6 @@ class BenchmarkState(Enum):
 class BenchmarkResults(BaseModel):
     state: BenchmarkState
     results: dict[Key, CheckpointBenchmark | None]
+    invalid: dict[Key, str]
     baseline_metrics: MetricData | None
     average_benchmark_time: float | None
