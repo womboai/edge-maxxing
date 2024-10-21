@@ -1,10 +1,9 @@
-import asyncio
 import logging
 import traceback
-from asyncio import Task
+from concurrent.futures import Future, CancelledError, ThreadPoolExecutor
 from datetime import timedelta, datetime
 from random import choice
-from threading import Lock
+from threading import Lock, Event
 from time import perf_counter
 
 from neuron.submission_tester import (
@@ -24,6 +23,7 @@ from neuron import (
 from pipelines import TextToImageRequest
 
 logger = logging.getLogger(__name__)
+EXECUTOR = ThreadPoolExecutor(1)
 
 
 class Benchmarker:
@@ -36,7 +36,8 @@ class Benchmarker:
     start_timestamp: int
     submission_times: list[float]
     lock: Lock
-    benchmark_task: Task | None
+    benchmark_future: Future | None
+    cancelled_event: Event
 
     def __init__(self):
         self.submissions = {}
@@ -47,71 +48,79 @@ class Benchmarker:
         self.start_timestamp = 0
         self.lock = Lock()
         self.submission_times = []
-        self.benchmark_task = None
+        self.benchmark_future = None
+        self.cancelled_event = Event()
 
-    async def _benchmark_key(self, hotkey: Key):
+    def _benchmark_key(self, hotkey: Key):
         submission = self.submissions[hotkey]
 
         try:
             start_time = perf_counter()
 
-            benchmark = await compare_checkpoints(
+            benchmark = compare_checkpoints(
                 submission,
                 self.benchmarks.items(),
                 self.inputs,
                 self.baseline,
+                cancelled_event=self.cancelled_event,
             )
 
             self.submission_times.append(perf_counter() - start_time)
             self.benchmarks[hotkey] = benchmark
+        except (CancelledError, TimeoutError):
+            raise
         except:
             traceback.print_exc()
 
-    async def _start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
+    def _start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         self.submissions = submissions
         self.benchmarks = {}
         self.submission_times = []
         self.inputs = random_inputs()
         self.done = False
 
-        if not self.baseline or self.baseline.inputs != self.inputs:
-            logger.info("Generating baseline samples to compare")
-            self.baseline = await generate_baseline(self.inputs)
+        try:
+            if not self.baseline or self.baseline.inputs != self.inputs:
+                logger.info("Generating baseline samples to compare")
+                self.baseline = generate_baseline(self.inputs, cancelled_event=self.cancelled_event)
 
-        while len(self.benchmarks) != len(self.submissions):
-            hotkey = choice(list(self.submissions.keys() - self.benchmarks.keys()))
+            while len(self.benchmarks) != len(self.submissions):
+                hotkey = choice(list(self.submissions.keys() - self.benchmarks.keys()))
 
-            try:
-                await self._benchmark_key(hotkey)
-            except (asyncio.CancelledError, asyncio.TimeoutError):
-                return
+                self._benchmark_key(hotkey)
 
-            valid_submissions = len([benchmark for benchmark in self.benchmarks.values() if benchmark])
-            logger.info(f"{len(self.benchmarks)}/{len(self.submissions)} submissions benchmarked. {valid_submissions} valid.")
+                valid_submissions = len([benchmark for benchmark in self.benchmarks.values() if benchmark])
+                logger.info(f"{len(self.benchmarks)}/{len(self.submissions)} submissions benchmarked. {valid_submissions} valid.")
 
-            if self.submission_times:
-                average_time = sum(self.submission_times) / len(self.submission_times)
-                eta = int(average_time * (len(self.submissions) - len(self.benchmarks)))
-                if eta > 0:
-                    time_left = timedelta(seconds=eta)
-                    eta_date = datetime.now(tz=TIMEZONE) + time_left
-                    eta_time = eta_date.strftime("%Y-%m-%d %I:%M:%S %p")
+                if self.submission_times:
+                    average_time = sum(self.submission_times) / len(self.submission_times)
+                    eta = int(average_time * (len(self.submissions) - len(self.benchmarks)))
+                    if eta > 0:
+                        time_left = timedelta(seconds=eta)
+                        eta_date = datetime.now(tz=TIMEZONE) + time_left
+                        eta_time = eta_date.strftime("%Y-%m-%d %I:%M:%S %p")
 
-                    logger.info(f"ETA: {eta_time} PST. Time remaining: {time_left}")
+                        logger.info(f"ETA: {eta_time} PST. Time remaining: {time_left}")
+        except CancelledError:
+            return
 
         self.done = True
 
     def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
-        benchmark_task = self.benchmark_task
+        benchmark_future = self.benchmark_future
 
-        if not self.done and benchmark_task:
-            benchmark_task.cancel()
+        if not self.done and benchmark_future:
+            benchmark_future.cancel()
+            self.cancelled_event.set()
+
+            if not benchmark_future.cancelled():
+                benchmark_future.result()
 
             self.submissions = submissions
             self.benchmarks = {}
+            self.done = False
 
-        loop = asyncio.new_event_loop()
-        self.benchmark_task = loop.create_task(self._start_benchmarking(submissions))
+        self.benchmark_future = EXECUTOR.submit(self._start_benchmarking, submissions)
 
     def get_baseline_metrics(self) -> MetricData | None:
         return self.baseline.metric_data if self.baseline else None

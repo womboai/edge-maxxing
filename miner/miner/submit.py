@@ -75,12 +75,12 @@ def add_extra_args(argument_parser: ArgumentParser):
     )
 
 
-async def start_benchmarking(submission: CheckpointSubmission):
+def start_benchmarking(submission: CheckpointSubmission):
     logger.info("Generating baseline samples to compare")
     if not BASELINE_MODEL_DIRECTORY.exists():
         BASELINE_MODEL_DIRECTORY.mkdir()
     inputs = random_inputs()
-    baseline = await generate_baseline(
+    baseline = generate_baseline(
         inputs,
         BASELINE_MODEL_DIRECTORY,
         False
@@ -90,7 +90,7 @@ async def start_benchmarking(submission: CheckpointSubmission):
     if not MODEL_DIRECTORY.exists():
         MODEL_DIRECTORY.mkdir()
 
-    await compare_checkpoints(
+    compare_checkpoints(
         ModelRepositoryInfo(url=submission.get_repo_link(), revision=submission.revision),
         [],
         inputs,
@@ -195,7 +195,7 @@ def get_submission(config) -> CheckpointSubmission:
     )
 
 
-async def submit():
+def main():
     config = get_config(add_extra_args)
 
     substrate = get_substrate(
@@ -209,7 +209,7 @@ async def submit():
     enable_benchmarking = config["benchmarking.on"]
 
     if enable_benchmarking or input("Benchmark submission before submitting? (y/N): ").strip().lower() in ("yes", "y"):
-        await start_benchmarking(submission)
+        start_benchmarking(submission)
 
     print(
         "\nSubmission info:\n"
@@ -229,10 +229,6 @@ async def submit():
     )
 
     logger.info(f"Submitted {submission} as the info for this miner")
-
-
-def main():
-    asyncio.run(submit())
 
 
 if __name__ == '__main__':
