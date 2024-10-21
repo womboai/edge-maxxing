@@ -63,11 +63,10 @@ async def generate_baseline(
     inputs: list[TextToImageRequest],
     sandbox_directory: Path = BASELINE_SANDBOX_DIRECTORY,
     switch_user: bool = True,
-    cache: bool = True,
 ) -> BaselineBenchmark:
     outputs: list[GenerationOutput] = []
 
-    with InferenceSandbox(CURRENT_CONTEST.baseline_repository, True, sandbox_directory, switch_user, cache) as sandbox:
+    with InferenceSandbox(CURRENT_CONTEST.baseline_repository, True, sandbox_directory, switch_user) as sandbox:
         size = sandbox.model_size
 
         for index, request in enumerate(inputs):
@@ -105,13 +104,12 @@ async def compare_checkpoints(
     baseline: BaselineBenchmark,
     sandbox_directory: Path = SANDBOX_DIRECTORY,
     switch_user: bool = True,
-    cache: bool = False,
 ) -> CheckpointBenchmark | None:
     logger.info("Generating model samples")
 
     outputs: list[GenerationOutput] = []
 
-    with InferenceSandbox(submission, False, sandbox_directory, switch_user, cache) as sandbox:
+    with InferenceSandbox(submission, False, sandbox_directory, switch_user) as sandbox:
         size = sandbox.model_size
 
         image_hash = None

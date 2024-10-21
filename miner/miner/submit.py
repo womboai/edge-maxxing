@@ -148,7 +148,6 @@ async def start_benchmarking(submission: CheckpointSubmission):
             inputs,
             BASELINE_MODEL_DIRECTORY,
             False,
-            True,
         )
         save_baseline_cache(baseline)
     else:
@@ -165,7 +164,6 @@ async def start_benchmarking(submission: CheckpointSubmission):
         baseline,
         MODEL_DIRECTORY,
         False,
-        True,
     )
 
 

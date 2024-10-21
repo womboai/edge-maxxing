@@ -57,14 +57,25 @@ def is_cached(sandbox_directory: Path, url: str, revision: str) -> bool:
         return cache_info["repository"] == url and cache_info["revision"] == revision
 
 
-def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bool, cache: bool, url: str, revision: str) -> int:
+def get_submission_size(sandbox_directory: Path) -> int:
+    return sum(
+        file.stat().st_size for file in sandbox_directory.rglob("*")
+        if ".git" not in file.parts and ".venv" not in file.parts
+    )
+
+
+def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bool, url: str, revision: str) -> int:
+    if is_cached(sandbox_directory, url, revision):
+        logger.info(f"Using cached repository")
+        return get_submission_size(sandbox_directory)
+
     start = perf_counter()
     logger.info(f"Cloning repository '{url}' with revision '{revision}'...")
     _run(
         CLONE_SCRIPT,
         sandbox_args,
         sandbox_directory,
-        [url, revision, str(cache).lower(), str(is_cached(sandbox_directory, url, revision)).lower()],
+        [url, revision],
         "Failed to clone repository"
     )
     logger.info(f"Cloned repository '{url}' in {perf_counter() - start:.2f} seconds")
@@ -92,11 +103,6 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
     )
     logger.info(f"Pulled LFS files in {perf_counter() - start:.2f} seconds")
 
-    file_size = sum(
-        file.stat().st_size for file in sandbox_directory.rglob("*")
-        if ".git" not in file.parts and ".venv" not in file.parts
-    )
-
     start = perf_counter()
     logger.info(f"Installing dependencies...")
     _run(
@@ -108,4 +114,4 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
     )
     logger.info(f"Installed dependencies in {perf_counter() - start:.2f} seconds")
 
-    return file_size
+    return get_submission_size(sandbox_directory)

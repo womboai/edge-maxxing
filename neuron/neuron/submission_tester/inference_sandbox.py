@@ -27,19 +27,17 @@ class InferenceSandbox(Generic[RequestT]):
     _client: Connection
     _process: Popen
 
-    def __init__(self, repository_info: ModelRepositoryInfo, baseline: bool, sandbox_directory: Path, switch_user: bool, cache: bool):
+    def __init__(self, repository_info: ModelRepositoryInfo, baseline: bool, sandbox_directory: Path, switch_user: bool):
         self._repository = repository_info
         self._baseline = baseline
         self._sandbox_directory = sandbox_directory
         self._switch_user = switch_user
-        self._cache = cache
 
         try:
             self._file_size = setup_sandbox(
                 self.sandbox_args(self._user),
                 self._sandbox_directory,
                 baseline,
-                cache,
                 repository_info.url,
                 repository_info.revision,
             )
@@ -154,9 +152,6 @@ class InferenceSandbox(Generic[RequestT]):
             logger.warning(f"Forcefully killed inference process")
 
         self._process.__exit__(exc_type, exc_val, exc_tb)
-
-        if not self._cache:
-            self.clear_sandbox()
 
     def __call__(self, request: RequestT):
         self._check_exit()
