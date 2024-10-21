@@ -127,7 +127,7 @@ def state(request: Request) -> BenchmarkResults:
 
     benchmark_state: BenchmarkState
 
-    if not benchmarker.benchmark_task:
+    if not benchmarker.benchmark_future:
         benchmark_state = BenchmarkState.NOT_STARTED
     elif benchmarker.done:
         benchmark_state = BenchmarkState.FINISHED
