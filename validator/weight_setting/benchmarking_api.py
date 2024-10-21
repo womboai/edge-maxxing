@@ -58,6 +58,8 @@ class BenchmarkingApi:
         self._future = stream_logs()
         self._stream_logs = stream_logs
 
+        self._session = None
+
     async def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         if self._future.done():
             exception = self._future.exception()
