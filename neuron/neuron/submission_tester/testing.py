@@ -58,11 +58,12 @@ def generate_baseline(
     inputs: list[TextToImageRequest],
     sandbox_directory: Path = BASELINE_SANDBOX_DIRECTORY,
     switch_user: bool = True,
+    cache: bool = True,
     cancelled_event: Event | None = None,
 ) -> BaselineBenchmark:
     outputs: list[GenerationOutput] = []
 
-    with InferenceSandbox(CURRENT_CONTEST.baseline_repository, True, sandbox_directory, switch_user) as sandbox:
+    with InferenceSandbox(CURRENT_CONTEST.baseline_repository, True, sandbox_directory, switch_user, cache) as sandbox:
         size = sandbox.model_size
 
         for index, request in enumerate(inputs):
@@ -104,12 +105,13 @@ def compare_checkpoints(
     sandbox_directory: Path = SANDBOX_DIRECTORY,
     switch_user: bool = True,
     cancelled_event: Event | None = None,
+    cache: bool = False,
 ) -> CheckpointBenchmark | None:
     logger.info("Generating model samples")
 
     outputs: list[GenerationOutput] = []
 
-    with InferenceSandbox(submission, False, sandbox_directory, switch_user) as sandbox:
+    with InferenceSandbox(submission, False, sandbox_directory, switch_user, cache) as sandbox:
         size = sandbox.model_size
 
         image_hash = None
@@ -206,6 +208,7 @@ def compare_checkpoints(
         f"Tested {len(inputs)} Samples\n"
         f"Score: {benchmark.calculate_score(baseline.metric_data)}\n"
         f"Average Similarity: {average_similarity}\n"
+        f"Min Similarity: {min_similarity}\n"
         f"Average Generation Time: {average_time}s\n"
         f"Model Size: {size}b\n"
         f"Max VRAM Usage: {vram_used}b\n"

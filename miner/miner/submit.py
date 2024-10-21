@@ -1,6 +1,7 @@
-import asyncio
+import base64
 import logging
 import re
+import json
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -21,6 +22,11 @@ from neuron import (
     make_submission,
     random_inputs,
     ModelRepositoryInfo,
+    BaselineBenchmark,
+    TextToImageRequest,
+    MetricData,
+    GenerationOutput,
+    BENCHMARKS_VERSION,
 )
 from neuron.submission_tester import (
     generate_baseline,
@@ -33,6 +39,7 @@ VALID_REVISION_REGEX = r"^[a-f0-9]{7}$"
 
 MODEL_DIRECTORY = Path("model")
 BASELINE_MODEL_DIRECTORY = Path("baseline-model")
+BASELINE_CACHE_JSON = BASELINE_MODEL_DIRECTORY / "baseline_cache.json"
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -75,16 +82,75 @@ def add_extra_args(argument_parser: ArgumentParser):
     )
 
 
+def load_baseline_cache(inputs: list[TextToImageRequest]) -> BaselineBenchmark | None:
+    try:
+        if not BASELINE_CACHE_JSON.exists():
+            return None
+
+        with open(BASELINE_CACHE_JSON, "r") as f:
+            data = json.load(f)
+
+            benchmarks_version = data["benchmarks_version"]
+            if BENCHMARKS_VERSION != benchmarks_version:
+                logger.info(f"Baseline cache is outdated, regenerating baseline")
+                return None
+
+            cached_inputs = [TextToImageRequest(**input_data) for input_data in data["inputs"]]
+            if cached_inputs != inputs:
+                logger.info("Contest inputs have changed, regenerating baseline")
+                return None
+
+            metrics = MetricData(**data["metrics"])
+            outputs = [
+                GenerationOutput(
+                    output=base64.b64decode(output_data["output"]),
+                    generation_time=output_data["generation_time"],
+                    vram_used=output_data["vram_used"],
+                    watts_used=output_data["watts_used"]
+                )
+                for output_data in data["outputs"]
+            ]
+            return BaselineBenchmark(inputs=inputs, outputs=outputs, metric_data=metrics)
+    except Exception as e:
+        logger.error(f"Failed to load baseline cache: {e}. Clearing.")
+        return None
+
+
+def save_baseline_cache(baseline: BaselineBenchmark):
+    with open(BASELINE_CACHE_JSON, "w") as f:
+        data = {
+            "benchmarks_version": BENCHMARKS_VERSION,
+            "inputs": [request.model_dump(exclude_none=True) for request in baseline.inputs],
+            "outputs": [
+                {
+                    "output": base64.b64encode(output.output).decode('utf-8'),
+                    "generation_time": output.generation_time,
+                    "vram_used": output.vram_used,
+                    "watts_used": output.watts_used
+                }
+                for output in baseline.outputs
+            ],
+            "metrics": baseline.metric_data.model_dump(exclude_none=True),
+        }
+        json.dump(data, f, indent=4)
+
+
 def start_benchmarking(submission: CheckpointSubmission):
     logger.info("Generating baseline samples to compare")
     if not BASELINE_MODEL_DIRECTORY.exists():
         BASELINE_MODEL_DIRECTORY.mkdir()
     inputs = random_inputs()
-    baseline = generate_baseline(
-        inputs,
-        BASELINE_MODEL_DIRECTORY,
-        False
-    )
+
+    baseline = load_baseline_cache(inputs)
+    if baseline is None:
+        baseline = generate_baseline(
+            inputs,
+            BASELINE_MODEL_DIRECTORY,
+            cache=True,
+        )
+        save_baseline_cache(baseline)
+    else:
+        logger.info("Using cached baseline")
 
     logger.info("Comparing submission to baseline")
     if not MODEL_DIRECTORY.exists():
@@ -96,7 +162,7 @@ def start_benchmarking(submission: CheckpointSubmission):
         inputs,
         baseline,
         MODEL_DIRECTORY,
-        False,
+        cache=True,
     )
 
 

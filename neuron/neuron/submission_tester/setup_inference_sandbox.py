@@ -1,3 +1,4 @@
+import json
 import sys
 from logging import getLogger
 from os.path import abspath
@@ -40,19 +41,31 @@ def _run(script: str, sandbox_args: list[str], sandbox_directory: Path, args: li
         raise InvalidSubmissionError(error_message) from e
     finally:
         if process:
-            print(process.stdout)
-            print(process.stderr, file=sys.stderr)
+            if process.stdout.strip():
+                print(process.stdout)
+            if process.stderr.strip():
+                print(process.stderr, file=sys.stderr)
 
 
-def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bool, url: str, revision: str) -> int:
+def is_cached(sandbox_directory: Path, url: str, revision: str) -> bool:
+    cache_file = sandbox_directory / "cache_info.json"
+    if not cache_file.exists():
+        return False
+
+    with open(cache_file, 'r') as file:
+        cache_info = json.load(file)
+        return cache_info["repository"] == url and cache_info["revision"] == revision
+
+
+def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bool, cache: bool, url: str, revision: str) -> int:
     start = perf_counter()
     logger.info(f"Cloning repository '{url}' with revision '{revision}'...")
     _run(
         CLONE_SCRIPT,
         sandbox_args,
         sandbox_directory,
-        [url, revision, str(baseline).lower()],
-        f"Failed to clone repository '{url}'"
+        [url, revision, str(cache).lower(), str(is_cached(sandbox_directory, url, revision)).lower()],
+        "Failed to clone repository"
     )
     logger.info(f"Cloned repository '{url}' in {perf_counter() - start:.2f} seconds")
 
@@ -64,7 +77,7 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
             sandbox_args,
             sandbox_directory,
             [BLACKLISTED_DEPENDENCIES],
-            f"Found blacklisted dependency in repository '{url}'"
+            "Detected a blacklisted dependency"
         )
         logger.info(f"Found no blacklisted dependencies after {perf_counter() - start:.2f} seconds")
 
@@ -75,13 +88,13 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
         sandbox_args,
         sandbox_directory,
         [],
-        f"Failed to pull LFS files from repository '{url}'"
+        "Failed to pull LFS files"
     )
     logger.info(f"Pulled LFS files in {perf_counter() - start:.2f} seconds")
 
     file_size = sum(
         file.stat().st_size for file in sandbox_directory.rglob("*")
-        if ".git" not in file.parts
+        if ".git" not in file.parts and ".venv" not in file.parts
     )
 
     start = perf_counter()
@@ -91,7 +104,7 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
         sandbox_args,
         sandbox_directory,
         [],
-        f"Failed to install dependencies from repository '{url}'"
+        "Failed to install dependencies"
     )
     logger.info(f"Installed dependencies in {perf_counter() - start:.2f} seconds")
 

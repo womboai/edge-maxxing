@@ -39,6 +39,7 @@ from neuron import (
     ModelRepositoryInfo,
     SPEC_VERSION,
     get_submission,
+    BENCHMARKS_VERSION,
 )
 from neuron.submission_tester import (
     load_image_hash,
@@ -52,8 +53,6 @@ from .winner_selection import get_scores, get_contestant_scores
 
 VALIDATOR_VERSION: tuple[int, int, int] = (4, 2, 0)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
-
-BENCHMARKS_VERSION = 5
 
 WEIGHTS_VERSION = (
     VALIDATOR_VERSION[0] * 10000 +
@@ -848,7 +847,7 @@ class Validator:
 
             for duplicate_uid, original_uid in find_duplicates(benchmark_duplicate_info):
                 self.benchmarks[duplicate_uid] = None
-                self.invalid[duplicate_uid] = f"Duplicate submission of UID '{original_uid}'"
+                self.invalid[duplicate_uid] = f"Duplicate of UID {original_uid}'s submission"
 
             self.benchmarking = False
             self.step += 1
