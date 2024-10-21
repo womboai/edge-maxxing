@@ -1,9 +1,9 @@
 name: Test Validator Types
 
 on:
-  pull_request:
-    types:
-      - opened
+  - pull_request
+  - push
+  - workflow_dispatch
 
 jobs:
   test-types:
