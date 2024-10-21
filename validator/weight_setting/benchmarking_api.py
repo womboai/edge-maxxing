@@ -60,7 +60,7 @@ class BenchmarkingApi:
 
         self._session = None
 
-    async def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
+    def check_log_stream(self):
         if self._future.done():
             try:
                 self._future.result()
@@ -74,6 +74,9 @@ class BenchmarkingApi:
             logger.error("Log streaming future was cancelled, restarting it")
 
             self._future = self._stream_logs()
+
+    async def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
+        self.check_log_stream()
 
         if not self._session:
             self._session = ClientSession()
@@ -93,6 +96,8 @@ class BenchmarkingApi:
             state_response.raise_for_status()
 
     async def state(self):
+        self.check_log_stream()
+
         if not self._session:
             self._session = ClientSession()
 
