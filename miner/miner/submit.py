@@ -158,7 +158,6 @@ def start_benchmarking(submission: CheckpointSubmission):
 
     compare_checkpoints(
         ModelRepositoryInfo(url=submission.get_repo_link(), revision=submission.revision),
-        [],
         inputs,
         baseline,
         MODEL_DIRECTORY,

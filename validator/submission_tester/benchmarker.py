@@ -62,7 +62,6 @@ class Benchmarker:
         try:
             self.benchmarks[hotkey] = compare_checkpoints(
                 submission,
-                self.benchmarks.items(),
                 self.inputs,
                 self.baseline,
                 cancelled_event=self.cancelled_event,

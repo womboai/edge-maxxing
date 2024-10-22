@@ -1,8 +1,10 @@
 from operator import itemgetter
+from typing import cast
 
+from neuron import Uid
 from neuron.submission_tester import CheckpointBenchmark, MetricData
 
-TIER_SCORE_IMPROVEMENT_THRESHOLD = 1.05
+TIER_SCORE_IMPROVEMENT_THRESHOLD = 1.075
 
 
 def get_contestant_scores(benchmarks: list[CheckpointBenchmark | None], baseline_metrics: MetricData):
@@ -17,16 +19,13 @@ def get_contestant_scores(benchmarks: list[CheckpointBenchmark | None], baseline
     return sorted_contestants
 
 
-def get_scores(contestants: list[tuple[int, float]], node_count: int) -> list[float]:
+def get_tiers(contestants: list[tuple[Uid, float]]) -> list[list[Uid]]:
     if not contestants:
         return []
 
-    last_uid, last_tier_score = contestants[0]
+    _, last_tier_score = contestants[0]
 
-    scores = [0.0] * node_count
-    winning_uids = []
-
-    uid = last_uid
+    tiers = [[]]
 
     for contestant in contestants:
         uid, score = contestant
@@ -34,13 +33,21 @@ def get_scores(contestants: list[tuple[int, float]], node_count: int) -> list[fl
         if score > last_tier_score * TIER_SCORE_IMPROVEMENT_THRESHOLD:
             # No longer in top threshold
             last_tier_score = score
-            winning_uids.append(last_uid)
+            tiers.append([])
 
-        last_uid = uid
+        tiers[-1].append(uid)
 
-    winning_uids.append(uid)
+    return tiers
 
-    for winner_index, uid in enumerate(reversed(winning_uids)):
-        scores[uid] = 0.5 * (0.5 ** winner_index)
+
+def pick_winners(tiers: list[list[Uid]], blocks: list[int | None]) -> list[Uid]:
+    return [cast(int, min(tier, key=blocks.__getitem__)) for tier in tiers]
+
+
+def get_scores(winners: list[Uid], node_count: int) -> list[float]:
+    scores = [0.0] * node_count
+
+    for index, winner in enumerate(reversed(winners)):
+        scores[winner] = 0.5 * (0.5 ** index)
 
     return scores
