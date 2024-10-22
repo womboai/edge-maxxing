@@ -548,8 +548,8 @@ class Validator:
 
         contestants = get_contestant_scores(self.benchmarks, self.baseline_metrics)
         tiers = get_tiers(contestants)
-        winners = pick_winners(tiers, [info.block if info else None for info in self.contest_state.miner_info])
-        weights = get_scores(winners, len(self.metagraph.nodes))
+        blocks = [info.block if info else None for info in self.contest_state.miner_info]
+        weights = get_scores(tiers, blocks, len(self.metagraph.nodes))
 
         self.send_wandb_metrics()
 

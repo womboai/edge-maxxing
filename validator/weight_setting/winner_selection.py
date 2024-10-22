@@ -1,3 +1,4 @@
+from itertools import chain
 from operator import itemgetter
 from typing import cast
 
@@ -44,10 +45,25 @@ def pick_winners(tiers: list[list[Uid]], blocks: list[int | None]) -> list[Uid]:
     return [cast(int, min(tier, key=blocks.__getitem__)) for tier in tiers]
 
 
-def get_scores(winners: list[Uid], node_count: int) -> list[float]:
+def get_scores(tiers: list[list[Uid]], blocks: list[int | None], node_count: int) -> list[float]:
+    ordered_tiers = [
+        sorted(tier, key=blocks.__getitem__) for tier in tiers
+    ]
+
+    max_len = max(len(tier) for tier in ordered_tiers)
+
+    sorted_winners = list(
+        chain.from_iterable(
+            [tier[i] for tier in ordered_tiers if i < len(tier)]
+            for i in range(max_len)
+        )
+    )
+
     scores = [0.0] * node_count
 
-    for index, winner in enumerate(reversed(winners)):
-        scores[winner] = 0.5 * (0.5 ** index)
+    scores[sorted_winners[0]] = 0.5
+
+    for uid in sorted_winners[1:]:
+        scores[uid] = 0.5 / (len(sorted_winners) - 1)
 
     return scores
