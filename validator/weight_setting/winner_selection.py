@@ -31,7 +31,7 @@ def get_tiers(contestants: list[tuple[Uid, float]]) -> list[list[Uid]]:
         uid, score = contestant
 
         if score > last_tier_score * TIER_SCORE_IMPROVEMENT_THRESHOLD:
-            # No longer in top threshold
+            # New tier
             last_tier_score = score
             tiers.append([])
 
