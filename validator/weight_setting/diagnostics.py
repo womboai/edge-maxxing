@@ -11,7 +11,7 @@ from pathlib import Path
 from pickle import load
 from typing import Any
 
-from weight_setting.validator import ContestState  #  (Needed for depickling)
+from weight_setting.validator import ContestState  # noqa
 
 DIAGNOSTICS_DIR: Path = Path(".diagnostics")
 DIAGNOSTICS_FILE_PATH: Path = DIAGNOSTICS_DIR / "diagnostics.json"
