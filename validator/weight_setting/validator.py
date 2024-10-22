@@ -119,6 +119,8 @@ class Validator:
 
     benchmarks: list[CheckpointBenchmark | None]
     baseline_metrics: MetricData | None
+    average_benchmarking_time: float | None
+    benchmarking_state: BenchmarkState
     failed: set[int] = set()  # for backwards depickling compatibility
     invalid: dict[int, str]
     hash_prompt: str
@@ -169,6 +171,8 @@ class Validator:
 
         self.benchmarks = self.clear_benchmarks()
         self.baseline_metrics = None
+        self.average_benchmarking_time = None
+        self.benchmarking_state = BenchmarkState.NOT_STARTED
         self.invalid = {}
 
         self.load_state()
@@ -217,6 +221,8 @@ class Validator:
 
         self.wandb_run_date = day
 
+        self.wandb_run.log(data={"benchmarking_state": self.benchmarking_state.name})
+
         logger.debug(f"Started a new wandb run: {name}")
 
     def start_wandb_run(self):
@@ -230,7 +236,7 @@ class Validator:
 
         self.new_wandb_run()
 
-    def send_wandb_metrics(self, average_time: float | None = None):
+    def send_wandb_metrics(self):
         if not self.wandb_run:
             return
 
@@ -275,10 +281,11 @@ class Validator:
             "submissions": submission_data,
             "benchmarks": benchmark_data,
             "invalid": self.invalid,
+            "benchmarking_state": self.benchmarking_state.name,
         }
 
-        if average_time:
-            log_data["average_benchmark_time"] = average_time
+        if self.average_benchmarking_time:
+            log_data["average_benchmark_time"] = self.average_benchmarking_time
 
         if self.baseline_metrics:
             log_data["baseline"] = {
@@ -359,6 +366,8 @@ class Validator:
                     "hotkeys": self.hotkeys,
                     "benchmarks": self.benchmarks,
                     "baseline_benchmarks": self.baseline_metrics,
+                    "average_benchmarking_time": self.average_benchmarking_time,
+                    "benchmarking_state": self.benchmarking_state,
                     "invalid": self.invalid,
                     "last_day": self.last_day,
                     "contest_state": self.contest_state,
@@ -385,6 +394,8 @@ class Validator:
         self.hotkeys = state["hotkeys"]
         self.benchmarks = state.get("benchmarks", self.benchmarks)
         self.baseline_metrics = state.get("baseline_benchmarks", self.baseline_metrics)
+        self.average_benchmarking_time = state.get("average_benchmarking_time", self.average_benchmarking_time)
+        self.benchmarking_state = state.get("benchmarking_state", self.benchmarking_state)
         self.invalid = state.get("invalid", self.invalid)
         self.last_day = state["last_day"]
         self.contest_state = state["contest_state"]
@@ -772,6 +783,8 @@ class Validator:
                 self.baseline_metrics = result.baseline_metrics
                 logger.info(f"Updated baseline benchmarks to {result.baseline_metrics}")
 
+        self.benchmarking_state = min((result.state for result in states), key=lambda state: state.value)
+
         with_results = in_progress + finished
 
         if not_started:
@@ -825,9 +838,8 @@ class Validator:
                 if hotkey in self.hotkeys:
                     self.invalid[self.hotkeys.index(hotkey)] = error_message
 
-        average_time = (sum(benchmark_times) / len(benchmark_times)) if benchmark_times else None
-
-        self.send_wandb_metrics(average_time=average_time)
+        self.average_benchmarking_time = (sum(benchmark_times) / len(benchmark_times)) if benchmark_times else None
+        self.send_wandb_metrics()
 
         if not not_started and not in_progress and finished:
             logger.info(

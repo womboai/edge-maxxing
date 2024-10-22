@@ -11,7 +11,7 @@ from pathlib import Path
 from pickle import load
 from typing import Any
 
-from weight_setting.validator import ContestState  # noqa
+from .validator import ContestState  #  (Needed for depickling)
 
 DIAGNOSTICS_DIR: Path = Path(".diagnostics")
 DIAGNOSTICS_FILE_PATH: Path = DIAGNOSTICS_DIR / "diagnostics.json"
@@ -23,18 +23,17 @@ class DiagnosticsData:
     wallet_name: str
     wallet_hotkey: str
     netuid: int
-    logging_dir: str
 
 
 def state_path(data: DiagnosticsData) -> str:
-    full_path = expanduser(
-        "{}/{}/{}/netuid{}/{}".format(
-            data.logging_dir,
-            data.wallet_name,
-            data.wallet_hotkey,
-            data.netuid,
-            "validator",
-        )
+    full_path = (
+        Path.home() /
+        ".bittensor" /
+        "miners" /
+        data.wallet_name /
+        data.wallet_hotkey /
+        f"netuid{data.netuid}" /
+        "validator"
     )
 
     makedirs(full_path, exist_ok=True)
@@ -79,7 +78,6 @@ def load_validator_diagnostics() -> DiagnosticsData:
             wallet_name=data["wallet"]["name"],
             wallet_hotkey=data["wallet"]["hotkey"],
             netuid=data["netuid"],
-            logging_dir=data["logging"]["logging_dir"],
         )
 
 
@@ -93,8 +91,9 @@ if __name__ == "__main__":
 
     print("Gathering logs")
     logs = Path(expanduser("~/.pm2/logs"))
-    for file in logs.iterdir():
-        shutil.copy(file, DIAGNOSTICS_DIR)
+    if logs.exists():
+        for file in logs.iterdir():
+            shutil.copy(file, DIAGNOSTICS_DIR)
 
     with zipfile.ZipFile("diagnostics.zip", "w") as zf:
         for file in DIAGNOSTICS_DIR.iterdir():
