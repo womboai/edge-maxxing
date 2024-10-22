@@ -51,7 +51,7 @@ from .deduplication import find_duplicates, PotentiallyDuplicateSubmissionInfo
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores
 
-VALIDATOR_VERSION: tuple[int, int, int] = (4, 1, 5)
+VALIDATOR_VERSION: tuple[int, int, int] = (4, 2, 0)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -119,7 +119,7 @@ class Validator:
 
     benchmarks: list[CheckpointBenchmark | None]
     baseline_metrics: MetricData | None
-    failed: set[int] = set() # for backwards depickling compatibility
+    failed: set[int] = set()  # for backwards depickling compatibility
     invalid: dict[int, str]
     hash_prompt: str
     hash_seed: int
@@ -829,7 +829,7 @@ class Validator:
 
         self.send_wandb_metrics(average_time=average_time)
 
-        if not not_started and not in_progress:
+        if not not_started and not in_progress and finished:
             logger.info(
                 "Benchmarking APIs have reported submission testing as done. "
                 "Miner metrics updated:"
@@ -873,14 +873,10 @@ class Validator:
         return self.current_block
 
     async def run(self):
-        self.benchmarking_apis = list(
-            await asyncio.gather(
-                *[
-                    benchmarking_api(self.keypair, api, index)
-                    for index, api in enumerate(self.benchmarking_api_urls)
-                ],
-            )
-        )
+        self.benchmarking_apis = [
+            benchmarking_api(self.keypair, api, index).build()
+            for index, api in enumerate(self.benchmarking_api_urls)
+        ]
 
         while True:
             try:
