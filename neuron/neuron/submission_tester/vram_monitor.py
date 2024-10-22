@@ -1,7 +1,7 @@
 import threading
 import time
 
-from neuron import Contest
+from .. import Contest
 
 POLL_RATE_SECONDS = 0.1
 

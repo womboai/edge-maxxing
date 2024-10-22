@@ -1,16 +1,23 @@
 import logging
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor, CancelledError
+from io import BytesIO
 from pathlib import Path
 from statistics import mean
 from threading import Event
 from time import perf_counter
 
-from neuron import (
+from pipelines import TextToImageRequest
+from . import InvalidSubmissionError
+from .inference_sandbox import InferenceSandbox
+from .metrics import CheckpointBenchmark, MetricData, BaselineBenchmark
+from .vram_monitor import VRamMonitor
+from .. import (
     GenerationOutput,
     ModelRepositoryInfo,
     CURRENT_CONTEST,
-    Key, OutputComparator,
+    Key,
+    OutputComparator,
 )
 from pipelines import TextToImageRequest
 from .inference_sandbox import InferenceSandbox
@@ -107,23 +114,26 @@ def compare_checkpoints(
     with InferenceSandbox(submission, False, sandbox_directory, switch_user, cache) as sandbox:
         size = sandbox.model_size
 
-        f"Take {len(inputs)} samples, keeping track of how fast/accurate generations have been"
-        for index, request in enumerate(inputs):
-            logger.info(f"Sample {index + 1}, prompt {request.prompt} and seed {request.seed}")
+        try:
+            f"Take {len(inputs)} samples, keeping track of how fast/accurate generations have been"
+            for index, request in enumerate(inputs):
+                logger.info(f"Sample {index + 1}, prompt {request.prompt} and seed {request.seed}")
 
-            if cancelled_event and cancelled_event.is_set():
-                raise CancelledError()
+                if cancelled_event and cancelled_event.is_set():
+                    raise CancelledError()
 
-            output = generate(sandbox, request)
+                output = generate(sandbox, request)
 
-            logger.info(
-                f"Sample {index + 1} Generated\n"
-                f"Generation Time: {output.generation_time}s\n"
-                f"VRAM Usage: {output.vram_used}b\n"
-                f"Power Usage: {output.watts_used}W"
-            )
+                logger.info(
+                    f"Sample {index + 1} Generated\n"
+                    f"Generation Time: {output.generation_time}s\n"
+                    f"VRAM Usage: {output.vram_used}b\n"
+                    f"Power Usage: {output.watts_used}W"
+                )
 
-            outputs.append(output)
+                outputs.append(output)
+        except Exception as e:
+            raise InvalidSubmissionError(f"Failed to run inference on {submission}") from e
 
     average_time = sum(output.generation_time for output in outputs) / len(outputs)
     vram_used = max(output.vram_used for output in outputs)
