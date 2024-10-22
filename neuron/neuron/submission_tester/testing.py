@@ -1,28 +1,28 @@
 import logging
+from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor, CancelledError
+from io import BytesIO
 from pathlib import Path
 from statistics import mean
-from collections.abc import Iterable
-from io import BytesIO
 from threading import Event
 from time import perf_counter
 
-from .hash import load_image_hash, save_image_hash, GENERATION_TIME_DIFFERENCE_THRESHOLD
-from .metrics import CheckpointBenchmark, MetricData, BaselineBenchmark
 import imagehash
 from PIL import Image
 
-from neuron import (
+from pipelines import TextToImageRequest
+from . import InvalidSubmissionError
+from .hash import load_image_hash, save_image_hash, GENERATION_TIME_DIFFERENCE_THRESHOLD
+from .inference_sandbox import InferenceSandbox
+from .metrics import CheckpointBenchmark, MetricData, BaselineBenchmark
+from .vram_monitor import VRamMonitor
+from .. import (
     GenerationOutput,
     ModelRepositoryInfo,
     CURRENT_CONTEST,
     Key,
     OutputComparator,
-    InvalidSubmissionError,
 )
-from .vram_monitor import VRamMonitor
-from pipelines import TextToImageRequest
-from .inference_sandbox import InferenceSandbox
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")

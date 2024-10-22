@@ -22,9 +22,7 @@ from neuron import (
     make_submission,
     random_inputs,
     ModelRepositoryInfo,
-    BaselineBenchmark,
     TextToImageRequest,
-    MetricData,
     GenerationOutput,
     BENCHMARKS_VERSION,
 )
@@ -32,6 +30,7 @@ from neuron import (
 from neuron.submission_tester import (
     generate_baseline,
     compare_checkpoints,
+    BaselineBenchmark,
 )
 
 VALID_PROVIDER_REGEX = r'^[a-zA-Z0-9-.]+$'

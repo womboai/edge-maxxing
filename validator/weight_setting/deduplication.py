@@ -3,7 +3,7 @@ from collections.abc import Iterator
 
 from imagehash import ImageHash
 
-from neuron import GENERATION_TIME_DIFFERENCE_THRESHOLD
+from neuron.submission_tester import GENERATION_TIME_DIFFERENCE_THRESHOLD
 
 
 @dataclass

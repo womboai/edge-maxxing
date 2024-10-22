@@ -12,6 +12,7 @@ from neuron.submission_tester import (
     MetricData,
     compare_checkpoints,
     generate_baseline,
+    InvalidSubmissionError,
 )
 
 from neuron import (
@@ -19,7 +20,6 @@ from neuron import (
     ModelRepositoryInfo,
     TIMEZONE,
     random_inputs,
-    InvalidSubmissionError,
 )
 from pipelines import TextToImageRequest
 
