@@ -28,6 +28,7 @@ from neuron import (
     GenerationOutput,
     BENCHMARKS_VERSION,
 )
+
 from neuron.submission_tester import (
     generate_baseline,
     compare_checkpoints,
