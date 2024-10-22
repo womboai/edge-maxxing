@@ -1,7 +1,10 @@
 from enum import Enum
 
 from neuron import Key
-from neuron.submission_tester.metrics import *
+from neuron.submission_tester.metrics import *  # noqa
+from neuron.submission_tester.metrics import CheckpointBenchmark, MetricData
+
+from pydantic import BaseModel
 
 
 class BenchmarkState(Enum):
