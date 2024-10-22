@@ -1,7 +1,5 @@
 import logging
-from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor, CancelledError
-from io import BytesIO
 from pathlib import Path
 from statistics import mean
 from threading import Event
@@ -16,13 +14,8 @@ from .. import (
     GenerationOutput,
     ModelRepositoryInfo,
     CURRENT_CONTEST,
-    Key,
     OutputComparator,
 )
-from pipelines import TextToImageRequest
-from .inference_sandbox import InferenceSandbox
-from .metrics import CheckpointBenchmark, MetricData, BaselineBenchmark
-from .vram_monitor import VRamMonitor
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
