@@ -17,7 +17,7 @@ from neuron import (
     GenerationOutput,
     ModelRepositoryInfo,
     CURRENT_CONTEST,
-    Key, OutputComparator,
+    Key, OutputComparator, InvalidSubmissionError,
 )
 from .vram_monitor import VRamMonitor
 from pipelines import TextToImageRequest
@@ -116,49 +116,52 @@ def compare_checkpoints(
 
         image_hash = None
 
-        f"Take {len(inputs)} samples, keeping track of how fast/accurate generations have been"
-        for index, request in enumerate(inputs):
-            logger.info(f"Sample {index + 1}, prompt {request.prompt} and seed {request.seed}")
+        try:
+            f"Take {len(inputs)} samples, keeping track of how fast/accurate generations have been"
+            for index, request in enumerate(inputs):
+                logger.info(f"Sample {index + 1}, prompt {request.prompt} and seed {request.seed}")
 
-            if cancelled_event and cancelled_event.is_set():
-                raise CancelledError()
+                if cancelled_event and cancelled_event.is_set():
+                    raise CancelledError()
 
-            output = generate(sandbox, request)
+                output = generate(sandbox, request)
 
-            if not image_hash:
-                with BytesIO(output.output) as data:
-                    image_hash = imagehash.average_hash(Image.open(data))
+                if not image_hash:
+                    with BytesIO(output.output) as data:
+                        image_hash = imagehash.average_hash(Image.open(data))
 
-                    image_hash_bytes = save_image_hash(image_hash)
+                        image_hash_bytes = save_image_hash(image_hash)
 
-                    match = next(
-                        (
-                            (key, existing_benchmark)
-                            for key, existing_benchmark in existing_benchmarks
-                            if (
-                                existing_benchmark and
-                                not (image_hash - load_image_hash(existing_benchmark.image_hash)) and
-                                abs(output.generation_time - existing_benchmark.model.generation_time) < GENERATION_TIME_DIFFERENCE_THRESHOLD
-                            )
-                        ),
-                        None,
-                    )
+                        match = next(
+                            (
+                                (key, existing_benchmark)
+                                for key, existing_benchmark in existing_benchmarks
+                                if (
+                                    existing_benchmark and
+                                    not (image_hash - load_image_hash(existing_benchmark.image_hash)) and
+                                    abs(output.generation_time - existing_benchmark.model.generation_time) < GENERATION_TIME_DIFFERENCE_THRESHOLD
+                                )
+                            ),
+                            None,
+                        )
 
-                    if match:
-                        key, benchmark = match
+                        if match:
+                            key, benchmark = match
 
-                        logger.info(f"Submission {submission} marked as duplicate of hotkey {key}'s submission")
+                            logger.info(f"Submission {submission} marked as duplicate of hotkey {key}'s submission")
 
-                        return benchmark
+                            return benchmark
+        except Exception as e:
+            raise InvalidSubmissionError(f"Failed to run inference on {submission}") from e
 
-            logger.info(
-                f"Sample {index + 1} Generated\n"
-                f"Generation Time: {output.generation_time}s\n"
-                f"VRAM Usage: {output.vram_used}b\n"
-                f"Power Usage: {output.watts_used}W"
-            )
+        logger.info(
+            f"Sample {index + 1} Generated\n"
+            f"Generation Time: {output.generation_time}s\n"
+            f"VRAM Usage: {output.vram_used}b\n"
+            f"Power Usage: {output.watts_used}W"
+        )
 
-            outputs.append(output)
+        outputs.append(output)
 
     average_time = sum(output.generation_time for output in outputs) / len(outputs)
     vram_used = max(output.vram_used for output in outputs)
