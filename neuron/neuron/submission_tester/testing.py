@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor, CancelledError
 from pathlib import Path
@@ -17,7 +16,9 @@ from neuron import (
     GenerationOutput,
     ModelRepositoryInfo,
     CURRENT_CONTEST,
-    Key, OutputComparator, InvalidSubmissionError,
+    Key,
+    OutputComparator,
+    InvalidSubmissionError,
 )
 from .vram_monitor import VRamMonitor
 from pipelines import TextToImageRequest
@@ -151,17 +152,17 @@ def compare_checkpoints(
                             logger.info(f"Submission {submission} marked as duplicate of hotkey {key}'s submission")
 
                             return benchmark
+
+                logger.info(
+                    f"Sample {index + 1} Generated\n"
+                    f"Generation Time: {output.generation_time}s\n"
+                    f"VRAM Usage: {output.vram_used}b\n"
+                    f"Power Usage: {output.watts_used}W"
+                )
+
+                outputs.append(output)
         except Exception as e:
             raise InvalidSubmissionError(f"Failed to run inference on {submission}") from e
-
-        logger.info(
-            f"Sample {index + 1} Generated\n"
-            f"Generation Time: {output.generation_time}s\n"
-            f"VRAM Usage: {output.vram_used}b\n"
-            f"Power Usage: {output.watts_used}W"
-        )
-
-        outputs.append(output)
 
     average_time = sum(output.generation_time for output in outputs) / len(outputs)
     vram_used = max(output.vram_used for output in outputs)
