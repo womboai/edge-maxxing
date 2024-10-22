@@ -1,11 +1,10 @@
-from itertools import chain
 from operator import itemgetter
-from typing import cast
 
 from neuron import Uid
 from neuron.submission_tester import CheckpointBenchmark, MetricData
 
 TIER_SCORE_IMPROVEMENT_THRESHOLD = 1.075
+WINNER_PERCENTAGE = 0.5
 
 
 def get_contestant_scores(benchmarks: list[CheckpointBenchmark | None], baseline_metrics: MetricData):
@@ -41,29 +40,35 @@ def get_tiers(contestants: list[tuple[Uid, float]]) -> list[list[Uid]]:
     return tiers
 
 
-def pick_winners(tiers: list[list[Uid]], blocks: list[int | None]) -> list[Uid]:
-    return [cast(int, min(tier, key=blocks.__getitem__)) for tier in tiers]
-
-
 def get_scores(tiers: list[list[Uid]], blocks: list[int | None], node_count: int) -> list[float]:
+    if not tiers:
+        return [1.0] * node_count
+
     ordered_tiers = [
         sorted(tier, key=blocks.__getitem__) for tier in tiers
     ]
 
-    max_len = max(len(tier) for tier in ordered_tiers)
+    modified_tiers = []
 
-    sorted_winners = list(
-        chain.from_iterable(
-            [tier[i] for tier in ordered_tiers if i < len(tier)]
-            for i in range(max_len)
-        )
-    )
+    last_tier = None
+
+    for tier in ordered_tiers:
+        if last_tier:
+            modified_tiers.append([tier[0], *last_tier[1:]])
+        else:
+            modified_tiers.append([tier[0]])
+
+        last_tier = tier
+
+    modified_tiers.append(last_tier[1:])
 
     scores = [0.0] * node_count
 
-    scores[sorted_winners[0]] = 0.5
+    for index, tier in enumerate(modified_tiers):
+        incentive_pool = WINNER_PERCENTAGE * ((1 - WINNER_PERCENTAGE) ** index)
+        score = incentive_pool / len(tier)
 
-    for uid in sorted_winners[1:]:
-        scores[uid] = 0.5 / (len(sorted_winners) - 1)
+        for uid in tier:
+            scores[uid] = score
 
     return scores
