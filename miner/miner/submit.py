@@ -146,6 +146,7 @@ def start_benchmarking(submission: CheckpointSubmission):
         baseline = generate_baseline(
             inputs,
             BASELINE_MODEL_DIRECTORY,
+            switch_user=False,
             cache=True,
         )
         save_baseline_cache(baseline)

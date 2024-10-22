@@ -132,7 +132,7 @@ def compare_checkpoints(
     with CURRENT_CONTEST.output_comparator() as output_comparator:
         def calculate_similarity(comparator: OutputComparator, baseline_output: GenerationOutput, optimized_output: GenerationOutput):
             try:
-                if cancelled_event.is_set():
+                if cancelled_event and cancelled_event.is_set():
                     raise CancelledError()
 
                 return comparator(
