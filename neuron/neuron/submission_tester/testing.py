@@ -1,9 +1,11 @@
 import asyncio
 import logging
+from concurrent.futures import ThreadPoolExecutor, CancelledError
 from pathlib import Path
 from statistics import mean
 from collections.abc import Iterable
 from io import BytesIO
+from threading import Event
 from time import perf_counter
 
 from .hash import load_image_hash, save_image_hash, GENERATION_TIME_DIFFERENCE_THRESHOLD
@@ -24,10 +26,12 @@ from .inference_sandbox import InferenceSandbox
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
 
+EXECUTOR = ThreadPoolExecutor(max_workers=2)
+
 logger = logging.getLogger(__name__)
 
 
-def __generate_sync(
+def generate(
     container: InferenceSandbox,
     request: TextToImageRequest,
 ) -> GenerationOutput:
@@ -50,20 +54,12 @@ def __generate_sync(
     )
 
 
-async def generate(
-    container: InferenceSandbox,
-    request: TextToImageRequest,
-):
-    loop = asyncio.get_running_loop()
-
-    return await loop.run_in_executor(None, __generate_sync, container, request)
-
-
-async def generate_baseline(
+def generate_baseline(
     inputs: list[TextToImageRequest],
     sandbox_directory: Path = BASELINE_SANDBOX_DIRECTORY,
     switch_user: bool = True,
     cache: bool = True,
+    cancelled_event: Event | None = None,
 ) -> BaselineBenchmark:
     outputs: list[GenerationOutput] = []
 
@@ -71,7 +67,10 @@ async def generate_baseline(
         size = sandbox.model_size
 
         for index, request in enumerate(inputs):
-            output = await generate(sandbox, request)
+            if cancelled_event and cancelled_event.is_set():
+                raise CancelledError()
+
+            output = generate(sandbox, request)
 
             logger.info(
                 f"Sample {index + 1} Generated\n"
@@ -98,13 +97,14 @@ async def generate_baseline(
     )
 
 
-async def compare_checkpoints(
+def compare_checkpoints(
     submission: ModelRepositoryInfo,
     existing_benchmarks: Iterable[tuple[Key, CheckpointBenchmark | None]],
     inputs: list[TextToImageRequest],
     baseline: BaselineBenchmark,
     sandbox_directory: Path = SANDBOX_DIRECTORY,
     switch_user: bool = True,
+    cancelled_event: Event | None = None,
     cache: bool = False,
 ) -> CheckpointBenchmark | None:
     logger.info("Generating model samples")
@@ -120,7 +120,10 @@ async def compare_checkpoints(
         for index, request in enumerate(inputs):
             logger.info(f"Sample {index + 1}, prompt {request.prompt} and seed {request.seed}")
 
-            output = await generate(sandbox, request)
+            if cancelled_event and cancelled_event.is_set():
+                raise CancelledError()
+
+            output = generate(sandbox, request)
 
             if not image_hash:
                 with BytesIO(output.output) as data:
@@ -162,16 +165,17 @@ async def compare_checkpoints(
     watts_used = max(output.watts_used for output in outputs)
 
     with CURRENT_CONTEST.output_comparator() as output_comparator:
-        async def calculate_similarity(comparator: OutputComparator, baseline_output: GenerationOutput, optimized_output: GenerationOutput):
-            loop = asyncio.get_running_loop()
-
+        def calculate_similarity(comparator: OutputComparator, baseline_output: GenerationOutput, optimized_output: GenerationOutput):
             try:
-                return await loop.run_in_executor(
-                    None,
-                    comparator,
+                if cancelled_event.is_set():
+                    raise CancelledError()
+
+                return comparator(
                     baseline_output.output,
                     optimized_output.output,
                 )
+            except (CancelledError, TimeoutError):
+                raise
             except:
                 logger.info(
                     f"Submission {submission.url}'s output couldn't be compared in similarity",
@@ -181,7 +185,7 @@ async def compare_checkpoints(
                 return 0.0
 
         similarities = [
-            await calculate_similarity(output_comparator, baseline_output, output)
+            calculate_similarity(output_comparator, baseline_output, output)
             for baseline_output, output in zip(baseline.outputs, outputs)
         ]
 
@@ -210,4 +214,5 @@ async def compare_checkpoints(
         f"Max VRAM Usage: {vram_used}b\n"
         f"Max Power Usage: {watts_used}W"
     )
+
     return benchmark

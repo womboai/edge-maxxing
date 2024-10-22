@@ -1,3 +1,3 @@
 from .metrics import *
 
-API_VERSION = "4.1.5"
+API_VERSION = "4.2.0"
