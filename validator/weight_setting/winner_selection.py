@@ -21,10 +21,12 @@ def get_scores(contestants: list[tuple[int, float]], node_count: int) -> list[fl
     if not contestants:
         return []
 
-    _, last_tier_score = contestants[0]
+    last_uid, last_tier_score = contestants[0]
 
     scores = [0.0] * node_count
-    tier = 1
+    winning_uids = []
+
+    uid = last_uid
 
     for contestant in contestants:
         uid, score = contestant
@@ -32,8 +34,13 @@ def get_scores(contestants: list[tuple[int, float]], node_count: int) -> list[fl
         if score > last_tier_score * TIER_SCORE_IMPROVEMENT_THRESHOLD:
             # No longer in top threshold
             last_tier_score = score
-            tier += 1
+            winning_uids.append(last_uid)
 
-        scores[uid] = (score + 1) ** (tier * 0.75)
+        last_uid = uid
+
+    winning_uids.append(uid)
+
+    for winner_index, uid in enumerate(reversed(winning_uids)):
+        scores[uid] = 0.5 * (0.5 ** winner_index)
 
     return scores
