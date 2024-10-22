@@ -1,18 +1,12 @@
 import logging
-from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor, CancelledError
-from io import BytesIO
 from pathlib import Path
 from statistics import mean
 from threading import Event
 from time import perf_counter
 
-import imagehash
-from PIL import Image
-
 from pipelines import TextToImageRequest
 from . import InvalidSubmissionError
-from .hash import load_image_hash, save_image_hash, GENERATION_TIME_DIFFERENCE_THRESHOLD
 from .inference_sandbox import InferenceSandbox
 from .metrics import CheckpointBenchmark, MetricData, BaselineBenchmark
 from .vram_monitor import VRamMonitor
@@ -20,7 +14,6 @@ from .. import (
     GenerationOutput,
     ModelRepositoryInfo,
     CURRENT_CONTEST,
-    Key,
     OutputComparator,
 )
 
@@ -100,7 +93,6 @@ def generate_baseline(
 
 def compare_checkpoints(
     submission: ModelRepositoryInfo,
-    existing_benchmarks: Iterable[tuple[Key, CheckpointBenchmark | None]],
     inputs: list[TextToImageRequest],
     baseline: BaselineBenchmark,
     sandbox_directory: Path = SANDBOX_DIRECTORY,
@@ -115,8 +107,6 @@ def compare_checkpoints(
     with InferenceSandbox(submission, False, sandbox_directory, switch_user, cache) as sandbox:
         size = sandbox.model_size
 
-        image_hash = None
-
         try:
             f"Take {len(inputs)} samples, keeping track of how fast/accurate generations have been"
             for index, request in enumerate(inputs):
@@ -126,32 +116,6 @@ def compare_checkpoints(
                     raise CancelledError()
 
                 output = generate(sandbox, request)
-
-                if not image_hash:
-                    with BytesIO(output.output) as data:
-                        image_hash = imagehash.average_hash(Image.open(data))
-
-                        image_hash_bytes = save_image_hash(image_hash)
-
-                        match = next(
-                            (
-                                (key, existing_benchmark)
-                                for key, existing_benchmark in existing_benchmarks
-                                if (
-                                    existing_benchmark and
-                                    not (image_hash - load_image_hash(existing_benchmark.image_hash)) and
-                                    abs(output.generation_time - existing_benchmark.model.generation_time) < GENERATION_TIME_DIFFERENCE_THRESHOLD
-                                )
-                            ),
-                            None,
-                        )
-
-                        if match:
-                            key, benchmark = match
-
-                            logger.info(f"Submission {submission} marked as duplicate of hotkey {key}'s submission")
-
-                            return benchmark
 
                 logger.info(
                     f"Sample {index + 1} Generated\n"
@@ -171,7 +135,7 @@ def compare_checkpoints(
     with CURRENT_CONTEST.output_comparator() as output_comparator:
         def calculate_similarity(comparator: OutputComparator, baseline_output: GenerationOutput, optimized_output: GenerationOutput):
             try:
-                if cancelled_event.is_set():
+                if cancelled_event and cancelled_event.is_set():
                     raise CancelledError()
 
                 return comparator(
@@ -205,7 +169,6 @@ def compare_checkpoints(
         ),
         average_similarity=average_similarity,
         min_similarity=min_similarity,
-        image_hash=image_hash_bytes,
     )
 
     logger.info(

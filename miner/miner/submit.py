@@ -147,6 +147,7 @@ def start_benchmarking(submission: CheckpointSubmission):
         baseline = generate_baseline(
             inputs,
             BASELINE_MODEL_DIRECTORY,
+            switch_user=False,
             cache=True,
         )
         save_baseline_cache(baseline)
@@ -159,7 +160,6 @@ def start_benchmarking(submission: CheckpointSubmission):
 
     compare_checkpoints(
         ModelRepositoryInfo(url=submission.get_repo_link(), revision=submission.revision),
-        [],
         inputs,
         baseline,
         MODEL_DIRECTORY,

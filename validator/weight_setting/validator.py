@@ -42,16 +42,14 @@ from neuron import (
     BENCHMARKS_VERSION,
 )
 from neuron.submission_tester import (
-    load_image_hash,
     CheckpointBenchmark,
     MetricData,
 )
 from .benchmarking_api import BenchmarkingApi, benchmarking_api
-from .deduplication import find_duplicates, PotentiallyDuplicateSubmissionInfo
 from .wandb_args import add_wandb_args
-from .winner_selection import get_scores, get_contestant_scores
+from .winner_selection import get_scores, get_contestant_scores, get_tiers
 
-VALIDATOR_VERSION: tuple[int, int, int] = (4, 2, 1)
+VALIDATOR_VERSION: tuple[int, int, int] = (4, 3, 0)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -123,8 +121,6 @@ class Validator:
     benchmarking_state: BenchmarkState
     failed: set[int] = set()  # for backwards depickling compatibility
     invalid: dict[int, str]
-    hash_prompt: str
-    hash_seed: int
     contest: Contest
 
     def __init__(self):
@@ -550,7 +546,10 @@ class Validator:
 
         logger.info("Setting weights")
 
-        weights = get_scores(get_contestant_scores(self.benchmarks, self.baseline_metrics), len(self.metagraph.nodes))
+        contestants = get_contestant_scores(self.benchmarks, self.baseline_metrics)
+        tiers = get_tiers(contestants)
+        blocks = [info.block if info else None for info in self.contest_state.miner_info]
+        weights = get_scores(tiers, blocks, len(self.metagraph.nodes))
 
         self.send_wandb_metrics()
 
@@ -847,19 +846,6 @@ class Validator:
                 "Miner metrics updated:"
             )
             logger.info(self.benchmarks)
-
-            benchmark_duplicate_info = [
-                PotentiallyDuplicateSubmissionInfo(
-                    image_hash=load_image_hash(benchmark.image_hash),
-                    generation_time=benchmark.model.generation_time,
-                    block=self.contest_state.miner_info[uid].block,
-                ) if benchmark else None
-                for uid, benchmark in enumerate(self.benchmarks)
-            ]
-
-            for duplicate_uid, original_uid in find_duplicates(benchmark_duplicate_info):
-                self.benchmarks[duplicate_uid] = None
-                self.invalid[duplicate_uid] = f"Duplicate of UID {original_uid}'s submission"
 
             self.benchmarking = False
             self.step += 1
