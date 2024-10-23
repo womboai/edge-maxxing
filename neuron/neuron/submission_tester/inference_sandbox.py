@@ -55,7 +55,9 @@ class InferenceSandbox(Generic[RequestT]):
         self._process = Popen(
             [
                 *self.sandbox_args(self._user),
-                abspath(self._sandbox_directory / ".venv" / "bin" / "start_inference")
+                f"/home/{self._user}/.local/bin/poetry",
+                "run",
+                "start_inference",
             ],
             cwd=self._sandbox_directory,
             stdout=PIPE,

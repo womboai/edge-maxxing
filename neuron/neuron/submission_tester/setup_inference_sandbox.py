@@ -11,7 +11,7 @@ DEPENDENCY_BLACKLIST = abspath(Path(__file__).parent / "dependency_blacklist.txt
 CLONE_SCRIPT = abspath(Path(__file__).parent / "clone.sh")
 BLACKLIST_SCRIPT = abspath(Path(__file__).parent / "blacklist.sh")
 LFS_PULL_SCRIPT = abspath(Path(__file__).parent / "lfs_pull.sh")
-PIP_INSTALL_SCRIPT = abspath(Path(__file__).parent / "pip_install.sh")
+POETRY_INSTALL_SCRIPT = abspath(Path(__file__).parent / "poetry_install.sh")
 CACHE_SCRIPT = abspath(Path(__file__).parent / "cache.sh")
 
 with open(DEPENDENCY_BLACKLIST, 'r') as blacklist_file:
@@ -25,27 +25,20 @@ class InvalidSubmissionError(Exception):
 
 
 def _run(script: str, sandbox_args: list[str], sandbox_directory: Path, args: list[str], error_message: str):
-    process = None
     try:
-        process = run(
+        run(
             [
                 *sandbox_args,
                 script,
                 *args,
             ],
-            capture_output=True,
-            encoding='utf-8',
+            stdout=sys.stdout,
+            stderr=sys.stderr,
             cwd=sandbox_directory.absolute(),
+            check=True,
         )
-        process.check_returncode()
     except CalledProcessError as e:
         raise InvalidSubmissionError(error_message) from e
-    finally:
-        if process:
-            if process.stdout.strip():
-                print(process.stdout)
-            if process.stderr.strip():
-                print(process.stderr, file=sys.stderr)
 
 
 def is_cached(sandbox_directory: Path, url: str, revision: str) -> bool:
@@ -107,7 +100,7 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
     start = perf_counter()
     logger.info(f"Installing dependencies...")
     _run(
-        PIP_INSTALL_SCRIPT,
+        POETRY_INSTALL_SCRIPT,
         sandbox_args,
         sandbox_directory,
         [],

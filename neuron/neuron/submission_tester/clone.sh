@@ -5,9 +5,6 @@ set -e
 REPOSITORY_URL=$1
 REVISION=$2
 
-find . -maxdepth 1 -not \( -name ".venv" -o -name "." \) -exec rm -rf {} +
-
-git init
-git remote add origin "$REPOSITORY_URL"
-git fetch origin
-git switch --force --detach "$REVISION"
+find . -mindepth 1 -delete
+GIT_LFS_SKIP_SMUDGE=1 git clone --shallow-submodules "$REPOSITORY_URL" .
+git checkout "$REVISION"

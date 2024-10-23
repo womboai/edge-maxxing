@@ -147,7 +147,7 @@ async def start_benchmarking(submission: CheckpointSubmission):
         baseline = await generate_baseline(
             inputs,
             BASELINE_MODEL_DIRECTORY,
-            False,
+            switch_user=False,
         )
         save_baseline_cache(baseline)
     else:
@@ -163,7 +163,7 @@ async def start_benchmarking(submission: CheckpointSubmission):
         inputs,
         baseline,
         MODEL_DIRECTORY,
-        False,
+        switch_user=False,
     )
 
 
