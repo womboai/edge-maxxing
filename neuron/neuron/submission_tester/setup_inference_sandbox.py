@@ -11,7 +11,7 @@ DEPENDENCY_BLACKLIST = abspath(Path(__file__).parent / "dependency_blacklist.txt
 CLONE_SCRIPT = abspath(Path(__file__).parent / "clone.sh")
 BLACKLIST_SCRIPT = abspath(Path(__file__).parent / "blacklist.sh")
 LFS_PULL_SCRIPT = abspath(Path(__file__).parent / "lfs_pull.sh")
-POETRY_INSTALL_SCRIPT = abspath(Path(__file__).parent / "poetry_install.sh")
+DEPENDENCY_INSTALL_SCRIPT = abspath(Path(__file__).parent / "dependency_install.sh")
 CACHE_SCRIPT = abspath(Path(__file__).parent / "cache.sh")
 
 with open(DEPENDENCY_BLACKLIST, 'r') as blacklist_file:
@@ -100,7 +100,7 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
     start = perf_counter()
     logger.info(f"Installing dependencies...")
     _run(
-        POETRY_INSTALL_SCRIPT,
+        DEPENDENCY_INSTALL_SCRIPT,
         sandbox_args,
         sandbox_directory,
         [],
