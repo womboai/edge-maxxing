@@ -52,7 +52,7 @@ def get_scores(tiers: list[list[Uid]], blocks: list[int | None], node_count: int
 
     last_tier = None
 
-    for tier in ordered_tiers:
+    for tier in reversed(ordered_tiers):
         if last_tier:
             modified_tiers.append([tier[0], *last_tier[1:]])
         else:
