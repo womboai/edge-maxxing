@@ -25,7 +25,6 @@ class CheckpointBenchmark(BaseModel):
     model: MetricData
     average_similarity: float
     min_similarity: float
-    image_hash: bytes
 
     def calculate_score(self, baseline_metrics: MetricData) -> float:
         if self.min_similarity < SIMILARITY_SCORE_THRESHOLD:
