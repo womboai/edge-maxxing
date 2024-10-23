@@ -163,6 +163,7 @@ def start_benchmarking(submission: CheckpointSubmission):
         inputs,
         baseline,
         MODEL_DIRECTORY,
+        switch_user=False,
         cache=True,
     )
 
