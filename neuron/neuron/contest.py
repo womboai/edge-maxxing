@@ -3,6 +3,7 @@ from collections.abc import Callable
 from enum import Enum
 from functools import partial
 from io import BytesIO
+from typing import ContextManager
 
 from pydantic import BaseModel
 from transformers import CLIPProcessor, CLIPVisionModelWithProjection
@@ -19,7 +20,7 @@ class ContestId(Enum):
     FLUX_NVIDIA_4090 = 2
 
 
-class OutputComparator(ABC):
+class OutputComparator(ContextManager, ABC):
     @abstractmethod
     def compare(self, baseline: bytes, optimized: bytes) -> float:
         pass
@@ -85,7 +86,6 @@ class ImageOutputComparator(OutputComparator):
         del self.clip
         del self.processor
         getattr(torch, self.device).empty_cache()
-
 
 
 class Contest(ABC):
@@ -205,7 +205,7 @@ class ContestDeviceValidationError(Exception):
 CONTESTS = [
     CudaContest(
         ContestId.SDXL_NEWDREAM_NVIDIA_4090,
-        ModelRepositoryInfo(url="https://github.com/womboai/sdxl-newdream-20-inference", revision="f59c493"),
+        ModelRepositoryInfo(url="https://github.com/womboai/sdxl-newdream-20-inference", revision="cfc6e5c"),
         "NVIDIA GeForce RTX 4090",
     ),
 ]

@@ -2,8 +2,8 @@ from math import sqrt
 
 from pydantic import BaseModel
 
-from neuron import GenerationOutput
 from pipelines import TextToImageRequest
+from .. import GenerationOutput
 
 SIMILARITY_SCORE_THRESHOLD = 0.8
 

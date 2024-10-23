@@ -1,17 +1,16 @@
-import asyncio
 import json
 import sys
 import time
-from asyncio import Task, CancelledError
-from collections.abc import Callable, Awaitable
+from collections.abc import Callable
+from concurrent.futures import Future, Executor, ThreadPoolExecutor, CancelledError
 
 from aiohttp import ClientSession
 from base_validator import API_VERSION, BenchmarkResults
 from fiber.logging_utils import get_logger
 from pydantic import RootModel
 from substrateinterface import Keypair
-from websockets import connect
 from websockets.protocol import State
+from websockets.sync.client import connect
 
 from neuron import ModelRepositoryInfo, Key
 
@@ -29,16 +28,20 @@ def _authentication_headers(keypair: Keypair):
     }
 
 
+class InvalidAPIException(Exception):
+    pass
+
+
 class BenchmarkingApi:
     _keypair: Keypair
     _api: str
     _index: int
 
-    _task: Task
+    _future: Future
 
-    _stream_logs: Callable[[], Task]
+    _stream_logs: Callable[[], Future]
 
-    _session: ClientSession
+    _session: ClientSession | None
 
     def __init__(
         self,
@@ -46,26 +49,37 @@ class BenchmarkingApi:
         api: str,
         index: int,
 
-        stream_logs: Callable[[], Task],
+        stream_logs: Callable[[], Future],
     ):
         self._keypair = keypair
         self._api = api
         self._index = index
 
-        self._task = stream_logs()
+        self._future = stream_logs()
         self._stream_logs = stream_logs
 
-        self._session = ClientSession()
+        self._session = None
+
+    def check_log_stream(self):
+        if self._future.done():
+            try:
+                self._future.result()
+            except InvalidAPIException:
+                raise
+            except Exception as e:
+                logger.error("Error in log streaming", exc_info=e)
+
+            self._future = self._stream_logs()
+        elif self._future.cancelled():
+            logger.error("Log streaming future was cancelled, restarting it")
+
+            self._future = self._stream_logs()
 
     async def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
-        if self._task.done() and self._task.exception():
-            logger.error("Error in log streaming", exc_info=self._task.exception())
+        self.check_log_stream()
 
-            self._task = self._stream_logs()
-        elif self._task.cancelled():
-            logger.error("Log streaming task was cancelled, restarting it")
-
-            self._task = self._stream_logs()
+        if not self._session:
+            self._session = ClientSession()
 
         logger.info(f"Sending {submissions} for testing")
 
@@ -82,47 +96,83 @@ class BenchmarkingApi:
             state_response.raise_for_status()
 
     async def state(self):
+        self.check_log_stream()
+
+        if not self._session:
+            self._session = ClientSession()
+
         async with self._session.get(f"{self._api}/state") as state_response:
             state_response.raise_for_status()
 
             return BenchmarkResults.model_validate(await state_response.json())
 
     async def close(self):
-        self._task.cancel()
-        await self._session.close()
+        self._future.cancel()
+
+        if self._session:
+            await self._session.close()
 
 
-class BenchmarkingApiContextManager(Awaitable[BenchmarkingApi]):
+class BenchmarkingApiContextManager:
     _keypair: Keypair
     _api: str
     _index: int
+
+    _executor: Executor
 
     def __init__(self, keypair: Keypair, api: str, index: int):
         self._keypair = keypair
         self._api = api
         self._index = index
+        self._executor = ThreadPoolExecutor(1)
 
-    async def _connect_to_api(self):
+    def _connect_to_api(self):
+        name = f"API - {self._index + 1}"
+        logger.info(f"Connecting to {name}")
         url = self._api.replace("http", "ws")
 
-        websocket = await connect(f"{url}/logs", extra_headers=_authentication_headers(self._keypair))
+        websocket = connect(f"{url}/logs", additional_headers=_authentication_headers(self._keypair))
 
         try:
-            version = json.loads(await websocket.recv())["version"]
+            version = json.loads(websocket.recv())["version"]
         except:
-            raise RuntimeError("Validator API out of date")
+            raise InvalidAPIException(f"Validator {name} out of date")
 
         if version != API_VERSION:
-            raise RuntimeError(
-                f"Validator API has mismatched version, received {version} but expected {API_VERSION}"
+            raise InvalidAPIException(
+                f"Validator {name} has mismatched version, received {version} but expected {API_VERSION}"
             )
 
         return websocket
 
     def _stream_logs(self):
-        return asyncio.create_task(self._api_logs())
+        return self._executor.submit(self._api_logs)
 
-    async def _create_connection(self):
+    def _api_logs(self):
+        websocket = self._connect_to_api()
+
+        try:
+            while True:
+                try:
+                    for line in websocket:
+                        output = sys.stderr if line.startswith("err:") else sys.stdout
+
+                        print(f"[API - {self._index + 1}] - {line[4:]}", file=output)
+
+                        websocket.ping()
+                except (TimeoutError, CancelledError):
+                    raise
+                except Exception:
+                    if websocket.protocol.state is State.CLOSED or websocket.protocol.state is State.CLOSING:
+                        logger.error(f"Disconnected from API-{self._index + 1}'s logs, reconnecting", exc_info=True)
+
+                        websocket = self._connect_to_api()
+                    else:
+                        logger.error(f"Error occurred from API-{self._index + 1}'s logs", exc_info=True)
+        finally:
+            websocket.close()
+
+    def build(self):
         return BenchmarkingApi(
             self._keypair,
             self._api,
@@ -130,33 +180,6 @@ class BenchmarkingApiContextManager(Awaitable[BenchmarkingApi]):
 
             self._stream_logs,
         )
-
-    async def _api_logs(self):
-        websocket = await self._connect_to_api()
-
-        try:
-            while True:
-                try:
-                    async for line in websocket:
-                        output = sys.stderr if line.startswith("err:") else sys.stdout
-
-                        print(f"[API - {self._index + 1}] - {line[4:]}", file=output)
-                except Exception as e:
-                    if isinstance(e, (asyncio.TimeoutError, CancelledError)):
-                        break
-
-                    if websocket.state is State.CLOSED or websocket.state is State.CLOSING:
-                        logger.error(f"Disconnected from API-{self._index + 1}'s logs, reconnecting", exc_info=True)
-
-                        await websocket.wait_closed()
-                        websocket = await self._connect_to_api()
-                    else:
-                        logger.error(f"Error occurred from API-{self._index + 1}'s logs", exc_info=True)
-        finally:
-            await websocket.close()
-
-    def __await__(self):
-        return self._create_connection().__await__()
 
 
 benchmarking_api = BenchmarkingApiContextManager

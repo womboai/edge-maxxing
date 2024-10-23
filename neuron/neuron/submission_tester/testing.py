@@ -1,33 +1,38 @@
-import asyncio
 import logging
+from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor, CancelledError
+from io import BytesIO
 from pathlib import Path
 from statistics import mean
-from collections.abc import Iterable
-from io import BytesIO
+from threading import Event
 from time import perf_counter
 
-from .hash import load_image_hash, save_image_hash, GENERATION_TIME_DIFFERENCE_THRESHOLD
-from .metrics import CheckpointBenchmark, MetricData, BaselineBenchmark
 import imagehash
 from PIL import Image
 
-from neuron import (
+from pipelines import TextToImageRequest
+from . import InvalidSubmissionError
+from .hash import load_image_hash, save_image_hash, GENERATION_TIME_DIFFERENCE_THRESHOLD
+from .inference_sandbox import InferenceSandbox
+from .metrics import CheckpointBenchmark, MetricData, BaselineBenchmark
+from .vram_monitor import VRamMonitor
+from .. import (
     GenerationOutput,
     ModelRepositoryInfo,
     CURRENT_CONTEST,
-    Key, OutputComparator,
+    Key,
+    OutputComparator,
 )
-from .vram_monitor import VRamMonitor
-from pipelines import TextToImageRequest
-from .inference_sandbox import InferenceSandbox
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
 
+EXECUTOR = ThreadPoolExecutor(max_workers=2)
+
 logger = logging.getLogger(__name__)
 
 
-def __generate_sync(
+def generate(
     container: InferenceSandbox,
     request: TextToImageRequest,
 ) -> GenerationOutput:
@@ -50,19 +55,11 @@ def __generate_sync(
     )
 
 
-async def generate(
-    container: InferenceSandbox,
-    request: TextToImageRequest,
-):
-    loop = asyncio.get_running_loop()
-
-    return await loop.run_in_executor(None, __generate_sync, container, request)
-
-
-async def generate_baseline(
+def generate_baseline(
     inputs: list[TextToImageRequest],
     sandbox_directory: Path = BASELINE_SANDBOX_DIRECTORY,
     switch_user: bool = True,
+    cancelled_event: Event | None = None,
 ) -> BaselineBenchmark:
     outputs: list[GenerationOutput] = []
 
@@ -70,7 +67,10 @@ async def generate_baseline(
         size = sandbox.model_size
 
         for index, request in enumerate(inputs):
-            output = await generate(sandbox, request)
+            if cancelled_event and cancelled_event.is_set():
+                raise CancelledError()
+
+            output = generate(sandbox, request)
 
             logger.info(
                 f"Sample {index + 1} Generated\n"
@@ -97,13 +97,14 @@ async def generate_baseline(
     )
 
 
-async def compare_checkpoints(
+def compare_checkpoints(
     submission: ModelRepositoryInfo,
     existing_benchmarks: Iterable[tuple[Key, CheckpointBenchmark | None]],
     inputs: list[TextToImageRequest],
     baseline: BaselineBenchmark,
     sandbox_directory: Path = SANDBOX_DIRECTORY,
     switch_user: bool = True,
+    cancelled_event: Event | None = None,
 ) -> CheckpointBenchmark | None:
     logger.info("Generating model samples")
 
@@ -114,62 +115,69 @@ async def compare_checkpoints(
 
         image_hash = None
 
-        f"Take {len(inputs)} samples, keeping track of how fast/accurate generations have been"
-        for index, request in enumerate(inputs):
-            logger.info(f"Sample {index + 1}, prompt {request.prompt} and seed {request.seed}")
+        try:
+            f"Take {len(inputs)} samples, keeping track of how fast/accurate generations have been"
+            for index, request in enumerate(inputs):
+                logger.info(f"Sample {index + 1}, prompt {request.prompt} and seed {request.seed}")
 
-            output = await generate(sandbox, request)
+                if cancelled_event and cancelled_event.is_set():
+                    raise CancelledError()
 
-            if not image_hash:
-                with BytesIO(output.output) as data:
-                    image_hash = imagehash.average_hash(Image.open(data))
+                output = generate(sandbox, request)
 
-                    image_hash_bytes = save_image_hash(image_hash)
+                if not image_hash:
+                    with BytesIO(output.output) as data:
+                        image_hash = imagehash.average_hash(Image.open(data))
 
-                    match = next(
-                        (
-                            (key, existing_benchmark)
-                            for key, existing_benchmark in existing_benchmarks
-                            if (
-                                existing_benchmark and
-                                not (image_hash - load_image_hash(existing_benchmark.image_hash)) and
-                                abs(output.generation_time - existing_benchmark.model.generation_time) < GENERATION_TIME_DIFFERENCE_THRESHOLD
-                            )
-                        ),
-                        None,
-                    )
+                        image_hash_bytes = save_image_hash(image_hash)
 
-                    if match:
-                        key, benchmark = match
+                        match = next(
+                            (
+                                (key, existing_benchmark)
+                                for key, existing_benchmark in existing_benchmarks
+                                if (
+                                    existing_benchmark and
+                                    not (image_hash - load_image_hash(existing_benchmark.image_hash)) and
+                                    abs(output.generation_time - existing_benchmark.model.generation_time) < GENERATION_TIME_DIFFERENCE_THRESHOLD
+                                )
+                            ),
+                            None,
+                        )
 
-                        logger.info(f"Submission {submission} marked as duplicate of hotkey {key}'s submission")
+                        if match:
+                            key, benchmark = match
 
-                        return benchmark
+                            logger.info(f"Submission {submission} marked as duplicate of hotkey {key}'s submission")
 
-            logger.info(
-                f"Sample {index + 1} Generated\n"
-                f"Generation Time: {output.generation_time}s\n"
-                f"VRAM Usage: {output.vram_used}b\n"
-                f"Power Usage: {output.watts_used}W"
-            )
+                            return benchmark
 
-            outputs.append(output)
+                logger.info(
+                    f"Sample {index + 1} Generated\n"
+                    f"Generation Time: {output.generation_time}s\n"
+                    f"VRAM Usage: {output.vram_used}b\n"
+                    f"Power Usage: {output.watts_used}W"
+                )
+
+                outputs.append(output)
+        except Exception as e:
+            raise InvalidSubmissionError(f"Failed to run inference on {submission}") from e
 
     average_time = sum(output.generation_time for output in outputs) / len(outputs)
     vram_used = max(output.vram_used for output in outputs)
     watts_used = max(output.watts_used for output in outputs)
 
     with CURRENT_CONTEST.output_comparator() as output_comparator:
-        async def calculate_similarity(comparator: OutputComparator, baseline_output: GenerationOutput, optimized_output: GenerationOutput):
-            loop = asyncio.get_running_loop()
-
+        def calculate_similarity(comparator: OutputComparator, baseline_output: GenerationOutput, optimized_output: GenerationOutput):
             try:
-                return await loop.run_in_executor(
-                    None,
-                    comparator,
+                if cancelled_event.is_set():
+                    raise CancelledError()
+
+                return comparator(
                     baseline_output.output,
                     optimized_output.output,
                 )
+            except (CancelledError, TimeoutError):
+                raise
             except:
                 logger.info(
                     f"Submission {submission.url}'s output couldn't be compared in similarity",
@@ -179,7 +187,7 @@ async def compare_checkpoints(
                 return 0.0
 
         similarities = [
-            await calculate_similarity(output_comparator, baseline_output, output)
+            calculate_similarity(output_comparator, baseline_output, output)
             for baseline_output, output in zip(baseline.outputs, outputs)
         ]
 
@@ -208,4 +216,5 @@ async def compare_checkpoints(
         f"Max VRAM Usage: {vram_used}b\n"
         f"Max Power Usage: {watts_used}W"
     )
+
     return benchmark
