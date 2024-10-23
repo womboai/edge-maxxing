@@ -55,7 +55,7 @@ class InferenceSandbox(Generic[RequestT]):
         self._process = Popen(
             [
                 *self.sandbox_args(self._user),
-                f"/home/{self._user}/.local/bin/uv",
+                f"/home/{self._user}/.local/bin/uv" if self._switch_user else "uv",
                 "run",
                 "start_inference",
             ],
