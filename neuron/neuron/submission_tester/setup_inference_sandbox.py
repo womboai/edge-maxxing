@@ -25,20 +25,27 @@ class InvalidSubmissionError(Exception):
 
 
 def _run(script: str, sandbox_args: list[str], sandbox_directory: Path, args: list[str], error_message: str):
+    process = None
     try:
-        run(
+        process = run(
             [
                 *sandbox_args,
                 script,
                 *args,
             ],
-            stdout=sys.stdout,
-            stderr=sys.stderr,
+            capture_output=True,
+            encoding='utf-8',
             cwd=sandbox_directory.absolute(),
-            check=True,
         )
+        process.check_returncode()
     except CalledProcessError as e:
         raise InvalidSubmissionError(error_message) from e
+    finally:
+        if process:
+            if process.stdout.strip():
+                print(process.stdout)
+            if process.stderr.strip():
+                print(process.stderr, file=sys.stderr)
 
 
 def is_cached(sandbox_directory: Path, url: str, revision: str) -> bool:

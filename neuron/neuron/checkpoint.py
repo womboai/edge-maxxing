@@ -10,7 +10,7 @@ Uid: TypeAlias = int
 Key: TypeAlias = str
 
 BENCHMARKS_VERSION = 5
-SPEC_VERSION = 5
+SPEC_VERSION = 6
 REVISION_LENGTH = 7
 
 
