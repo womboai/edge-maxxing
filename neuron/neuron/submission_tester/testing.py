@@ -124,7 +124,7 @@ def compare_checkpoints(
 
                 outputs.append(output)
         except Exception as e:
-            raise InvalidSubmissionError(f"Failed to run inference on {submission}") from e
+            raise InvalidSubmissionError(f"Failed to run inference") from e
 
     average_time = sum(output.generation_time for output in outputs) / len(outputs)
     vram_used = max(output.vram_used for output in outputs)
