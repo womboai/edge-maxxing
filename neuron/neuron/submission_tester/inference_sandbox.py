@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from .setup_inference_sandbox import setup_sandbox, InvalidSubmissionError
 from ..contest import ModelRepositoryInfo
 from ..random_inputs import INFERENCE_SOCKET_TIMEOUT
+from ..checkpoint import SPEC_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +94,15 @@ class InferenceSandbox(Generic[RequestT]):
                 raise RuntimeError("Failed to connect to socket, cleared baseline sandbox directory") from e
             else:
                 raise InvalidSubmissionError("Failed to connect to socket") from e
+
+        logger.info("Checking submission version")
+
+        version = self._client.recv_bytes(1)[0]
+
+        if version != SPEC_VERSION:
+            raise InvalidSubmissionError(f"Submission is at version {version} while expected version is {SPEC_VERSION}")
+
+        logger.info(f"Found submission version {version}")
 
     @property
     def _user(self) -> str:
