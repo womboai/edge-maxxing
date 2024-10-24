@@ -251,7 +251,7 @@ class Validator:
         }
 
         tiers: list[list[Uid]] = []
-        if not self.baseline_metrics:
+        if self.baseline_metrics:
             contestants = get_contestant_scores(self.benchmarks, self.baseline_metrics)
             tiers = get_tiers(contestants)
 
