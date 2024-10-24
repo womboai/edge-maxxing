@@ -7,7 +7,7 @@ TIER_SCORE_IMPROVEMENT_THRESHOLD = 1.05
 WINNER_PERCENTAGE = 0.5
 
 
-def get_contestant_scores(benchmarks: list[CheckpointBenchmark | None], baseline_metrics: MetricData):
+def get_contestant_scores(benchmarks: list[CheckpointBenchmark | None], baseline_metrics: MetricData) -> list[tuple[Uid, float]]:
     contestants = [
         (uid, metric_data.calculate_score(baseline_metrics))
         for uid, metric_data in enumerate(benchmarks)
@@ -38,6 +38,14 @@ def get_tiers(contestants: list[tuple[Uid, float]]) -> list[list[Uid]]:
         tiers[-1].append(uid)
 
     return tiers
+
+
+def get_contestant_tier(tiers: list[list[Uid]], uid: Uid) -> int:
+    for index, tier in enumerate(tiers):
+        if uid in tier:
+            return index
+
+    return -1
 
 
 def get_scores(tiers: list[list[Uid]], blocks: list[int | None], node_count: int) -> list[float]:
