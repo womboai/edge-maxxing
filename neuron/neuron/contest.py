@@ -205,7 +205,7 @@ class ContestDeviceValidationError(Exception):
 CONTESTS = [
     CudaContest(
         ContestId.SDXL_NEWDREAM_NVIDIA_4090,
-        ModelRepositoryInfo(url="https://github.com/womboai/sdxl-newdream-20-inference", revision="1978901"),
+        ModelRepositoryInfo(url="https://github.com/womboai/sdxl-newdream-20-inference", revision="967bfad"),
         "NVIDIA GeForce RTX 4090",
     ),
 ]

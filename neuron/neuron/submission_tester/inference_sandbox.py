@@ -15,7 +15,6 @@ from pydantic import BaseModel
 from .setup_inference_sandbox import setup_sandbox, InvalidSubmissionError
 from ..contest import ModelRepositoryInfo
 from ..random_inputs import INFERENCE_SOCKET_TIMEOUT
-from ..checkpoint import SPEC_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -43,13 +42,9 @@ class InferenceSandbox(Generic[RequestT]):
                 repository_info.revision,
             )
         except InvalidSubmissionError as e:
-            if baseline:
-                self.clear_sandbox()
-                raise RuntimeError("Failed to setup baseline sandbox, cleared baseline sandbox directory") from e
-            else:
-                raise e
+            self.fail(str(e))
 
-        logger.info(f"Repository {repository_info} had size {self._file_size}b")
+        logger.info(f"Repository {repository_info} had size {self._file_size / 1024 ** 3:.2f} GB")
         socket_path = abspath(self._sandbox_directory / "inferences.sock")
         self.remove_socket(socket_path)
 
@@ -79,30 +74,13 @@ class InferenceSandbox(Generic[RequestT]):
 
             self._check_exit()
         else:
-            if baseline:
-                self.clear_sandbox()
-                raise RuntimeError(f"Baseline timed out after {INFERENCE_SOCKET_TIMEOUT} seconds. Cleared baseline sandbox directory")
-            else:
-                raise InvalidSubmissionError(f"Timed out after {INFERENCE_SOCKET_TIMEOUT} seconds")
+            self.fail(f"Timed out after {INFERENCE_SOCKET_TIMEOUT} seconds")
 
         logger.info("Connecting to socket")
         try:
             self._client = Client(socket_path)
-        except ConnectionRefusedError as e:
-            if baseline:
-                self.clear_sandbox()
-                raise RuntimeError("Failed to connect to socket, cleared baseline sandbox directory") from e
-            else:
-                raise InvalidSubmissionError("Failed to connect to socket") from e
-
-        logger.info("Checking submission version")
-
-        version = self._client.recv_bytes(1)[0]
-
-        if version != SPEC_VERSION:
-            raise InvalidSubmissionError(f"Submission is at version {version} while expected version is {SPEC_VERSION}")
-
-        logger.info(f"Found submission version {version}")
+        except ConnectionRefusedError:
+            self.fail("Failed to connect to socket")
 
     @property
     def _user(self) -> str:
@@ -110,11 +88,7 @@ class InferenceSandbox(Generic[RequestT]):
 
     def _check_exit(self):
         if self._process.returncode and not self._process.poll():
-            if self._baseline:
-                self.clear_sandbox()
-                raise RuntimeError(f"Baseline inference crashed with exit code {self._process.returncode}. Cleared baseline sandbox directory")
-            else:
-                raise InvalidSubmissionError(f"Inference crashed with exit code {self._process.returncode}")
+            self.fail(f"Inference crashed with exit code {self._process.returncode}")
 
     def clear_sandbox(self):
         run(
@@ -177,6 +151,14 @@ class InferenceSandbox(Generic[RequestT]):
     @property
     def model_size(self):
         return self._file_size
+
+    def fail(self, reason: str):
+        if self._baseline:
+            self.clear_sandbox()
+            logger.warning(f"Cleared baseline")
+            raise RuntimeError(reason)
+        else:
+            raise InvalidSubmissionError(reason)
 
     def sandbox_args(self, user: str) -> list[str]:
         return [

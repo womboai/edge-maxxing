@@ -5,6 +5,8 @@ from os.path import abspath
 from pathlib import Path
 from subprocess import run, CalledProcessError
 from time import perf_counter
+from ..checkpoint import SPEC_VERSION
+import toml
 
 DEPENDENCY_BLACKLIST = abspath(Path(__file__).parent / "dependency_blacklist.txt")
 
@@ -64,6 +66,14 @@ def get_submission_size(sandbox_directory: Path) -> int:
         if ".git" not in file.parts and ".venv" not in file.parts
     )
 
+def get_submission_version(sandbox_directory: Path) -> int | None:
+    try:
+        with open(sandbox_directory / "pyproject.toml", 'r') as file:
+            pyproject = toml.load(file)
+            return int(pyproject["project"]["version"])
+    except:
+        return None
+
 
 def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bool, url: str, revision: str) -> int:
     if is_cached(sandbox_directory, url, revision):
@@ -80,6 +90,10 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
         "Failed to clone repository"
     )
     logger.info(f"Cloned repository '{url}' in {perf_counter() - start:.2f} seconds")
+
+    version = get_submission_version(sandbox_directory)
+    if version != SPEC_VERSION:
+        raise InvalidSubmissionError(f"Submission is at version {version} while expected version is {SPEC_VERSION}")
 
     if not baseline:
         start = perf_counter()
