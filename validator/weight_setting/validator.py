@@ -847,8 +847,8 @@ class Validator:
 
                 if benchmark:
                     logger.info(f"Updating {hotkey}'s benchmarks to {benchmark}")
-                if hotkey in self.hotkeys:
-                    self.benchmarks[uid] = benchmark
+                self.benchmarks[uid] = benchmark
+
             for hotkey, error_message in result.invalid.items():
                 logger.info(f"Marking {hotkey}'s submission as invalid: '{error_message}'")
                 if hotkey in self.hotkeys:
