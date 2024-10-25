@@ -5,13 +5,17 @@ from os.path import abspath
 from pathlib import Path
 from subprocess import run, CalledProcessError
 from time import perf_counter
+import shutil
 
 DEPENDENCY_BLACKLIST = abspath(Path(__file__).parent / "dependency_blacklist.txt")
 
+CLEAR_CACHE_SCRIPT = abspath(Path(__file__).parent / "clear_cache.sh")
 CLONE_SCRIPT = abspath(Path(__file__).parent / "clone.sh")
 BLACKLIST_SCRIPT = abspath(Path(__file__).parent / "blacklist.sh")
 LFS_PULL_SCRIPT = abspath(Path(__file__).parent / "lfs_pull.sh")
 PIP_INSTALL_SCRIPT = abspath(Path(__file__).parent / "pip_install.sh")
+
+STORAGE_THRESHOLD_GB = 50
 
 with open(DEPENDENCY_BLACKLIST, 'r') as blacklist_file:
     BLACKLISTED_DEPENDENCIES = " ".join(blacklist_file.read().splitlines())
@@ -46,7 +50,6 @@ def _run(script: str, sandbox_args: list[str], sandbox_directory: Path, args: li
             if process.stderr.strip():
                 print(process.stderr, file=sys.stderr)
 
-
 def is_cached(sandbox_directory: Path, url: str, revision: str) -> bool:
     cache_file = sandbox_directory / "cache_info.json"
     if not cache_file.exists():
@@ -58,6 +61,19 @@ def is_cached(sandbox_directory: Path, url: str, revision: str) -> bool:
 
 
 def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bool, cache: bool, url: str, revision: str) -> int:
+    free_space = shutil.disk_usage("/").free
+    if free_space < STORAGE_THRESHOLD_GB * 1024 ** 3:
+        logger.info(f"Running low on disk space: {free_space / 1024 ** 3:.2f} GB remaining. Clearing caches...")
+        _run(
+            CLEAR_CACHE_SCRIPT,
+            sandbox_args,
+            sandbox_directory,
+            [],
+            "Failed to clear caches"
+        )
+        new_free_space = shutil.disk_usage("/").free
+        logger.info(f"Cleared {(new_free_space - free_space) / 1024 ** 3:.2f} GB of caches")
+
     start = perf_counter()
     logger.info(f"Cloning repository '{url}' with revision '{revision}'...")
     _run(
