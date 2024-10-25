@@ -835,14 +835,20 @@ class Validator:
 
         for _, result in with_results:
             for hotkey, benchmark in result.results.items():
+                if not hotkey in self.hotkeys:
+                    logger.info(f"{hotkey} not found, skipping")
+                    continue
+
                 uid = self.hotkeys.index(hotkey)
-                if self.contest_state.miner_info[uid]:
-                    if benchmark:
-                        logger.info(f"Updating {hotkey}'s benchmarks to {benchmark}")
-                    if hotkey in self.hotkeys:
-                        self.benchmarks[self.hotkeys.index(hotkey)] = benchmark
-                else:
+
+                if not self.contest_state.miner_info[uid]:
                     logger.info(f"{hotkey} has no submission, skipping")
+                    continue
+
+                if benchmark:
+                    logger.info(f"Updating {hotkey}'s benchmarks to {benchmark}")
+                if hotkey in self.hotkeys:
+                    self.benchmarks[uid] = benchmark
             for hotkey, error_message in result.invalid.items():
                 logger.info(f"Marking {hotkey}'s submission as invalid: '{error_message}'")
                 if hotkey in self.hotkeys:
