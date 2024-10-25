@@ -27,37 +27,33 @@ class InferenceSandbox(Generic[RequestT]):
     _client: Connection
     _process: Popen
 
-    def __init__(self, repository_info: ModelRepositoryInfo, baseline: bool, sandbox_directory: Path, switch_user: bool, cache: bool):
+    def __init__(self, repository_info: ModelRepositoryInfo, baseline: bool, sandbox_directory: Path, switch_user: bool):
         self._repository = repository_info
         self._baseline = baseline
         self._sandbox_directory = sandbox_directory
         self._switch_user = switch_user
-        self._cache = cache
 
         try:
             self._file_size = setup_sandbox(
                 self.sandbox_args(self._user),
                 self._sandbox_directory,
                 baseline,
-                cache,
                 repository_info.url,
                 repository_info.revision,
             )
         except InvalidSubmissionError as e:
-            if baseline:
-                self.clear_sandbox()
-                raise RuntimeError("Failed to setup baseline sandbox, cleared baseline sandbox directory") from e
-            else:
-                raise e
+            self.fail(str(e))
 
-        logger.info(f"Repository {repository_info} had size {self._file_size}b")
+        logger.info(f"Repository {repository_info} had size {self._file_size / 1024 ** 3:.2f} GB")
         socket_path = abspath(self._sandbox_directory / "inferences.sock")
         self.remove_socket(socket_path)
 
         self._process = Popen(
             [
                 *self.sandbox_args(self._user),
-                abspath(self._sandbox_directory / ".venv" / "bin" / "start_inference")
+                f"/home/{self._user}/.local/bin/uv" if self._switch_user else "uv",
+                "run",
+                "start_inference",
             ],
             cwd=self._sandbox_directory,
             stdout=PIPE,
@@ -78,21 +74,13 @@ class InferenceSandbox(Generic[RequestT]):
 
             self._check_exit()
         else:
-            if baseline:
-                self.clear_sandbox()
-                raise RuntimeError(f"Baseline timed out after {INFERENCE_SOCKET_TIMEOUT} seconds. Cleared baseline sandbox directory")
-            else:
-                raise InvalidSubmissionError(f"Timed out after {INFERENCE_SOCKET_TIMEOUT} seconds")
+            self.fail(f"Timed out after {INFERENCE_SOCKET_TIMEOUT} seconds")
 
         logger.info("Connecting to socket")
         try:
             self._client = Client(socket_path)
-        except ConnectionRefusedError as e:
-            if baseline:
-                self.clear_sandbox()
-                raise RuntimeError("Failed to connect to socket, cleared baseline sandbox directory") from e
-            else:
-                raise InvalidSubmissionError("Failed to connect to socket") from e
+        except ConnectionRefusedError:
+            self.fail("Failed to connect to socket")
 
     @property
     def _user(self) -> str:
@@ -100,11 +88,7 @@ class InferenceSandbox(Generic[RequestT]):
 
     def _check_exit(self):
         if self._process.returncode and not self._process.poll():
-            if self._baseline:
-                self.clear_sandbox()
-                raise RuntimeError(f"Baseline inference crashed with exit code {self._process.returncode}. Cleared baseline sandbox directory")
-            else:
-                raise InvalidSubmissionError(f"Inference crashed with exit code {self._process.returncode}")
+            self.fail(f"Inference crashed with exit code {self._process.returncode}")
 
     def clear_sandbox(self):
         run(
@@ -155,9 +139,6 @@ class InferenceSandbox(Generic[RequestT]):
 
         self._process.__exit__(exc_type, exc_val, exc_tb)
 
-        if not self._cache:
-            self.clear_sandbox()
-
     def __call__(self, request: RequestT):
         self._check_exit()
 
@@ -170,6 +151,14 @@ class InferenceSandbox(Generic[RequestT]):
     @property
     def model_size(self):
         return self._file_size
+
+    def fail(self, reason: str):
+        if self._baseline:
+            self.clear_sandbox()
+            logger.warning(f"Cleared baseline")
+            raise RuntimeError(reason)
+        else:
+            raise InvalidSubmissionError(reason)
 
     def sandbox_args(self, user: str) -> list[str]:
         return [

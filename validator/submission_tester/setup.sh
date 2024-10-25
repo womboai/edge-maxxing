@@ -18,10 +18,14 @@ chown -R api:api /api
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get -y install sudo pipx git git-lfs build-essential python3-dev python3-opencv
 
-su - api -c "
-    pipx install poetry
-    pipx ensurepath
-"
+sudo -u api pipx install poetry
+sudo -u api pipx ensurepath
+
+sudo -u sandbox pipx install uv
+sudo -u sandbox pipx ensurepath
+
+sudo -u baseline-sandbox pipx install uv
+sudo -u baseline-sandbox pipx ensurepath
 
 su - api -c "cd /api/validator && poetry install"
 
@@ -31,6 +35,7 @@ echo "Defaults env_keep += \"VALIDATOR_HOTKEY_SS58_ADDRESS VALIDATOR_DEBUG\"" >>
 
 git config --system lfs.concurrenttransfers 64
 git config --system advice.detachedHead false
+git config --global init.defaultBranch main
 
 sudo -u baseline-sandbox git lfs install
 sudo -u sandbox git lfs install

@@ -10,7 +10,6 @@ API_SERVICE_TEMPLATE = """
 
       volumes:
         - ~/edge-maxxing/baseline-sandbox:/baseline-sandbox
-        - ~/edge-maxxing/pip:/home/sandbox/.cache/pip
         - ~/edge-maxxing/lfs-cache:/home/sandbox/.cache/lfs-cache
 
       ports:

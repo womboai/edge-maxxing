@@ -52,12 +52,11 @@ def generate_baseline(
     inputs: list[TextToImageRequest],
     sandbox_directory: Path = BASELINE_SANDBOX_DIRECTORY,
     switch_user: bool = True,
-    cache: bool = True,
     cancelled_event: Event | None = None,
 ) -> BaselineBenchmark:
     outputs: list[GenerationOutput] = []
 
-    with InferenceSandbox(CURRENT_CONTEST.baseline_repository, True, sandbox_directory, switch_user, cache) as sandbox:
+    with InferenceSandbox(CURRENT_CONTEST.baseline_repository, True, sandbox_directory, switch_user) as sandbox:
         size = sandbox.model_size
 
         for index, request in enumerate(inputs):
@@ -98,13 +97,12 @@ def compare_checkpoints(
     sandbox_directory: Path = SANDBOX_DIRECTORY,
     switch_user: bool = True,
     cancelled_event: Event | None = None,
-    cache: bool = False,
 ) -> CheckpointBenchmark | None:
     logger.info("Generating model samples")
 
     outputs: list[GenerationOutput] = []
 
-    with InferenceSandbox(submission, False, sandbox_directory, switch_user, cache) as sandbox:
+    with InferenceSandbox(submission, False, sandbox_directory, switch_user) as sandbox:
         size = sandbox.model_size
 
         try:
@@ -126,7 +124,7 @@ def compare_checkpoints(
 
                 outputs.append(output)
         except Exception as e:
-            raise InvalidSubmissionError(f"Failed to run inference on {submission}") from e
+            raise InvalidSubmissionError(f"Failed to run inference") from e
 
     average_time = sum(output.generation_time for output in outputs) / len(outputs)
     vram_used = max(output.vram_used for output in outputs)
