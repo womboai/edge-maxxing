@@ -6,15 +6,19 @@ from pathlib import Path
 from subprocess import run, CalledProcessError
 from time import perf_counter
 from ..checkpoint import SPEC_VERSION
+import shutil
 import toml
 
 DEPENDENCY_BLACKLIST = abspath(Path(__file__).parent / "dependency_blacklist.txt")
 
+CLEAR_CACHE_SCRIPT = abspath(Path(__file__).parent / "clear_cache.sh")
 CLONE_SCRIPT = abspath(Path(__file__).parent / "clone.sh")
 BLACKLIST_SCRIPT = abspath(Path(__file__).parent / "blacklist.sh")
 LFS_PULL_SCRIPT = abspath(Path(__file__).parent / "lfs_pull.sh")
 DEPENDENCY_INSTALL_SCRIPT = abspath(Path(__file__).parent / "dependency_install.sh")
 CACHE_SCRIPT = abspath(Path(__file__).parent / "cache.sh")
+
+STORAGE_THRESHOLD_GB = 50
 
 with open(DEPENDENCY_BLACKLIST, 'r') as blacklist_file:
     BLACKLISTED_DEPENDENCIES = " ".join(blacklist_file.read().splitlines())
@@ -66,6 +70,7 @@ def get_submission_size(sandbox_directory: Path) -> int:
         if ".git" not in file.parts and ".venv" not in file.parts
     )
 
+
 def get_submission_version(sandbox_directory: Path) -> int | None:
     try:
         with open(sandbox_directory / "pyproject.toml", 'r') as file:
@@ -79,6 +84,19 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
     if is_cached(sandbox_directory, url, revision):
         logger.info(f"Using cached repository")
         return get_submission_size(sandbox_directory)
+
+    free_space = shutil.disk_usage("/").free
+    if free_space < STORAGE_THRESHOLD_GB * 1024 ** 3:
+        logger.info(f"Running low on disk space: {free_space / 1024 ** 3:.2f} GB remaining. Clearing caches...")
+        _run(
+            CLEAR_CACHE_SCRIPT,
+            sandbox_args,
+            sandbox_directory,
+            [],
+            "Failed to clear caches"
+        )
+        new_free_space = shutil.disk_usage("/").free
+        logger.info(f"Cleared {(new_free_space - free_space) / 1024 ** 3:.2f} GB of caches")
 
     start = perf_counter()
     logger.info(f"Cloning repository '{url}' with revision '{revision}'...")

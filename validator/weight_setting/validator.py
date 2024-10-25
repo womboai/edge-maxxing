@@ -47,7 +47,7 @@ from neuron.submission_tester import (
 )
 from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
-from .winner_selection import get_scores, get_contestant_scores, get_tiers
+from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
 VALIDATOR_VERSION: tuple[int, int, int] = (4, 4, 0)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
@@ -250,6 +250,11 @@ class Validator:
             if info
         }
 
+        tiers: list[list[Uid]] = []
+        if self.baseline_metrics:
+            contestants = get_contestant_scores(self.benchmarks, self.baseline_metrics)
+            tiers = get_tiers(contestants)
+
         for uid, benchmark in enumerate(self.benchmarks):
             if not benchmark:
                 continue
@@ -270,6 +275,8 @@ class Validator:
 
             if self.baseline_metrics:
                 data["score"] = benchmark.calculate_score(self.baseline_metrics)
+            if tiers:
+                data["tier"] = get_contestant_tier(tiers, uid)
 
             benchmark_data[str(uid)] = data
 
