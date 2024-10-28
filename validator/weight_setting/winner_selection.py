@@ -68,7 +68,8 @@ def get_scores(tiers: list[list[Uid]], blocks: list[int | None], node_count: int
 
         last_tier = tier
 
-    modified_tiers.append(last_tier[1:])
+    if len(last_tier) > 1:
+        modified_tiers.append(last_tier[1:])
 
     scores = [0.0] * node_count
 
