@@ -4,7 +4,7 @@ from neuron import Uid
 from neuron.submission_tester import CheckpointBenchmark, MetricData
 
 TIER_SCORE_IMPROVEMENT_THRESHOLD = 1.05
-WINNER_PERCENTAGE = 0.5
+WINNER_PERCENTAGE = 0.65
 
 
 def get_contestant_scores(benchmarks: list[CheckpointBenchmark | None], baseline_metrics: MetricData) -> list[tuple[Uid, float]]:
@@ -14,7 +14,7 @@ def get_contestant_scores(benchmarks: list[CheckpointBenchmark | None], baseline
         if metric_data
     ]
 
-    sorted_contestants = sorted(contestants, key=itemgetter(1))
+    sorted_contestants = sorted(contestants, key=itemgetter(1), reverse=True)
 
     return sorted_contestants
 
@@ -30,14 +30,14 @@ def get_tiers(contestants: list[tuple[Uid, float]]) -> list[list[Uid]]:
     for contestant in contestants:
         uid, score = contestant
 
-        if score > last_tier_score * TIER_SCORE_IMPROVEMENT_THRESHOLD:
+        if last_tier_score > score * TIER_SCORE_IMPROVEMENT_THRESHOLD:
             # New tier
             last_tier_score = score
             tiers.append([])
 
         tiers[-1].append(uid)
 
-    return tiers
+    return list(reversed(tiers))
 
 
 def get_contestant_tier(tiers: list[list[Uid]], uid: Uid) -> int:
