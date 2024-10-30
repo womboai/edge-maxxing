@@ -797,6 +797,7 @@ class Validator:
                 logger.info(f"Updated baseline benchmarks to {result.baseline_metrics}")
 
         self.benchmarking_state = min((result.state for result in states), key=lambda state: state.value)
+        self.inference_time = max((result.inference_time for result in states), default=None)
 
         with_results = in_progress + finished
 
