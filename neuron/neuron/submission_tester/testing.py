@@ -63,7 +63,7 @@ def generate_baseline(
         baseline=True,
         sandbox_directory=sandbox_directory,
         switch_user=switch_user,
-        load_timout=DEFAULT_LOAD_TIMEOUT,
+        load_timeout=DEFAULT_LOAD_TIMEOUT,
     ) as sandbox:
         size = sandbox.model_size
 
@@ -105,7 +105,7 @@ def compare_checkpoints(
     baseline: BaselineBenchmark,
     sandbox_directory: Path = SANDBOX_DIRECTORY,
     switch_user: bool = True,
-    load_timout: int = DEFAULT_LOAD_TIMEOUT,
+    load_timeout: int = DEFAULT_LOAD_TIMEOUT,
     cancelled_event: Event | None = None,
 ) -> CheckpointBenchmark | None:
     logger.info("Generating model samples")
@@ -117,7 +117,7 @@ def compare_checkpoints(
         baseline=False,
         sandbox_directory=sandbox_directory,
         switch_user=switch_user,
-        load_timout=max(load_timout, MIN_LOAD_TIMEOUT),
+        load_timeout=max(load_timeout, MIN_LOAD_TIMEOUT),
     ) as sandbox:
         size = sandbox.model_size
 
