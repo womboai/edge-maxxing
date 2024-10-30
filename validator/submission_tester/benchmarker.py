@@ -79,8 +79,9 @@ class Benchmarker:
 
     def _start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         self.submissions = submissions
-        self.benchmarks = {}
-        self.submission_times = []
+        self.benchmarks.clear()
+        self.invalid.clear()
+        self.submission_times.clear()
         self.inputs = random_inputs()
         self.done = False
 
