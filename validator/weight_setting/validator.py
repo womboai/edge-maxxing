@@ -553,6 +553,11 @@ class Validator:
 
         logger.info("Setting weights")
 
+        blacklisted_keys = self.get_blacklisted_keys()
+        for hotkey, node in self.metagraph.nodes.items():
+            if self.is_blacklisted(blacklisted_keys, hotkey, node.coldkey):
+                self.reset_miner(self.hotkeys.index(hotkey))
+
         contestants = get_contestant_scores(self.benchmarks, self.baseline_metrics)
         tiers = get_tiers(contestants)
         blocks = [info.block if info else None for info in self.contest_state.miner_info]
@@ -586,6 +591,10 @@ class Validator:
         response.raise_for_status()
         return response.json()
 
+    @staticmethod
+    def is_blacklisted(blacklisted_keys: dict, hotkey: str, coldkey: str):
+        return hotkey in blacklisted_keys["hotkeys"] or coldkey in blacklisted_keys["coldkeys"]
+
     def get_miner_submissions(self):
         visited_repositories: dict[str, tuple[Uid, int]] = {}
         visited_revisions: dict[str, tuple[Uid, int]] = {}
@@ -594,10 +603,7 @@ class Validator:
         miner_info: list[MinerModelInfo | None] = []
 
         for hotkey, node in tqdm(self.metagraph.nodes.items()):
-            if (
-                hotkey in blacklisted_keys["hotkeys"] or
-                node.coldkey in blacklisted_keys["coldkeys"]
-            ):
+            if self.is_blacklisted(blacklisted_keys, hotkey, node.coldkey):
                 miner_info.append(None)
                 continue
 
