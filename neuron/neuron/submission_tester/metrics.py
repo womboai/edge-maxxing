@@ -13,13 +13,13 @@ class MetricData(BaseModel):
     size: int
     vram_used: float
     watts_used: float
+    load_time: float
 
 
 class BaselineBenchmark(BaseModel):
     inputs: list[TextToImageRequest]
     outputs: list[GenerationOutput]
     metric_data: MetricData
-    load_time: float
 
 
 class CheckpointBenchmark(BaseModel):

@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 
 
 def generate(
-        container: InferenceSandbox,
-        request: TextToImageRequest,
+    container: InferenceSandbox,
+    request: TextToImageRequest,
 ) -> GenerationOutput:
     start_joules = CURRENT_CONTEST.get_joules()
     vram_monitor = VRamMonitor(CURRENT_CONTEST)
@@ -51,10 +51,10 @@ def generate(
 
 
 def generate_baseline(
-        inputs: list[TextToImageRequest],
-        sandbox_directory: Path = BASELINE_SANDBOX_DIRECTORY,
-        switch_user: bool = True,
-        cancelled_event: Event | None = None,
+    inputs: list[TextToImageRequest],
+    sandbox_directory: Path = BASELINE_SANDBOX_DIRECTORY,
+    switch_user: bool = True,
+    cancelled_event: Event | None = None,
 ) -> BaselineBenchmark:
     outputs: list[GenerationOutput] = []
 
@@ -63,7 +63,7 @@ def generate_baseline(
             baseline=True,
             sandbox_directory=sandbox_directory,
             switch_user=switch_user,
-            load_timout=DEFAULT_LOAD_TIMEOUT
+            load_timout=DEFAULT_LOAD_TIMEOUT,
     ) as sandbox:
         size = sandbox.model_size
 
@@ -94,6 +94,7 @@ def generate_baseline(
             size=size,
             vram_used=vram_used,
             watts_used=watts_used,
+            load_time=sandbox.load_time,
         ),
         load_time=sandbox.load_time,
     )
@@ -180,6 +181,7 @@ def compare_checkpoints(
             size=size,
             vram_used=vram_used,
             watts_used=watts_used,
+            load_time=sandbox.load_time,
         ),
         average_similarity=average_similarity,
         min_similarity=min_similarity,
@@ -192,6 +194,7 @@ def compare_checkpoints(
         f"Min Similarity: {min_similarity}\n"
         f"Average Generation Time: {average_time}s\n"
         f"Model Size: {size}b\n"
+        f"Model Load Time: {sandbox.load_time}s\n"
         f"Max VRAM Usage: {vram_used}b\n"
         f"Max Power Usage: {watts_used}W"
     )

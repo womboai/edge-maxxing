@@ -146,7 +146,6 @@ def state(request: Request) -> BenchmarkResults:
         invalid=benchmarker.invalid,
         baseline_metrics=benchmarker.get_baseline_metrics(),
         average_benchmark_time=average_benchmark_time,
-        load_time=benchmarker.get_load_time(),
     )
 
 

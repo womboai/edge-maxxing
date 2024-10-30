@@ -61,10 +61,9 @@ class Benchmarker:
 
         try:
             self.benchmarks[hotkey] = compare_checkpoints(
-                submission=submission,
-                inputs=self.inputs,
-                baseline=self.baseline,
-                load_timout=int(self.get_load_time() * 2),
+                submission,
+                self.inputs,
+                self.baseline,
                 cancelled_event=self.cancelled_event,
             )
         except InvalidSubmissionError as e:
@@ -130,6 +129,3 @@ class Benchmarker:
 
     def get_baseline_metrics(self) -> MetricData | None:
         return self.baseline.metric_data if self.baseline else None
-
-    def get_load_time(self) -> float | None:
-        return self.baseline.load_time if self.baseline else None

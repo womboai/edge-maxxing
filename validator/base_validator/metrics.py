@@ -19,4 +19,3 @@ class BenchmarkResults(BaseModel):
     invalid: dict[Key, str]
     baseline_metrics: MetricData | None
     average_benchmark_time: float | None
-    load_time: float | None
