@@ -96,7 +96,6 @@ def generate_baseline(
             watts_used=watts_used,
             load_time=sandbox.load_time,
         ),
-        load_time=sandbox.load_time,
     )
 
 
