@@ -6,8 +6,7 @@ from pydantic import RootModel
 
 from pipelines import TextToImageRequest
 
-INFERENCE_SOCKET_TIMEOUT = 240
-TIMEZONE = ZoneInfo("US/Pacific")
+TIMEZONE = ZoneInfo("America/Los_Angeles")
 INPUTS_ENDPOINT = os.getenv("INPUTS_ENDPOINT", "https://edge-inputs.api.wombo.ai")
 
 

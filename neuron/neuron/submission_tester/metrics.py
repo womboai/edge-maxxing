@@ -19,6 +19,7 @@ class BaselineBenchmark(BaseModel):
     inputs: list[TextToImageRequest]
     outputs: list[GenerationOutput]
     metric_data: MetricData
+    inference_time: float
 
 
 class CheckpointBenchmark(BaseModel):

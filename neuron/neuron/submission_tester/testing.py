@@ -19,6 +19,8 @@ from .. import (
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
+DEFAULT_INFERENCE_TIMEOUT = 500
+MIN_INFERENCE_TIMEOUT = 120
 
 EXECUTOR = ThreadPoolExecutor(max_workers=2)
 
@@ -26,8 +28,8 @@ logger = logging.getLogger(__name__)
 
 
 def generate(
-    container: InferenceSandbox,
-    request: TextToImageRequest,
+        container: InferenceSandbox,
+        request: TextToImageRequest,
 ) -> GenerationOutput:
     start_joules = CURRENT_CONTEST.get_joules()
     vram_monitor = VRamMonitor(CURRENT_CONTEST)
@@ -49,14 +51,20 @@ def generate(
 
 
 def generate_baseline(
-    inputs: list[TextToImageRequest],
-    sandbox_directory: Path = BASELINE_SANDBOX_DIRECTORY,
-    switch_user: bool = True,
-    cancelled_event: Event | None = None,
+        inputs: list[TextToImageRequest],
+        sandbox_directory: Path = BASELINE_SANDBOX_DIRECTORY,
+        switch_user: bool = True,
+        cancelled_event: Event | None = None,
 ) -> BaselineBenchmark:
     outputs: list[GenerationOutput] = []
 
-    with InferenceSandbox(CURRENT_CONTEST.baseline_repository, True, sandbox_directory, switch_user) as sandbox:
+    with InferenceSandbox(
+            repository_info=CURRENT_CONTEST.baseline_repository,
+            baseline=True,
+            sandbox_directory=sandbox_directory,
+            switch_user=switch_user,
+            inference_timeout=DEFAULT_INFERENCE_TIMEOUT
+    ) as sandbox:
         size = sandbox.model_size
 
         for index, request in enumerate(inputs):
@@ -87,22 +95,30 @@ def generate_baseline(
             vram_used=vram_used,
             watts_used=watts_used,
         ),
+        inference_time=sandbox.inference_time,
     )
 
 
 def compare_checkpoints(
-    submission: ModelRepositoryInfo,
-    inputs: list[TextToImageRequest],
-    baseline: BaselineBenchmark,
-    sandbox_directory: Path = SANDBOX_DIRECTORY,
-    switch_user: bool = True,
-    cancelled_event: Event | None = None,
+        submission: ModelRepositoryInfo,
+        inputs: list[TextToImageRequest],
+        baseline: BaselineBenchmark,
+        sandbox_directory: Path = SANDBOX_DIRECTORY,
+        switch_user: bool = True,
+        inference_timeout: int = DEFAULT_INFERENCE_TIMEOUT,
+        cancelled_event: Event | None = None,
 ) -> CheckpointBenchmark | None:
     logger.info("Generating model samples")
 
     outputs: list[GenerationOutput] = []
 
-    with InferenceSandbox(submission, False, sandbox_directory, switch_user) as sandbox:
+    with InferenceSandbox(
+            repository_info=submission,
+            baseline=False,
+            sandbox_directory=sandbox_directory,
+            switch_user=switch_user,
+            inference_timeout=max(inference_timeout, MIN_INFERENCE_TIMEOUT),
+    ) as sandbox:
         size = sandbox.model_size
 
         try:

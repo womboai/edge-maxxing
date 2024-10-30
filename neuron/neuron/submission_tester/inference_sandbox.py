@@ -1,20 +1,19 @@
 import logging
 import os
 import sys
-import time
 from io import TextIOWrapper
 from multiprocessing.connection import Client, Connection
 from os.path import abspath
 from pathlib import Path
 from subprocess import Popen, run, TimeoutExpired, PIPE
 from threading import Thread
+from time import perf_counter, sleep
 from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
 from .setup_inference_sandbox import setup_sandbox, InvalidSubmissionError
 from ..contest import ModelRepositoryInfo
-from ..random_inputs import INFERENCE_SOCKET_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +25,16 @@ class InferenceSandbox(Generic[RequestT]):
 
     _client: Connection
     _process: Popen
+    inference_time: float
 
-    def __init__(self, repository_info: ModelRepositoryInfo, baseline: bool, sandbox_directory: Path, switch_user: bool):
+    def __init__(
+            self,
+            repository_info: ModelRepositoryInfo,
+            baseline: bool,
+            sandbox_directory: Path,
+            switch_user: bool,
+            inference_timeout: int,
+    ):
         self._repository = repository_info
         self._baseline = baseline
         self._sandbox_directory = sandbox_directory
@@ -66,21 +73,21 @@ class InferenceSandbox(Generic[RequestT]):
 
         logger.info("Inference process starting")
 
-        for _ in range(INFERENCE_SOCKET_TIMEOUT):
-            if os.path.exists(socket_path):
-                break
-
-            time.sleep(1)
-
+        start = perf_counter()
+        for _ in range(inference_timeout):
+            if os.path.exists(socket_path): break
+            sleep(1)
             self._check_exit()
         else:
-            self.fail(f"Timed out after {INFERENCE_SOCKET_TIMEOUT} seconds")
+            self.fail(f"Timed out after {inference_timeout} seconds")
 
         logger.info("Connecting to socket")
         try:
             self._client = Client(socket_path)
         except ConnectionRefusedError:
             self.fail("Failed to connect to socket")
+        self.inference_time = perf_counter() - start
+        logger.info(f"Connected to socket in {self.inference_time:.2f} seconds")
 
     @property
     def _user(self) -> str:

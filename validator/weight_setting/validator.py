@@ -49,7 +49,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (4, 4, 3)
+VALIDATOR_VERSION: tuple[int, int, int] = (4, 4, 4)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -118,6 +118,7 @@ class Validator:
     benchmarks: list[CheckpointBenchmark | None]
     baseline_metrics: MetricData | None
     average_benchmarking_time: float | None
+    inference_time: float | None
     benchmarking_state: BenchmarkState
     failed: set[int] = set()  # for backwards depickling compatibility
     invalid: dict[int, str]
@@ -168,6 +169,7 @@ class Validator:
         self.benchmarks = self.clear_benchmarks()
         self.baseline_metrics = None
         self.average_benchmarking_time = None
+        self.inference_time = None
         self.benchmarking_state = BenchmarkState.NOT_STARTED
         self.invalid = {}
 
@@ -290,6 +292,9 @@ class Validator:
         if self.average_benchmarking_time:
             log_data["average_benchmark_time"] = self.average_benchmarking_time
 
+        if self.inference_time:
+            log_data["inference_time"] = self.inference_time
+
         if self.baseline_metrics:
             log_data["baseline"] = {
                 "generation_time": self.baseline_metrics.generation_time,
@@ -370,6 +375,7 @@ class Validator:
                     "benchmarks": self.benchmarks,
                     "baseline_benchmarks": self.baseline_metrics,
                     "average_benchmarking_time": self.average_benchmarking_time,
+                    "inference_time": self.inference_time,
                     "benchmarking_state": self.benchmarking_state,
                     "invalid": self.invalid,
                     "last_day": self.last_day,
@@ -398,6 +404,7 @@ class Validator:
         self.benchmarks = state.get("benchmarks", self.benchmarks)
         self.baseline_metrics = state.get("baseline_benchmarks", self.baseline_metrics)
         self.average_benchmarking_time = state.get("average_benchmarking_time", self.average_benchmarking_time)
+        self.inference_time = state.get("inference_time", self.inference_time)
         self.benchmarking_state = state.get("benchmarking_state", self.benchmarking_state)
         self.invalid = state.get("invalid", self.invalid)
         self.last_day = state["last_day"]
