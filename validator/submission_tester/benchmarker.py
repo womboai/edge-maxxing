@@ -64,7 +64,7 @@ class Benchmarker:
                 submission=submission,
                 inputs=self.inputs,
                 baseline=self.baseline,
-                inference_timeout=int(self.get_inference_time() * 2),
+                load_timout=int(self.get_load_time() * 2),
                 cancelled_event=self.cancelled_event,
             )
         except InvalidSubmissionError as e:
@@ -131,5 +131,5 @@ class Benchmarker:
     def get_baseline_metrics(self) -> MetricData | None:
         return self.baseline.metric_data if self.baseline else None
 
-    def get_inference_time(self) -> float | None:
-        return self.baseline.inference_time if self.baseline else None
+    def get_load_time(self) -> float | None:
+        return self.baseline.load_time if self.baseline else None

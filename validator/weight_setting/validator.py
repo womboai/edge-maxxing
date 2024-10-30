@@ -118,7 +118,7 @@ class Validator:
     benchmarks: list[CheckpointBenchmark | None]
     baseline_metrics: MetricData | None
     average_benchmarking_time: float | None
-    inference_time: float | None
+    load_time: float | None
     benchmarking_state: BenchmarkState
     failed: set[int] = set()  # for backwards depickling compatibility
     invalid: dict[int, str]
@@ -169,7 +169,7 @@ class Validator:
         self.benchmarks = self.clear_benchmarks()
         self.baseline_metrics = None
         self.average_benchmarking_time = None
-        self.inference_time = None
+        self.load_time = None
         self.benchmarking_state = BenchmarkState.NOT_STARTED
         self.invalid = {}
 
@@ -292,8 +292,8 @@ class Validator:
         if self.average_benchmarking_time:
             log_data["average_benchmark_time"] = self.average_benchmarking_time
 
-        if self.inference_time:
-            log_data["inference_time"] = self.inference_time
+        if self.load_time:
+            log_data["load_time"] = self.load_time
 
         if self.baseline_metrics:
             log_data["baseline"] = {
@@ -375,7 +375,7 @@ class Validator:
                     "benchmarks": self.benchmarks,
                     "baseline_benchmarks": self.baseline_metrics,
                     "average_benchmarking_time": self.average_benchmarking_time,
-                    "inference_time": self.inference_time,
+                    "load_time": self.load_time,
                     "benchmarking_state": self.benchmarking_state,
                     "invalid": self.invalid,
                     "last_day": self.last_day,
@@ -404,7 +404,7 @@ class Validator:
         self.benchmarks = state.get("benchmarks", self.benchmarks)
         self.baseline_metrics = state.get("baseline_benchmarks", self.baseline_metrics)
         self.average_benchmarking_time = state.get("average_benchmarking_time", self.average_benchmarking_time)
-        self.inference_time = state.get("inference_time", self.inference_time)
+        self.load_time = state.get("load_time", self.load_time)
         self.benchmarking_state = state.get("benchmarking_state", self.benchmarking_state)
         self.invalid = state.get("invalid", self.invalid)
         self.last_day = state["last_day"]
@@ -797,7 +797,7 @@ class Validator:
                 logger.info(f"Updated baseline benchmarks to {result.baseline_metrics}")
 
         self.benchmarking_state = min((result.state for result in states), key=lambda state: state.value)
-        self.inference_time = max((result.inference_time for result in states), default=None)
+        self.load_time = max((result.load_time for result in states), default=None)
 
         with_results = in_progress + finished
 

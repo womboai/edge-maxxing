@@ -25,7 +25,7 @@ class InferenceSandbox(Generic[RequestT]):
 
     _client: Connection
     _process: Popen
-    inference_time: float
+    load_time: float
 
     def __init__(
             self,
@@ -33,7 +33,7 @@ class InferenceSandbox(Generic[RequestT]):
             baseline: bool,
             sandbox_directory: Path,
             switch_user: bool,
-            inference_timeout: int,
+            load_timeout: int,
     ):
         self._repository = repository_info
         self._baseline = baseline
@@ -74,20 +74,20 @@ class InferenceSandbox(Generic[RequestT]):
         logger.info("Inference process starting")
 
         start = perf_counter()
-        for _ in range(inference_timeout):
+        for _ in range(load_timeout):
             if os.path.exists(socket_path): break
             sleep(1)
             self._check_exit()
         else:
-            self.fail(f"Timed out after {inference_timeout} seconds")
+            self.fail(f"Timed out after {load_timeout} seconds")
 
         logger.info("Connecting to socket")
         try:
             self._client = Client(socket_path)
         except ConnectionRefusedError:
             self.fail("Failed to connect to socket")
-        self.inference_time = perf_counter() - start
-        logger.info(f"Connected to socket in {self.inference_time:.2f} seconds")
+        self.load_time = perf_counter() - start
+        logger.info(f"Connected to socket in {self.load_time:.2f} seconds")
 
     @property
     def _user(self) -> str:

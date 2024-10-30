@@ -19,8 +19,8 @@ from .. import (
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
-DEFAULT_INFERENCE_TIMEOUT = 500
-MIN_INFERENCE_TIMEOUT = 120
+DEFAULT_LOAD_TIMEOUT = 500
+MIN_LOAD_TIMEOUT = 120
 
 EXECUTOR = ThreadPoolExecutor(max_workers=2)
 
@@ -63,7 +63,7 @@ def generate_baseline(
             baseline=True,
             sandbox_directory=sandbox_directory,
             switch_user=switch_user,
-            inference_timeout=DEFAULT_INFERENCE_TIMEOUT
+            load_timout=DEFAULT_LOAD_TIMEOUT
     ) as sandbox:
         size = sandbox.model_size
 
@@ -95,7 +95,7 @@ def generate_baseline(
             vram_used=vram_used,
             watts_used=watts_used,
         ),
-        inference_time=sandbox.inference_time,
+        load_time=sandbox.load_time,
     )
 
 
@@ -105,7 +105,7 @@ def compare_checkpoints(
         baseline: BaselineBenchmark,
         sandbox_directory: Path = SANDBOX_DIRECTORY,
         switch_user: bool = True,
-        inference_timeout: int = DEFAULT_INFERENCE_TIMEOUT,
+        load_timout: int = DEFAULT_LOAD_TIMEOUT,
         cancelled_event: Event | None = None,
 ) -> CheckpointBenchmark | None:
     logger.info("Generating model samples")
@@ -117,7 +117,7 @@ def compare_checkpoints(
             baseline=False,
             sandbox_directory=sandbox_directory,
             switch_user=switch_user,
-            inference_timeout=max(inference_timeout, MIN_INFERENCE_TIMEOUT),
+            load_timout=max(load_timout, MIN_LOAD_TIMEOUT),
     ) as sandbox:
         size = sandbox.model_size
 
