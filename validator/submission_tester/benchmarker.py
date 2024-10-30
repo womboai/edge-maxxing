@@ -61,10 +61,10 @@ class Benchmarker:
 
         try:
             self.benchmarks[hotkey] = compare_checkpoints(
-                submission,
-                self.inputs,
-                self.baseline,
-                cancelled_event=self.cancelled_event,
+                submission=submission,
+                inputs=self.inputs,
+                baseline=self.baseline,
+                load_timout=int(self.get_baseline_metrics().load_time * 2),
             )
         except InvalidSubmissionError as e:
             logger.error(f"Skipping invalid submission '{submission}': '{e}'")
