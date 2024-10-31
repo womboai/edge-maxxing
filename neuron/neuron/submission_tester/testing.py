@@ -21,7 +21,7 @@ from .. import (
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
 DEFAULT_LOAD_TIMEOUT = 500
-MIN_LOAD_TIMEOUT = 120
+MIN_LOAD_TIMEOUT = 240
 
 EXECUTOR = ThreadPoolExecutor(max_workers=2)
 
