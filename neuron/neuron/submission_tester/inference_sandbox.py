@@ -12,7 +12,7 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
-from .setup_inference_sandbox import setup_sandbox, InvalidSubmissionError
+from .setup_inference_sandbox import setup_sandbox, InvalidSubmissionError, NETWORK_JAIL
 from ..contest import ModelRepositoryInfo
 
 logger = logging.getLogger(__name__)
@@ -62,6 +62,7 @@ class InferenceSandbox(Generic[RequestT]):
                 "run",
                 "start_inference",
             ],
+            env={"LD_PRELOAD": NETWORK_JAIL},
             cwd=self._sandbox_directory,
             stdout=PIPE,
             stderr=PIPE,
