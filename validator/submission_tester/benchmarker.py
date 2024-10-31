@@ -64,7 +64,7 @@ class Benchmarker:
                 submission=submission,
                 inputs=self.inputs,
                 baseline=self.baseline,
-                load_timout=int(self.get_baseline_metrics().load_time * 2),
+                load_timeout=int(self.get_baseline_metrics().load_time * 2),
             )
         except InvalidSubmissionError as e:
             logger.error(f"Skipping invalid submission '{submission}': '{e}'")
