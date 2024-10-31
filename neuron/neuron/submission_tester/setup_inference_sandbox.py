@@ -17,6 +17,7 @@ BLACKLIST_SCRIPT = abspath(Path(__file__).parent / "blacklist.sh")
 LFS_PULL_SCRIPT = abspath(Path(__file__).parent / "lfs_pull.sh")
 DEPENDENCY_INSTALL_SCRIPT = abspath(Path(__file__).parent / "dependency_install.sh")
 CACHE_SCRIPT = abspath(Path(__file__).parent / "cache.sh")
+NETWORK_JAIL = abspath(Path(__file__).parent / "libnetwork_jail.so")
 
 STORAGE_THRESHOLD_GB = 50
 
