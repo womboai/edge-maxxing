@@ -55,10 +55,11 @@ class InferenceSandbox(Generic[RequestT]):
         socket_path = abspath(self._sandbox_directory / "inferences.sock")
         self.remove_socket(socket_path)
 
+        home = f"/home/{self._user}" if self._switch_user else Path.home()
         self._process = Popen(
             [
                 *self.sandbox_args(self._user),
-                f"/home/{self._user}/.local/bin/uv" if self._switch_user else "uv",
+                f"{home}/.local/bin/uv",
                 "run",
                 "start_inference",
             ],

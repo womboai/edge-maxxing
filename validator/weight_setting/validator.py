@@ -49,7 +49,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (4, 5, 0)
+VALIDATOR_VERSION: tuple[int, int, int] = (4, 5, 1)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -264,14 +264,10 @@ class Validator:
                 continue
 
             data = {
-                "generation_time": benchmark.model.generation_time,
                 "similarity": benchmark.average_similarity,
                 "min_similarity": benchmark.min_similarity,
-                "size": benchmark.model.size,
-                "vram_used": benchmark.model.vram_used,
-                "watts_used": benchmark.model.watts_used,
                 "hotkey": self.hotkeys[uid],
-            }
+            } | benchmark.model_dump()
 
             if self.baseline_metrics:
                 data["score"] = benchmark.calculate_score(self.baseline_metrics)
@@ -291,12 +287,7 @@ class Validator:
             log_data["average_benchmark_time"] = self.average_benchmarking_time
 
         if self.baseline_metrics:
-            log_data["baseline"] = {
-                "generation_time": self.baseline_metrics.generation_time,
-                "size": self.baseline_metrics.size,
-                "vram_used": self.baseline_metrics.vram_used,
-                "watts_used": self.baseline_metrics.watts_used,
-            }
+            log_data["baseline"] = self.baseline_metrics.model_dump()
 
         self.wandb_run.log(data=log_data)
 
