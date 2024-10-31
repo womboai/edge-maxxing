@@ -13,6 +13,7 @@ class MetricData(BaseModel):
     size: int
     vram_used: float
     watts_used: float
+    load_time: float
 
 
 class BaselineBenchmark(BaseModel):

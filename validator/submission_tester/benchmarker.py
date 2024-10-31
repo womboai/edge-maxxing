@@ -5,6 +5,7 @@ from datetime import timedelta, datetime
 from random import choice
 from threading import Lock, Event
 from time import perf_counter
+from typing import cast
 
 from neuron.submission_tester import (
     CheckpointBenchmark,
@@ -61,10 +62,10 @@ class Benchmarker:
 
         try:
             self.benchmarks[hotkey] = compare_checkpoints(
-                submission,
-                self.inputs,
-                self.baseline,
-                cancelled_event=self.cancelled_event,
+                submission=submission,
+                inputs=self.inputs,
+                baseline=self.baseline,
+                load_timeout=int(cast(MetricData, self.get_baseline_metrics()).load_time * 2),
             )
         except InvalidSubmissionError as e:
             logger.error(f"Skipping invalid submission '{submission}': '{e}'")

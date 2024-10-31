@@ -1,4 +1,5 @@
 import logging
+import os
 from concurrent.futures import ThreadPoolExecutor, CancelledError
 from pathlib import Path
 from statistics import mean
@@ -19,9 +20,12 @@ from .. import (
 
 SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
+DEFAULT_LOAD_TIMEOUT = 500
+MIN_LOAD_TIMEOUT = 120
 
 EXECUTOR = ThreadPoolExecutor(max_workers=2)
 
+debug = int(os.getenv("VALIDATOR_DEBUG", 0)) > 0
 logger = logging.getLogger(__name__)
 
 
@@ -56,7 +60,13 @@ def generate_baseline(
 ) -> BaselineBenchmark:
     outputs: list[GenerationOutput] = []
 
-    with InferenceSandbox(CURRENT_CONTEST.baseline_repository, True, sandbox_directory, switch_user) as sandbox:
+    with InferenceSandbox(
+        repository_info=CURRENT_CONTEST.baseline_repository,
+        baseline=True,
+        sandbox_directory=sandbox_directory,
+        switch_user=switch_user,
+        load_timeout=DEFAULT_LOAD_TIMEOUT,
+    ) as sandbox:
         size = sandbox.model_size
 
         for index, request in enumerate(inputs):
@@ -86,6 +96,7 @@ def generate_baseline(
             size=size,
             vram_used=vram_used,
             watts_used=watts_used,
+            load_time=sandbox.load_time,
         ),
     )
 
@@ -96,13 +107,20 @@ def compare_checkpoints(
     baseline: BaselineBenchmark,
     sandbox_directory: Path = SANDBOX_DIRECTORY,
     switch_user: bool = True,
+    load_timeout: int = DEFAULT_LOAD_TIMEOUT,
     cancelled_event: Event | None = None,
 ) -> CheckpointBenchmark | None:
     logger.info("Generating model samples")
 
     outputs: list[GenerationOutput] = []
 
-    with InferenceSandbox(submission, False, sandbox_directory, switch_user) as sandbox:
+    with InferenceSandbox(
+        repository_info=submission,
+        baseline=False,
+        sandbox_directory=sandbox_directory,
+        switch_user=switch_user,
+        load_timeout=max(load_timeout, MIN_LOAD_TIMEOUT if not debug else DEFAULT_LOAD_TIMEOUT),
+    ) as sandbox:
         size = sandbox.model_size
 
         try:
@@ -164,6 +182,7 @@ def compare_checkpoints(
             size=size,
             vram_used=vram_used,
             watts_used=watts_used,
+            load_time=sandbox.load_time,
         ),
         average_similarity=average_similarity,
         min_similarity=min_similarity,
@@ -176,6 +195,7 @@ def compare_checkpoints(
         f"Min Similarity: {min_similarity}\n"
         f"Average Generation Time: {average_time}s\n"
         f"Model Size: {size}b\n"
+        f"Model Load Time: {sandbox.load_time}s\n"
         f"Max VRAM Usage: {vram_used}b\n"
         f"Max Power Usage: {watts_used}W"
     )
