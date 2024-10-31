@@ -1,4 +1,5 @@
 import logging
+import os
 from concurrent.futures import ThreadPoolExecutor, CancelledError
 from pathlib import Path
 from statistics import mean
@@ -24,6 +25,7 @@ MIN_LOAD_TIMEOUT = 120
 
 EXECUTOR = ThreadPoolExecutor(max_workers=2)
 
+debug = int(os.getenv("VALIDATOR_DEBUG", 0)) > 0
 logger = logging.getLogger(__name__)
 
 
@@ -117,7 +119,7 @@ def compare_checkpoints(
         baseline=False,
         sandbox_directory=sandbox_directory,
         switch_user=switch_user,
-        load_timeout=max(load_timeout, MIN_LOAD_TIMEOUT),
+        load_timeout=max(load_timeout, MIN_LOAD_TIMEOUT if not debug else DEFAULT_LOAD_TIMEOUT),
     ) as sandbox:
         size = sandbox.model_size
 
