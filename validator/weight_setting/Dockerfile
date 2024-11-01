@@ -26,7 +26,6 @@ COPY validator/weight_setting/__init__.py validator/weight_setting/
 
 USER root
 RUN chown -R validator:validator /app
-RUN echo "Defaults env_keep += \"WANDB_API_KEY\"" >> /etc/sudoers
 USER validator
 
 WORKDIR /app/validator

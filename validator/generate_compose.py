@@ -40,9 +40,6 @@ VALIDATOR_SERVICE_TEMPLATE = """
           source: ~/.netrc
           target: /home/validator/.netrc
 
-      environment:
-        WANDB_API_KEY: $WANDB_API_KEY
-
       command: --benchmarker_api {apis} $VALIDATOR_ARGS
 
       network_mode: host

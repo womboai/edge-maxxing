@@ -49,7 +49,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (4, 5, 1)
+VALIDATOR_VERSION: tuple[int, int, int] = (4, 5, 2)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -373,12 +373,12 @@ class Validator:
 
     def load_state(self):
         """Loads the state of the validator from a file."""
-        logger.info("Loading validator state.")
-
         path = self.state_path
 
         if not isfile(path):
             return
+
+        logger.info("Loading validator state.")
 
         # Load the state of the validator from file.
         with open(path, "rb") as file:
