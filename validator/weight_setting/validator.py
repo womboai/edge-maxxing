@@ -376,12 +376,12 @@ class Validator:
 
     def load_state(self):
         """Loads the state of the validator from a file."""
-        logger.info("Loading validator state.")
-
         path = self.state_path
 
         if not isfile(path):
             return
+
+        logger.info("Loading validator state.")
 
         # Load the state of the validator from file.
         with open(path, "rb") as file:

@@ -25,7 +25,7 @@ MIN_LOAD_TIMEOUT = 240
 
 EXECUTOR = ThreadPoolExecutor(max_workers=2)
 
-debug = int(os.getenv("VALIDATOR_DEBUG", 0)) > 0
+debug = int(os.getenv("VALIDATOR_DEBUG") or 0) > 0
 logger = logging.getLogger(__name__)
 
 
