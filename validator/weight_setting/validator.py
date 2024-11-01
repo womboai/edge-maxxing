@@ -49,7 +49,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (4, 5, 3)
+VALIDATOR_VERSION: tuple[int, int, int] = (4, 5, 4)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -503,7 +503,7 @@ class Validator:
             logger.info("Will not set new weights as the contest state has not been set, setting to all ones")
             equal_weights = True
 
-        if not self.last_benchmarks:
+        if all(benchmark is None for benchmark in self.last_benchmarks):
             logger.info("Will not set new weights as the previous day's benchmarks have not been set, setting to all ones")
             equal_weights = True
 
