@@ -21,7 +21,7 @@ from base_validator import (
 )
 
 hotkey = os.getenv("VALIDATOR_HOTKEY_SS58_ADDRESS")
-debug = int(os.getenv("VALIDATOR_DEBUG", 0)) > 0
+debug = int(os.getenv("VALIDATOR_DEBUG") or 0) > 0
 
 if not hotkey:
     raise ValueError("Environment variable VALIDATOR_HOTKEY_SS58_ADDRESS was not specified")
