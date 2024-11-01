@@ -9,7 +9,7 @@ API_SERVICE_TEMPLATE = """
         dockerfile: ./validator/submission_tester/Dockerfile
 
       volumes:
-        - ~/edge-maxxing/baseline-sandbox:/baseline-sandbox
+        - ~/edge-maxxing/baseline-sandbox-{id}:/baseline-sandbox
         - ~/edge-maxxing/lfs-cache:/home/sandbox/.cache/lfs-cache
 
       ports:
