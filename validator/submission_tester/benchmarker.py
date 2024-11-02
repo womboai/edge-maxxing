@@ -116,16 +116,11 @@ class Benchmarker:
     def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         benchmark_future = self.benchmark_future
 
-        if not self.done and benchmark_future:
+        if benchmark_future:
             benchmark_future.cancel()
             self.cancelled_event.set()
-
             if not benchmark_future.cancelled():
                 benchmark_future.result()
-
-            self.submissions = submissions
-            self.benchmarks = {}
-            self.done = False
 
         self.benchmark_future = EXECUTOR.submit(self._start_benchmarking, submissions)
 
