@@ -496,7 +496,6 @@ class Validator:
         if self.attempted_set_weights:
             return
 
-        reuse_weights = False
         equal_weights = False
 
         if not self.contest_state:
@@ -511,39 +510,9 @@ class Validator:
                 logger.info("Will not set new weights as the previous day's benchmarks have not been set, setting to all ones")
                 equal_weights = True
 
-        if not self.baseline_metrics:
-            logger.info("Will not calculate weights as the baseline benchmarks have not been set, reusing old weights")
-            reuse_weights = True
-
-        if self.benchmarking:
-            logger.info("Not setting new weights as benchmarking is not done, reusing old weights")
-            reuse_weights = True
-
         if equal_weights:
             uids = list(range(len(self.metagraph.nodes)))
             weights = [1.0] * len(self.metagraph.nodes)
-
-            set_node_weights(
-                self.substrate,
-                self.keypair,
-                node_ids=list(uids),
-                node_weights=list(weights),
-                netuid=self.metagraph.netuid,
-                validator_node_id=self.uid,
-                version_key=WEIGHTS_VERSION,
-            )
-
-            return
-
-        if reuse_weights:
-            zipped_weights = get_weights_set_by_node(self.substrate, self.metagraph.netuid, self.uid, self.block)
-
-            if not zipped_weights:
-                return
-
-            uids = map(itemgetter(0), zipped_weights)
-            weights = map(itemgetter(1), zipped_weights)
-            weights = map(float, weights)
 
             set_node_weights(
                 self.substrate,
