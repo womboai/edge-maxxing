@@ -502,11 +502,11 @@ class Validator:
             logger.info("Will not set new weights as the contest state has not been set, setting to all ones")
             equal_weights = True
 
-        if not self.baseline_metrics:
+        elif not self.baseline_metrics:
             logger.info("Will not set new weights as the baseline benchmarks have not been set, setting to all ones")
             equal_weights = True
 
-        if all(benchmark is None for benchmark in self.last_benchmarks):
+        elif all(benchmark is None for benchmark in self.last_benchmarks):
             if any(benchmark is not None for benchmark in self.benchmarks):
                 logger.info("Setting weights to current benchmarks as the previous day's benchmarks have not been set")
                 self.last_benchmarks = self.benchmarks
