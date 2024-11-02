@@ -18,7 +18,7 @@ from base_validator import BenchmarkState, BenchmarkResults
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
-from fiber.chain.weights import set_node_weights, get_weights_set_by_node
+from fiber.chain.weights import set_node_weights
 from fiber.logging_utils import get_logger
 from substrateinterface import SubstrateInterface, Keypair
 from tqdm import tqdm
@@ -49,7 +49,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (4, 5, 4)
+VALIDATOR_VERSION: tuple[int, int, int] = (4, 5, 6)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -496,50 +496,27 @@ class Validator:
         if self.attempted_set_weights:
             return
 
-        reuse_weights = False
         equal_weights = False
 
         if not self.contest_state:
             logger.info("Will not set new weights as the contest state has not been set, setting to all ones")
             equal_weights = True
 
-        if all(benchmark is None for benchmark in self.last_benchmarks):
-            logger.info("Will not set new weights as the previous day's benchmarks have not been set, setting to all ones")
+        elif not self.baseline_metrics:
+            logger.info("Will not set new weights as the baseline benchmarks have not been set, setting to all ones")
             equal_weights = True
 
-        if not self.baseline_metrics:
-            logger.info("Will not calculate weights as the baseline benchmarks have not been set, reusing old weights")
-            reuse_weights = True
-
-        if self.benchmarking:
-            logger.info("Not setting new weights as benchmarking is not done, reusing old weights")
-            reuse_weights = True
+        elif all(benchmark is None for benchmark in self.last_benchmarks):
+            if any(benchmark is not None for benchmark in self.benchmarks):
+                logger.info("Setting weights to current benchmarks as the previous day's benchmarks have not been set")
+                self.last_benchmarks = self.benchmarks
+            else:
+                logger.info("Will not set new weights as the previous day's benchmarks have not been set, setting to all ones")
+                equal_weights = True
 
         if equal_weights:
             uids = list(range(len(self.metagraph.nodes)))
             weights = [1.0] * len(self.metagraph.nodes)
-
-            set_node_weights(
-                self.substrate,
-                self.keypair,
-                node_ids=list(uids),
-                node_weights=list(weights),
-                netuid=self.metagraph.netuid,
-                validator_node_id=self.uid,
-                version_key=WEIGHTS_VERSION,
-            )
-
-            return
-
-        if reuse_weights:
-            zipped_weights = get_weights_set_by_node(self.substrate, self.metagraph.netuid, self.uid, self.block)
-
-            if not zipped_weights:
-                return
-
-            uids = map(itemgetter(0), zipped_weights)
-            weights = map(itemgetter(1), zipped_weights)
-            weights = map(float, weights)
 
             set_node_weights(
                 self.substrate,
@@ -704,9 +681,6 @@ class Validator:
 
             await self.start_benchmarking(submissions)
 
-            self.benchmarks = self.clear_benchmarks()
-            self.invalid.clear()
-
             if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
                 # New contest, restart
                 self.contest = CURRENT_CONTEST
@@ -715,6 +689,9 @@ class Validator:
                 self.last_benchmarks = self.benchmarks
             else:
                 self.contest_state.miner_info = miner_info
+
+            self.benchmarks = self.clear_benchmarks()
+            self.invalid.clear()
 
             self.last_day = now.date()
 
