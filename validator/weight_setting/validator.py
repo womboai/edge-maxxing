@@ -49,7 +49,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (4, 5, 4)
+VALIDATOR_VERSION: tuple[int, int, int] = (4, 5, 6)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -504,8 +504,12 @@ class Validator:
             equal_weights = True
 
         if all(benchmark is None for benchmark in self.last_benchmarks):
-            logger.info("Will not set new weights as the previous day's benchmarks have not been set, setting to all ones")
-            equal_weights = True
+            if any(benchmark is not None for benchmark in self.benchmarks):
+                logger.info("Setting weights to current benchmarks as the previous day's benchmarks have not been set")
+                self.last_benchmarks = self.benchmarks
+            else:
+                logger.info("Will not set new weights as the previous day's benchmarks have not been set, setting to all ones")
+                equal_weights = True
 
         if not self.baseline_metrics:
             logger.info("Will not calculate weights as the baseline benchmarks have not been set, reusing old weights")
@@ -704,9 +708,6 @@ class Validator:
 
             await self.start_benchmarking(submissions)
 
-            self.benchmarks = self.clear_benchmarks()
-            self.invalid.clear()
-
             if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
                 # New contest, restart
                 self.contest = CURRENT_CONTEST
@@ -715,6 +716,9 @@ class Validator:
                 self.last_benchmarks = self.benchmarks
             else:
                 self.contest_state.miner_info = miner_info
+
+            self.benchmarks = self.clear_benchmarks()
+            self.invalid.clear()
 
             self.last_day = now.date()
 
