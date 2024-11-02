@@ -18,7 +18,7 @@ from base_validator import BenchmarkState, BenchmarkResults
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
-from fiber.chain.weights import set_node_weights, get_weights_set_by_node
+from fiber.chain.weights import set_node_weights
 from fiber.logging_utils import get_logger
 from substrateinterface import SubstrateInterface, Keypair
 from tqdm import tqdm
