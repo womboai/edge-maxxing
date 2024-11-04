@@ -25,7 +25,6 @@ from neuron import (
 from pipelines import TextToImageRequest
 
 logger = logging.getLogger(__name__)
-EXECUTOR = ThreadPoolExecutor(1)
 
 
 class Benchmarker:
@@ -41,6 +40,7 @@ class Benchmarker:
     lock: Lock
     benchmark_future: Future | None
     cancelled_event: Event
+    executor: ThreadPoolExecutor
 
     def __init__(self):
         self.submissions = {}
@@ -54,6 +54,7 @@ class Benchmarker:
         self.submission_times = []
         self.benchmark_future = None
         self.cancelled_event = Event()
+        self.executor = ThreadPoolExecutor(max_workers=1)
 
     def _benchmark_key(self, hotkey: Key):
         submission = self.submissions[hotkey]
@@ -91,7 +92,7 @@ class Benchmarker:
                 logger.info("Generating baseline samples to compare")
                 self.baseline = generate_baseline(self.inputs, cancelled_event=self.cancelled_event)
 
-            while len(self.benchmarks) != len(self.submissions):
+            while len(self.benchmarks) != len(self.submissions) and not self.cancelled_event.is_set():
                 hotkey = choice(list(self.submissions.keys() - self.benchmarks.keys()))
 
                 self._benchmark_key(hotkey)
@@ -116,13 +117,17 @@ class Benchmarker:
     def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         benchmark_future = self.benchmark_future
 
-        if benchmark_future:
+        if benchmark_future and not benchmark_future.done():
             benchmark_future.cancel()
             self.cancelled_event.set()
-            if not benchmark_future.cancelled():
-                benchmark_future.result()
+            try:
+                benchmark_future.result(timeout=60)
+            except (CancelledError, TimeoutError):
+                logger.warning("Benchmarking was not stopped gracefully. Forcing shutdown.")
+                self.executor.shutdown(wait=False)
+                self.executor = ThreadPoolExecutor(max_workers=1)
 
-        self.benchmark_future = EXECUTOR.submit(self._start_benchmarking, submissions)
+        self.benchmark_future = self.executor.submit(self._start_benchmarking, submissions)
 
     def get_baseline_metrics(self) -> MetricData | None:
         return self.baseline.metric_data if self.baseline else None
