@@ -1,6 +1,6 @@
 import logging
 import os
-from concurrent.futures import ThreadPoolExecutor, CancelledError
+from concurrent.futures import CancelledError
 from pathlib import Path
 from statistics import mean
 from threading import Event
@@ -22,8 +22,6 @@ SANDBOX_DIRECTORY = Path("/sandbox")
 BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
 DEFAULT_LOAD_TIMEOUT = 500
 MIN_LOAD_TIMEOUT = 240
-
-EXECUTOR = ThreadPoolExecutor(max_workers=2)
 
 debug = int(os.getenv("VALIDATOR_DEBUG") or 0) > 0
 logger = logging.getLogger(__name__)
