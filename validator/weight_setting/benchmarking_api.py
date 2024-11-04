@@ -141,7 +141,7 @@ class BenchmarkingApiContextManager:
         if version != API_VERSION:
             raise InvalidAPIException(
                 f"Validator {name} has mismatched version, received {version} but expected {API_VERSION}"
-            )
+            ) from None
 
         return websocket
 

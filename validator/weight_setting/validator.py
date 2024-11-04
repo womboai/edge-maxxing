@@ -49,7 +49,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (4, 5, 8)
+VALIDATOR_VERSION: tuple[int, int, int] = (4, 5, 9)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -311,25 +311,6 @@ class Validator:
             nargs="*",
             help="The API route to the validator benchmarking API.",
             required=True,
-        )
-
-        argument_parser.add_argument(
-            "--blacklist.coldkeys",
-            type=str,
-            nargs="*",
-            default=[
-                "5CCefwu4fFXkBorK4ETJpaijXTG3LD5J2kBb7U5aEP4eABny",
-                "5GWCF5UR9nhbEXdWifRL8xiMTUJ4XV4o23L7stbptaDRHMDr",
-                "5DhxiGN4MfzTbyBh7gE3ABvvp5ZavZm97RWYeJMbKjMLCg3q",
-                "5HQc3J7DoFAo54Luhh39TFmnvKQcXGfW2btQiG8VzJyUc1fj",
-            ],
-        )
-
-        argument_parser.add_argument(
-            "--blacklist.hotkeys",
-            type=str,
-            nargs="*",
-            default=[],
         )
 
         add_wandb_args(argument_parser)

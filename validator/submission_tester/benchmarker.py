@@ -40,7 +40,7 @@ class Benchmarker:
     lock: Lock
     benchmark_future: Future | None
     cancelled_event: Event
-    executor: ThreadPoolExecutor
+    executor: ThreadPoolExecutor | None
 
     def __init__(self):
         self.submissions = {}
@@ -54,9 +54,9 @@ class Benchmarker:
         self.submission_times = []
         self.benchmark_future = None
         self.cancelled_event = Event()
-        self.executor = ThreadPoolExecutor(max_workers=1)
+        self.executor = None
 
-    def _benchmark_key(self, hotkey: Key):
+    def _benchmark_submission(self, hotkey: Key):
         submission = self.submissions[hotkey]
 
         start_time = perf_counter()
@@ -67,12 +67,14 @@ class Benchmarker:
                 inputs=self.inputs,
                 baseline=self.baseline,
                 load_timeout=int(cast(MetricData, self.get_baseline_metrics()).load_time * 2),
+                cancelled_event=self.cancelled_event,
             )
         except InvalidSubmissionError as e:
             logger.error(f"Skipping invalid submission '{submission}': '{e}'")
             self.benchmarks[hotkey] = None
             self.invalid[hotkey] = str(e)
-        except (CancelledError, TimeoutError):
+        except CancelledError:
+            logger.warning(f"Benchmarking was canceled while testing '{submission}'")
             raise
         except:
             traceback.print_exc()
@@ -91,42 +93,51 @@ class Benchmarker:
             if not self.baseline or self.baseline.inputs != self.inputs:
                 logger.info("Generating baseline samples to compare")
                 self.baseline = generate_baseline(self.inputs, cancelled_event=self.cancelled_event)
-
-            while len(self.benchmarks) != len(self.submissions) and not self.cancelled_event.is_set():
-                hotkey = choice(list(self.submissions.keys() - self.benchmarks.keys()))
-
-                self._benchmark_key(hotkey)
-
-                valid_submissions = len([benchmark for benchmark in self.benchmarks.values() if benchmark])
-                logger.info(f"{len(self.benchmarks)}/{len(self.submissions)} submissions benchmarked. {valid_submissions} valid.")
-
-                if self.submission_times:
-                    average_time = sum(self.submission_times) / len(self.submission_times)
-                    eta = int(average_time * (len(self.submissions) - len(self.benchmarks)))
-                    if eta > 0:
-                        time_left = timedelta(seconds=eta)
-                        eta_date = datetime.now(tz=TIMEZONE) + time_left
-                        eta_time = eta_date.strftime("%Y-%m-%d %I:%M:%S %p")
-
-                        logger.info(f"ETA: {eta_time} PST. Time remaining: {time_left}")
         except CancelledError:
+            logger.warning("Benchmarking was canceled while testing the baseline")
             return
+
+        while len(self.benchmarks) != len(self.submissions) and not self.cancelled_event.is_set():
+            hotkey = choice(list(self.submissions.keys() - self.benchmarks.keys()))
+
+            try:
+                self._benchmark_submission(hotkey)
+            except CancelledError:
+                return
+
+            valid_submissions = len([benchmark for benchmark in self.benchmarks.values() if benchmark])
+            logger.info(f"{len(self.benchmarks)}/{len(self.submissions)} submissions benchmarked. {valid_submissions} valid.")
+
+            if self.submission_times:
+                average_time = sum(self.submission_times) / len(self.submission_times)
+                eta = int(average_time * (len(self.submissions) - len(self.benchmarks)))
+                if eta > 0:
+                    time_left = timedelta(seconds=eta)
+                    eta_date = datetime.now(tz=TIMEZONE) + time_left
+                    eta_time = eta_date.strftime("%Y-%m-%d %I:%M:%S %p")
+
+                    logger.info(f"ETA: {eta_time} PST. Time remaining: {time_left}")
 
         self.done = True
 
     def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         benchmark_future = self.benchmark_future
 
+        logger.info(f"Starting benchmarking for {len(submissions)} submissions")
         if benchmark_future and not benchmark_future.done():
+            logger.info("Attempting to cancel previous benchmarking")
             benchmark_future.cancel()
             self.cancelled_event.set()
             try:
                 benchmark_future.result(timeout=60)
             except (CancelledError, TimeoutError):
                 logger.warning("Benchmarking was not stopped gracefully. Forcing shutdown.")
-                self.executor.shutdown(wait=False)
-                self.executor = ThreadPoolExecutor(max_workers=1)
 
+        if self.executor:
+            self.executor.shutdown(wait=False, cancel_futures=True)
+        self.executor = ThreadPoolExecutor(max_workers=1)
+
+        self.cancelled_event.clear()
         self.benchmark_future = self.executor.submit(self._start_benchmarking, submissions)
 
     def get_baseline_metrics(self) -> MetricData | None:
