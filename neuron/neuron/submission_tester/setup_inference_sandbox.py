@@ -1,4 +1,3 @@
-import json
 import sys
 from logging import getLogger
 from os.path import abspath
@@ -8,15 +7,15 @@ from time import perf_counter
 from ..checkpoint import SPEC_VERSION
 import shutil
 import toml
+import os
 
 DEPENDENCY_BLACKLIST = abspath(Path(__file__).parent / "dependency_blacklist.txt")
 
 CLEAR_CACHE_SCRIPT = abspath(Path(__file__).parent / "clear_cache.sh")
 CLONE_SCRIPT = abspath(Path(__file__).parent / "clone.sh")
 BLACKLIST_SCRIPT = abspath(Path(__file__).parent / "blacklist.sh")
-LFS_PULL_SCRIPT = abspath(Path(__file__).parent / "lfs_pull.sh")
 DEPENDENCY_INSTALL_SCRIPT = abspath(Path(__file__).parent / "dependency_install.sh")
-CACHE_SCRIPT = abspath(Path(__file__).parent / "cache.sh")
+DOWNLOAD_HUGGINGFACE_MODEL = abspath(Path(__file__).parent / "download_huggingface_model.sh")
 NETWORK_JAIL = abspath(Path(__file__).parent / "libnetwork_jail.so")
 
 STORAGE_THRESHOLD_GB = 50
@@ -25,6 +24,7 @@ with open(DEPENDENCY_BLACKLIST, 'r') as blacklist_file:
     BLACKLISTED_DEPENDENCIES = " ".join(blacklist_file.read().splitlines())
 
 logger = getLogger(__name__)
+debug = int(os.getenv("VALIDATOR_DEBUG") or 0) > 0
 
 
 class InvalidSubmissionError(Exception):
@@ -40,7 +40,9 @@ def _run(script: str, sandbox_args: list[str], sandbox_directory: Path, args: li
                 script,
                 *args,
             ],
-            capture_output=True,
+            capture_output=not debug,
+            stdout=sys.stdout if debug else None,
+            stderr=sys.stderr if debug else None,
             encoding='utf-8',
             cwd=sandbox_directory.absolute(),
         )
@@ -48,44 +50,14 @@ def _run(script: str, sandbox_args: list[str], sandbox_directory: Path, args: li
     except CalledProcessError as e:
         raise InvalidSubmissionError(error_message) from e
     finally:
-        if process:
+        if process and not debug:
             if process.stdout.strip():
                 print(process.stdout)
             if process.stderr.strip():
                 print(process.stderr, file=sys.stderr)
 
 
-def is_cached(sandbox_directory: Path, url: str, revision: str) -> bool:
-    cache_file = sandbox_directory / "cache_info.json"
-    if not cache_file.exists():
-        return False
-
-    with open(cache_file, 'r') as file:
-        cache_info = json.load(file)
-        return cache_info["repository"] == url and cache_info["revision"] == revision
-
-
-def get_submission_size(sandbox_directory: Path) -> int:
-    return sum(
-        file.stat().st_size for file in sandbox_directory.rglob("*")
-        if ".git" not in file.parts and ".venv" not in file.parts
-    )
-
-
-def get_submission_version(sandbox_directory: Path) -> int | None:
-    try:
-        with open(sandbox_directory / "pyproject.toml", 'r') as file:
-            pyproject = toml.load(file)
-            return int(pyproject["project"]["version"])
-    except:
-        return None
-
-
-def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bool, url: str, revision: str) -> int:
-    if is_cached(sandbox_directory, url, revision):
-        logger.info(f"Using cached repository")
-        return get_submission_size(sandbox_directory)
-
+def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, home: Path, baseline: bool, url: str, revision: str) -> int:
     free_space = shutil.disk_usage("/").free
     if free_space < STORAGE_THRESHOLD_GB * 1024 ** 3:
         logger.info(f"Running low on disk space: {free_space / 1024 ** 3:.2f} GB remaining. Clearing caches...")
@@ -110,7 +82,14 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
     )
     logger.info(f"Cloned repository '{url}' in {perf_counter() - start:.2f} seconds")
 
-    version = get_submission_version(sandbox_directory)
+    try:
+        with open(sandbox_directory / "pyproject.toml", 'r') as file:
+            pyproject = toml.load(file)
+            version = int(pyproject["project"]["version"])
+            model = pyproject["tool"]["edge-maxxing"]["model"]
+    except Exception as e:
+        raise InvalidSubmissionError("Failed to read submission info") from e
+
     if version != SPEC_VERSION:
         raise InvalidSubmissionError(f"Submission is at version {version} while expected version is {SPEC_VERSION}")
 
@@ -127,17 +106,6 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
         logger.info(f"Found no blacklisted dependencies after {perf_counter() - start:.2f} seconds")
 
     start = perf_counter()
-    logger.info(f"Pulling LFS files...")
-    _run(
-        LFS_PULL_SCRIPT,
-        sandbox_args,
-        sandbox_directory,
-        [],
-        "Failed to pull LFS files"
-    )
-    logger.info(f"Pulled LFS files in {perf_counter() - start:.2f} seconds")
-
-    start = perf_counter()
     logger.info(f"Installing dependencies...")
     _run(
         DEPENDENCY_INSTALL_SCRIPT,
@@ -148,12 +116,19 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
     )
     logger.info(f"Installed dependencies in {perf_counter() - start:.2f} seconds")
 
+    start = perf_counter()
+    logger.info(f"Downloading Hugging Face model...")
     _run(
-        CACHE_SCRIPT,
+        DOWNLOAD_HUGGINGFACE_MODEL,
         sandbox_args,
         sandbox_directory,
-        [url, revision],
-        "Failed to create cache file"
+        [model],
+        "Failed to download Hugging Face model"
     )
 
-    return get_submission_size(sandbox_directory)
+    logger.info(f"Downloaded Hugging Face model in {perf_counter() - start:.2f} seconds")
+
+    return sum(
+        file.stat().st_size for file in sandbox_directory.rglob("*")
+        if ".git" not in file.parts and ".venv" not in file.parts
+    )

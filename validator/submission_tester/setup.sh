@@ -3,13 +3,10 @@
 set -e
 
 useradd --shell=/bin/false --create-home --home-dir /home/sandbox sandbox || true
-useradd --shell=/bin/false --create-home --home-dir /home/baseline-sandbox baseline-sandbox || true
 
-mkdir /sandbox || true
-mkdir /baseline-sandbox || true
+mkdir -p /sandbox
 
 chown sandbox:sandbox /sandbox
-chown baseline-sandbox:baseline-sandbox /baseline-sandbox
 
 useradd --create-home --home-dir /home/api api || true
 
@@ -22,24 +19,12 @@ sudo -u api pipx install poetry
 sudo -u api pipx ensurepath
 
 sudo -u sandbox pipx install uv
+sudo -u sandbox pipx install huggingface-hub[cli]
 sudo -u sandbox pipx ensurepath
-
-sudo -u baseline-sandbox pipx install uv
-sudo -u baseline-sandbox pipx ensurepath
 
 su - api -c "cd /api/validator && poetry install"
 
 echo "api ALL = (sandbox) NOPASSWD: ALL" >> /etc/sudoers
-echo "api ALL = (baseline-sandbox) NOPASSWD: ALL" >> /etc/sudoers
 echo "Defaults env_keep += \"VALIDATOR_HOTKEY_SS58_ADDRESS VALIDATOR_DEBUG\"" >> /etc/sudoers
 
-git config --system lfs.concurrenttransfers 64
 git config --system advice.detachedHead false
-git config --global init.defaultBranch main
-
-sudo -u baseline-sandbox git lfs install
-sudo -u sandbox git lfs install
-
-CACHE_DIR="/home/sandbox/.cache/lfs-cache"
-sudo -u sandbox mkdir -p "$CACHE_DIR"
-sudo -u sandbox git config --global lfs.storage "$CACHE_DIR"

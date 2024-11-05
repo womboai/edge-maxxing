@@ -19,7 +19,6 @@ from .. import (
 )
 
 SANDBOX_DIRECTORY = Path("/sandbox")
-BASELINE_SANDBOX_DIRECTORY = Path("/baseline-sandbox")
 DEFAULT_LOAD_TIMEOUT = 500
 MIN_LOAD_TIMEOUT = 240
 
@@ -52,7 +51,7 @@ def generate(
 
 def generate_baseline(
     inputs: list[TextToImageRequest],
-    sandbox_directory: Path = BASELINE_SANDBOX_DIRECTORY,
+    sandbox_directory: Path = SANDBOX_DIRECTORY,
     switch_user: bool = True,
     cancelled_event: Event | None = None,
 ) -> BaselineBenchmark:
