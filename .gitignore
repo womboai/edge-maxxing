@@ -163,4 +163,5 @@ cython_debug/
 huggingface/
 pip/
 miner/model/
+miner/baseline_cache.json
 validator/compose.yaml

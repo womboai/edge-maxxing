@@ -11,7 +11,7 @@ COPY pipelines/pyproject.toml pipelines/
 COPY pipelines/pipelines/__init__.py pipelines/pipelines/
 
 COPY validator/pyproject.toml validator/
-COPY validator/poetry.toml validator/
+COPY validator/uv.lock validator/
 
 COPY validator/base_validator/__init__.py validator/base_validator/
 COPY validator/submission_tester/__init__.py validator/submission_tester/

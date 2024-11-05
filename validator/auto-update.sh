@@ -2,17 +2,16 @@
 
 PM2_PROCESS_NAME=$1
 
-while true; do
-  sleep 1800
+DIRECTORY=$(dirname $(realpath $0))
 
-  VERSION=$(git rev-parse HEAD)
+cd $DIRECTORY
 
-  git pull --rebase --autostash
+VERSION=$(git rev-parse HEAD)
 
-  NEW_VERSION=$(git rev-parse HEAD)
+git pull --rebase --autostash
 
-  if [ $VERSION != $NEW_VERSION ]; then
-    poetry install
-    pm2 restart $PM2_PROCESS_NAME
-  fi
-done
+NEW_VERSION=$(git rev-parse HEAD)
+
+if [ $VERSION != $NEW_VERSION ]; then
+  pm2 restart $PM2_PROCESS_NAME
+fi

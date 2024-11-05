@@ -96,9 +96,9 @@ Validators receive rewards for their consistent operation and accurate scoring.
 
 ## Running Miners and Validators
 
-To start working with a registered hotkey, clone the repository and install poetry
+To start working with a registered hotkey, clone the repository and install uv
 ```bash
-# Poetry
+# uv
 if [ "$USER" = "root" ]; then
   apt install pipx
 else
@@ -106,14 +106,14 @@ else
 fi
 
 pipx ensurepath
-pipx install poetry
+pipx install uv
 
 # Repository
 git clone https://github.com/womboai/edge-maxxing
 cd edge-maxxing
 ```
 
-There is no need to manage venvs in any way, as poetry will handle that.
+There is no need to manage venvs in any way, as uv will handle that.
 
 ### Miner setup
 1. Clone the [base inference repository](https://github.com/womboai/sdxl-newdream-20-inference)
@@ -122,14 +122,10 @@ There is no need to manage venvs in any way, as poetry will handle that.
 ```
 2. Make your own repository on a git provider such as `GitHub` or `HuggingFace` to optimize in
 3. Edit the `src/pipeline.py` file to include any loading or inference optimizations, and save any changed models in `models` (use git submodules for referencing huggingface models or other git provider repositories) and commit
-4. After creating and optimizing your repository, run:
+4. After creating and optimizing your repository, submit the model, changing the options as necessary
 ```bash
 cd miner
-poetry install
-```
-5. Submit the model, changing the options as necessary
-```bash
-poetry run submit_model \
+uv run submit_model \
     --netuid {netuid} \
     --subtensor.network finney \
     --wallet.name {wallet} \
@@ -137,13 +133,13 @@ poetry run submit_model \
     --logging.trace \
     --logging.debug
 ```
-6. Follow the interactive prompts to submit the repository link, revision, and contest to participate in
-7. Optionally, benchmark your submission locally before submitting (make sure you have the right hardware e.g. NVIDIA GeForce RTX 4090). uv is required for benchmarking:
+5. Follow the interactive prompts to submit the repository link, revision, and contest to participate in
+6. Optionally, benchmark your submission locally before submitting (make sure you have the right hardware e.g. NVIDIA GeForce RTX 4090). uv is required for benchmarking:
 ```bash
 pipx ensurepath
 pipx install uv
 ```
-8. Validators will collect your submission on 12PM New York time and test it in the remainder of the day
+7. Validators will collect your submission on 12PM New York time and test it in the remainder of the day
 
 ### Validator setup
 The validator setup requires two components, an API container and a scoring validator
@@ -194,7 +190,7 @@ And then run as follows:
 
     export VALIDATOR_HOTKEY_SS58_ADDRESS={ss58-address}
 
-    pm2 start poetry --name edge-maxxing-submission-tester --interpreter none -- \
+    pm2 start uv --name edge-maxxing-submission-tester --interpreter none -- \
       run uvicorn \
       --host 0.0.0.0 \
       --port 8000 \
@@ -202,9 +198,9 @@ And then run as follows:
 ```
 Make sure port 8000(or whichever you set) is exposed!
 
-If you want this to auto-update(which is recommended), start another pm2 process using `auto-update.sh` like the following:
+To setup auto-updating, simply run
 ```bash
-    pm2 start auto-update.sh --name edge-validator-updater --interpreter bash -- edge-maxxing-submission-tester
+./initialize-auto-update.sh edge-maxxing-submission-tester
 ```
 
 The argument at the end is the name of the main PM2 process. This will keep your PM2 validator instance up to date as long as it is running.
@@ -216,10 +212,7 @@ You can set which CUDA devices or ports to use along with that.
 In the another pod/container without a GPU, to run the scoring validator, clone the repository as per the common instructions, then do as follows
 ```bash
     cd validator
-
-    poetry install
-
-    pm2 start poetry --name edge-validator --interpreter none -- \
+    pm2 start uv --name edge-maxxing-validator --interpreter none -- \
         run start_validator \
         --netuid {netuid} \
         --subtensor.network {network} \
@@ -234,7 +227,7 @@ Make sure to replace the API component route with the routes to the API containe
 
 Additionally, the auto-updating script can be used here
 ```bash
-    pm2 start auto-update.sh --name edge-validator-updater --interpreter bash -- edge-validator
+./initialize-auto-update.sh edge-maxxing-validator
 ```
 
 ## Proposals for Optimizations
