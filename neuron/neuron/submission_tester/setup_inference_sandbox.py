@@ -8,6 +8,7 @@ from ..checkpoint import SPEC_VERSION
 import shutil
 import toml
 import os
+from huggingface_hub import HfApi
 
 DEPENDENCY_BLACKLIST = abspath(Path(__file__).parent / "dependency_blacklist.txt")
 
@@ -18,11 +19,13 @@ DOWNLOAD_HUGGINGFACE_MODELS = abspath(Path(__file__).parent / "download_huggingf
 NETWORK_JAIL = abspath(Path(__file__).parent / "libnetwork_jail.so")
 
 STORAGE_THRESHOLD_GB = 50
+MAX_HF_MODEL_SIZE_GB = 50
 
 with open(DEPENDENCY_BLACKLIST, 'r') as blacklist_file:
     BLACKLISTED_DEPENDENCIES = " ".join(blacklist_file.read().splitlines())
 
 logger = getLogger(__name__)
+hf_api = HfApi()
 debug = int(os.getenv("VALIDATOR_DEBUG") or 0) > 0
 
 
@@ -56,7 +59,7 @@ def _run(script: str, sandbox_args: list[str], sandbox_directory: Path, args: li
                 print(process.stderr, file=sys.stderr)
 
 
-def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, home: Path, baseline: bool, url: str, revision: str) -> int:
+def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bool, url: str, revision: str) -> int:
     free_space = shutil.disk_usage("/").free
     if free_space < STORAGE_THRESHOLD_GB * 1024 ** 3:
         logger.info(f"Running low on disk space: {free_space / 1024 ** 3:.2f} GB remaining. Clearing caches...")
@@ -106,6 +109,18 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, home: Path, 
 
     start = perf_counter()
     logger.info(f"Downloading Hugging Face models...")
+    try:
+        total_model_size = 0
+        for model in models:
+            model_info = hf_api.model_info(repo_id=model, files_metadata=True)
+            for sibling in model_info.siblings:
+                total_model_size += sibling.size
+    except Exception as e:
+        raise InvalidSubmissionError("Failed to get model info") from e
+
+    if total_model_size > MAX_HF_MODEL_SIZE_GB * 1024 ** 3:
+        raise InvalidSubmissionError(f"Size of all Hugging Face models exceeds {MAX_HF_MODEL_SIZE_GB} GB")
+
     _run(
         DOWNLOAD_HUGGINGFACE_MODELS,
         sandbox_args,
@@ -113,10 +128,9 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, home: Path, 
         [" ".join(models)],
         "Failed to download Hugging Face models"
     )
-
     logger.info(f"Downloaded Hugging Face model in {perf_counter() - start:.2f} seconds")
 
     return sum(
         file.stat().st_size for file in sandbox_directory.rglob("*")
         if ".git" not in file.parts and ".venv" not in file.parts
-    )
+    ) + total_model_size
