@@ -2,6 +2,9 @@
 
 set -e
 
-MODEL=$1
+MODELS=$1
 
-~/.local/bin/huggingface-cli download $MODEL
+for model in $MODELS
+do
+    ~/.local/bin/huggingface-cli download "$model"
+done

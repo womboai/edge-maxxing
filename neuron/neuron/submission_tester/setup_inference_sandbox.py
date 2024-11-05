@@ -86,7 +86,7 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, home: Path, 
         with open(sandbox_directory / "pyproject.toml", 'r') as file:
             pyproject = toml.load(file)
             version = int(pyproject["project"]["version"])
-            model = pyproject["tool"]["edge-maxxing"]["model"]
+            models = pyproject["tool"]["edge-maxxing"]["models"]
     except Exception as e:
         raise InvalidSubmissionError("Failed to read submission info") from e
 
@@ -122,7 +122,7 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, home: Path, 
         DOWNLOAD_HUGGINGFACE_MODEL,
         sandbox_args,
         sandbox_directory,
-        [model],
+        [" ".join(models)],
         "Failed to download Hugging Face model"
     )
 

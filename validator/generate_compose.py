@@ -4,6 +4,8 @@ BASE_PORT = 8000
 
 API_SERVICE_TEMPLATE = """
   api-{id}:
+      restart: unless-stopped
+      
       build:
         context: ../
         dockerfile: ./validator/submission_tester/Dockerfile
@@ -29,6 +31,8 @@ API_SERVICE_TEMPLATE = """
 
 VALIDATOR_SERVICE_TEMPLATE = """
   validator:
+      restart: unless-stopped
+      
       build:
         context: ../
         dockerfile: ./validator/weight_setting/Dockerfile
