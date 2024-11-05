@@ -1,56 +1,37 @@
-[tool.poetry]
-name = "edge-maxxing-validator"
-
-version = "1.0.0"
-
-description = "The validator which checks models and checkpoints provided by miners"
-
-readme = "../README.md"
-
-license = "MIT"
-
-authors = ["WOMBO <hello@w.ai>"]
-
-packages = [
-    { include = "base_validator" },
-    { include = "submission_tester" },
-    { include = "weight_setting" },
-]
-
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "Topic :: Software Development :: Build Tools",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3 :: Only",
-    "Topic :: Scientific/Engineering",
-    "Topic :: Scientific/Engineering :: Mathematics",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-]
-
-[tool.poetry.dependencies]
-python = ">=3.10,<3.13"
-wandb = "0.18.1"
-websockets = "13.1"
-aiohttp = "3.10.6"
-safetensors = "0.4.5"
-edge-maxxing-neuron = { path = "../neuron", develop = true }
-
-[tool.poetry.scripts]
-start_validator = 'weight_setting.validator:main'
-
-[tool.poetry.dev-dependencies]
-pytype = "2024.10.11"
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
 
-[tool.poetry-monorepo.deps]
+[project]
+name = "edge-maxxing-validator"
+description = "The validator which checks models and checkpoints provided by miners"
+requires-python = ">=3.10,<3.13"
+version = "1.0.0"
+dependencies = [
+    "wandb==0.18.1",
+    "websockets==13.1",
+    "aiohttp==3.10.6",
+    "safetensors==0.4.5",
+    "edge-maxxing-neuron==1.0.0"
+]
+
+[tool.uv.sources]
+edge-maxxing-neuron = { path = "../neuron", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytype==2024.10.11"
+]
 
 [tool.pytype]
 inputs = ["base_validator", "submission_tester", "weight_setting"]
+
+[project.scripts]
+start_validator = 'weight_setting.validator:main'
+
+[tool.setuptools]
+packages = [
+    "base_validator",
+    "submission_tester",
+    "weight_setting"
+]

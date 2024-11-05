@@ -39,7 +39,7 @@ VALID_REPO_REGEX = r'^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$'
 VALID_REVISION_REGEX = r"^[a-f0-9]{7}$"
 
 MODEL_DIRECTORY = Path("model")
-BASELINE_CACHE_JSON = BASELINE_MODEL_DIRECTORY / "baseline_cache.json"
+BASELINE_CACHE_JSON = Path("baseline_cache.json")
 
 logging.basicConfig(
     level=logging.DEBUG,

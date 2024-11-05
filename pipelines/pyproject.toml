@@ -1,48 +1,20 @@
-[tool.poetry]
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
 name = "edge-maxxing-pipelines"
-
-version = "1.0.0"
-
 description = "Holder for models & constants to be accessed by multiple repositories"
-
-readme = "../README.md"
-
-license = "MIT"
-
-authors = ["WOMBO <hello@w.ai>"]
-
-packages = [{ include = "pipelines" }]
-
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "Topic :: Software Development :: Build Tools",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3 :: Only",
-    "Topic :: Scientific/Engineering",
-    "Topic :: Scientific/Engineering :: Mathematics",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Topic :: Software Development",
-    "Topic :: Software Development :: Libraries",
-    "Topic :: Software Development :: Libraries :: Python Modules",
+requires-python = ">=3.10,<3.13"
+version = "1.0.0"
+dependencies = [
+    "pydantic>=2"
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.13"
-pydantic = ">=2"
-
-[tool.poetry.dev-dependencies]
-pytype = "2024.10.11"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry-monorepo.deps]
+[tool.uv]
+dev-dependencies = [
+    "pytype==2024.10.11",
+]
 
 [tool.pytype]
 inputs = ["pipelines"]

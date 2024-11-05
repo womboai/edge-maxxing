@@ -8,7 +8,7 @@ WORKDIR /app
 
 USER validator
 
-RUN pipx install poetry
+RUN pipx install uv
 
 COPY README.md .
 COPY neuron/pyproject.toml neuron/
@@ -17,8 +17,7 @@ COPY pipelines/pyproject.toml pipelines/
 COPY pipelines/pipelines/__init__.py pipelines/pipelines/
 
 COPY validator/pyproject.toml validator/
-COPY validator/poetry.toml validator/
-COPY validator/poetry.lock validator/
+COPY validator/uv.lock validator/
 
 COPY validator/base_validator/__init__.py validator/base_validator/
 COPY validator/submission_tester/__init__.py validator/submission_tester/
@@ -30,8 +29,6 @@ USER validator
 
 WORKDIR /app/validator
 ENV PATH="/home/validator/.local/bin:$PATH"
-
-RUN poetry install
 
 COPY validator/base_validator base_validator
 COPY validator/weight_setting weight_setting

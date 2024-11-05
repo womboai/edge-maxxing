@@ -1,48 +1,26 @@
-[tool.poetry]
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
 name = "edge-maxxing-miner"
-
-version = "1.0.0"
-
 description = "The miner which provides optimized models and checkpoints"
-
-readme = "../README.md"
-
-license = "MIT"
-
-authors = ["WOMBO <hello@w.ai>"]
-
-packages = [{ include = "miner" }]
-
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "Topic :: Software Development :: Build Tools",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3 :: Only",
-    "Topic :: Scientific/Engineering",
-    "Topic :: Scientific/Engineering :: Mathematics",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+requires-python = ">=3.10,<3.13"
+version = "1.0.0"
+dependencies = [
+    "edge-maxxing-neuron==1.0.0"
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.13"
-edge-maxxing-neuron = { path = "../neuron", develop = true }
+[tool.uv.sources]
+edge-maxxing-neuron = { path = "../neuron", editable = true }
 
-[tool.poetry.scripts]
-submit_model = 'miner.submit:main'
-
-[tool.poetry.dev-dependencies]
-pytype = "2024.10.11"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry-monorepo.deps]
+[dependency-groups]
+dev = [
+    "pytype==2024.10.11"
+]
 
 [tool.pytype]
 inputs = ["miner"]
+
+[project.scripts]
+submit_model = 'miner.submit:main'
