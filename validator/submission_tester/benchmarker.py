@@ -1,12 +1,18 @@
 import logging
 import traceback
-from concurrent.futures import Future, CancelledError, ThreadPoolExecutor
+from concurrent.futures import CancelledError
 from datetime import timedelta, datetime
 from random import choice
-from threading import Lock, Event
+from threading import Lock, Event, Thread
 from time import perf_counter
 from typing import cast
 
+from neuron import (
+    Key,
+    ModelRepositoryInfo,
+    TIMEZONE,
+    random_inputs,
+)
 from neuron.submission_tester import (
     CheckpointBenchmark,
     BaselineBenchmark,
@@ -14,13 +20,6 @@ from neuron.submission_tester import (
     compare_checkpoints,
     generate_baseline,
     InvalidSubmissionError,
-)
-
-from neuron import (
-    Key,
-    ModelRepositoryInfo,
-    TIMEZONE,
-    random_inputs,
 )
 from pipelines import TextToImageRequest
 
@@ -37,10 +36,9 @@ class Benchmarker:
     done: bool
     start_timestamp: int
     submission_times: list[float]
+    thread: Thread | None
     lock: Lock
-    benchmark_future: Future | None
     cancelled_event: Event
-    executor: ThreadPoolExecutor | None
 
     def __init__(self):
         self.submissions = {}
@@ -50,11 +48,10 @@ class Benchmarker:
         self.inputs = []
         self.done = False
         self.start_timestamp = 0
+        self.thread = None
         self.lock = Lock()
         self.submission_times = []
-        self.benchmark_future = None
         self.cancelled_event = Event()
-        self.executor = None
 
     def _benchmark_submission(self, hotkey: Key):
         submission = self.submissions[hotkey]
@@ -99,11 +96,7 @@ class Benchmarker:
 
         while len(self.benchmarks) != len(self.submissions) and not self.cancelled_event.is_set():
             hotkey = choice(list(self.submissions.keys() - self.benchmarks.keys()))
-
-            try:
-                self._benchmark_submission(hotkey)
-            except CancelledError:
-                return
+            self._benchmark_submission(hotkey)
 
             valid_submissions = len([benchmark for benchmark in self.benchmarks.values() if benchmark])
             logger.info(f"{len(self.benchmarks)}/{len(self.submissions)} submissions benchmarked. {valid_submissions} valid.")
@@ -121,24 +114,23 @@ class Benchmarker:
         self.done = True
 
     def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
-        benchmark_future = self.benchmark_future
-
         logger.info(f"Starting benchmarking for {len(submissions)} submissions")
-        if benchmark_future and not benchmark_future.done():
-            logger.info("Attempting to cancel previous benchmarking")
-            benchmark_future.cancel()
-            self.cancelled_event.set()
-            try:
-                benchmark_future.result(timeout=60)
-            except (CancelledError, TimeoutError):
-                logger.warning("Benchmarking was not stopped gracefully. Forcing shutdown.")
 
-        if self.executor:
-            self.executor.shutdown(wait=False, cancel_futures=True)
-        self.executor = ThreadPoolExecutor(max_workers=1)
+        if self.thread and self.thread.is_alive():
+            logger.info("Attempting to cancel previous benchmarking")
+            self.cancelled_event.set()
+            self.thread.join(timeout=60)
+            if self.thread.is_alive():
+                logger.warning("Benchmarking was not stopped gracefully.")
+            else:
+                logger.info("Benchmarking was stopped gracefully.")
 
         self.cancelled_event.clear()
-        self.benchmark_future = self.executor.submit(self._start_benchmarking, submissions)
+        self.thread = Thread(
+            target=self._start_benchmarking,
+            args=(submissions,),
+        )
+        self.thread.start()
 
     def get_baseline_metrics(self) -> MetricData | None:
         return self.baseline.metric_data if self.baseline else None

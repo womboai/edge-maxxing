@@ -138,6 +138,8 @@ def compare_checkpoints(
                 )
 
                 outputs.append(output)
+        except (CancelledError, TimeoutError):
+            raise
         except Exception as e:
             raise InvalidSubmissionError(f"Failed to run inference") from e
 
