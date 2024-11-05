@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools >= 61.0"]
+requires = ["setuptools >= 75.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,3 +7,10 @@ name = "edge-maxxing"
 description = "A Bittensor subnet designed to incentivice optimization of checkpoints and models"
 requires-python = ">=3.10,<3.13"
 version = "1.0.0"
+
+[tool.setuptools]
+packages = [
+    "neuron",
+    "validator",
+    "miner"
+]

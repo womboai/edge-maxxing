@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools >= 61.0"]
+requires = ["setuptools >= 75.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -24,3 +24,8 @@ inputs = ["miner"]
 
 [project.scripts]
 submit_model = 'miner.submit:main'
+
+[tool.setuptools]
+packages = [
+    "miner",
+]

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools >= 61.0"]
+requires = ["setuptools >= 75.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,9 +8,9 @@ description = "The validator which checks models and checkpoints provided by min
 requires-python = ">=3.10,<3.13"
 version = "1.0.0"
 dependencies = [
-    "wandb==0.18.1",
+    "wandb==0.18.5",
     "websockets==13.1",
-    "aiohttp==3.10.6",
+    "aiohttp==3.10.10",
     "safetensors==0.4.5",
     "edge-maxxing-neuron==1.0.0"
 ]
