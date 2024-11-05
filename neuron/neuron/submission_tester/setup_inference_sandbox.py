@@ -14,8 +14,7 @@ DEPENDENCY_BLACKLIST = abspath(Path(__file__).parent / "dependency_blacklist.txt
 CLEAR_CACHE_SCRIPT = abspath(Path(__file__).parent / "clear_cache.sh")
 CLONE_SCRIPT = abspath(Path(__file__).parent / "clone.sh")
 BLACKLIST_SCRIPT = abspath(Path(__file__).parent / "blacklist.sh")
-DEPENDENCY_INSTALL_SCRIPT = abspath(Path(__file__).parent / "dependency_install.sh")
-DOWNLOAD_HUGGINGFACE_MODEL = abspath(Path(__file__).parent / "download_huggingface_model.sh")
+DOWNLOAD_HUGGINGFACE_MODELS = abspath(Path(__file__).parent / "download_huggingface_models.sh")
 NETWORK_JAIL = abspath(Path(__file__).parent / "libnetwork_jail.so")
 
 STORAGE_THRESHOLD_GB = 50
@@ -106,24 +105,13 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, home: Path, 
         logger.info(f"Found no blacklisted dependencies after {perf_counter() - start:.2f} seconds")
 
     start = perf_counter()
-    logger.info(f"Installing dependencies...")
+    logger.info(f"Downloading Hugging Face models...")
     _run(
-        DEPENDENCY_INSTALL_SCRIPT,
-        sandbox_args,
-        sandbox_directory,
-        [],
-        "Failed to install dependencies"
-    )
-    logger.info(f"Installed dependencies in {perf_counter() - start:.2f} seconds")
-
-    start = perf_counter()
-    logger.info(f"Downloading Hugging Face model...")
-    _run(
-        DOWNLOAD_HUGGINGFACE_MODEL,
+        DOWNLOAD_HUGGINGFACE_MODELS,
         sandbox_args,
         sandbox_directory,
         [" ".join(models)],
-        "Failed to download Hugging Face model"
+        "Failed to download Hugging Face models"
     )
 
     logger.info(f"Downloaded Hugging Face model in {perf_counter() - start:.2f} seconds")
