@@ -41,13 +41,11 @@ class InferenceSandbox(Generic[RequestT]):
         self._baseline = baseline
         self._sandbox_directory = sandbox_directory
         self._switch_user = switch_user
-        home = Path(f"/home/{SANDBOX}") if self._switch_user else Path.home()
 
         try:
             self._file_size = setup_sandbox(
                 sandbox_args=self.sandbox_args(SANDBOX),
                 sandbox_directory=self._sandbox_directory,
-                home=home,
                 baseline=baseline,
                 url=repository_info.url,
                 revision=repository_info.revision,
@@ -57,6 +55,7 @@ class InferenceSandbox(Generic[RequestT]):
 
         logger.info(f"Repository {repository_info} had size {self._file_size / 1024 ** 3:.2f} GB")
 
+        home = Path(f"/home/{SANDBOX}") if self._switch_user else Path.home()
         self._process = Popen(
             [
                 *self.sandbox_args(SANDBOX),

@@ -30,6 +30,8 @@ USER validator
 WORKDIR /app/validator
 ENV PATH="/home/validator/.local/bin:$PATH"
 
+RUN uv sync
+
 COPY validator/base_validator base_validator
 COPY validator/weight_setting weight_setting
 COPY neuron/neuron ../neuron/neuron
