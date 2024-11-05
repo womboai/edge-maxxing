@@ -5,7 +5,7 @@ from io import TextIOWrapper
 from multiprocessing.connection import Client, Connection
 from os.path import abspath
 from pathlib import Path
-from subprocess import Popen, run, TimeoutExpired, PIPE
+from subprocess import Popen, TimeoutExpired, PIPE
 from threading import Thread
 from time import perf_counter, sleep
 from typing import Generic, TypeVar
@@ -18,6 +18,8 @@ from ..contest import ModelRepositoryInfo
 logger = logging.getLogger(__name__)
 
 RequestT = TypeVar("RequestT", bound=BaseModel)
+
+SANDBOX = "sandbox"
 
 
 class InferenceSandbox(Generic[RequestT]):
@@ -39,26 +41,25 @@ class InferenceSandbox(Generic[RequestT]):
         self._baseline = baseline
         self._sandbox_directory = sandbox_directory
         self._switch_user = switch_user
+        home = Path(f"/home/{SANDBOX}") if self._switch_user else Path.home()
 
         try:
             self._file_size = setup_sandbox(
-                self.sandbox_args(self._user),
-                self._sandbox_directory,
-                baseline,
-                repository_info.url,
-                repository_info.revision,
+                sandbox_args=self.sandbox_args(SANDBOX),
+                sandbox_directory=self._sandbox_directory,
+                home=home,
+                baseline=baseline,
+                url=repository_info.url,
+                revision=repository_info.revision,
             )
         except InvalidSubmissionError as e:
             self.fail(str(e))
 
         logger.info(f"Repository {repository_info} had size {self._file_size / 1024 ** 3:.2f} GB")
-        socket_path = abspath(self._sandbox_directory / "inferences.sock")
-        self.remove_socket(socket_path)
 
-        home = f"/home/{self._user}" if self._switch_user else Path.home()
         self._process = Popen(
             [
-                *self.sandbox_args(self._user),
+                *self.sandbox_args(SANDBOX),
                 f"{home}/.local/bin/uv",
                 "run",
                 "start_inference",
@@ -75,6 +76,7 @@ class InferenceSandbox(Generic[RequestT]):
 
         logger.info("Inference process starting")
 
+        socket_path = abspath(self._sandbox_directory / "inferences.sock")
         start = perf_counter()
         for _ in range(load_timeout):
             if os.path.exists(socket_path): break
@@ -91,41 +93,9 @@ class InferenceSandbox(Generic[RequestT]):
         self.load_time = perf_counter() - start
         logger.info(f"Connected to socket in {self.load_time:.2f} seconds")
 
-    @property
-    def _user(self) -> str:
-        return "baseline-sandbox" if self._baseline else "sandbox"
-
     def _check_exit(self):
         if self._process.returncode and not self._process.poll():
             self.fail(f"Inference crashed with exit code {self._process.returncode}")
-
-    def clear_sandbox(self):
-        run(
-            [
-                *self.sandbox_args(self._user),
-                "find",
-                str(self._sandbox_directory),
-                "-mindepth",
-                "1",
-                "-delete",
-            ],
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-            check=True,
-        )
-
-    def remove_socket(self, socket_path: str):
-        run(
-            [
-                *self.sandbox_args(self._user),
-                "rm",
-                "-f",
-                socket_path,
-            ],
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-            check=True,
-        )
 
     def __enter__(self):
         self._process.__enter__()
@@ -162,12 +132,7 @@ class InferenceSandbox(Generic[RequestT]):
         return self._file_size
 
     def fail(self, reason: str):
-        if self._baseline:
-            self.clear_sandbox()
-            logger.warning(f"Cleared baseline")
-            raise RuntimeError(reason)
-        else:
-            raise InvalidSubmissionError(reason)
+        raise InvalidSubmissionError(reason) if not self._baseline else RuntimeError(reason)
 
     def sandbox_args(self, user: str) -> list[str]:
         return [

@@ -160,9 +160,7 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
-baseline-sandbox/
-lfs-cache/
+huggingface/
 pip/
 miner/model/
-miner/baseline-model/
 validator/compose.yaml

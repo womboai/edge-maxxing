@@ -39,7 +39,6 @@ VALID_REPO_REGEX = r'^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$'
 VALID_REVISION_REGEX = r"^[a-f0-9]{7}$"
 
 MODEL_DIRECTORY = Path("model")
-BASELINE_MODEL_DIRECTORY = Path("baseline-model")
 BASELINE_CACHE_JSON = BASELINE_MODEL_DIRECTORY / "baseline_cache.json"
 
 logging.basicConfig(
@@ -138,15 +137,15 @@ def save_baseline_cache(baseline: BaselineBenchmark):
 
 def start_benchmarking(submission: CheckpointSubmission):
     logger.info("Generating baseline samples to compare")
-    if not BASELINE_MODEL_DIRECTORY.exists():
-        BASELINE_MODEL_DIRECTORY.mkdir()
+    if not MODEL_DIRECTORY.exists():
+        MODEL_DIRECTORY.mkdir()
     inputs = random_inputs()
 
     baseline = load_baseline_cache(inputs)
     if baseline is None:
         baseline = generate_baseline(
             inputs=inputs,
-            sandbox_directory=BASELINE_MODEL_DIRECTORY,
+            sandbox_directory=MODEL_DIRECTORY,
             switch_user=False,
         )
         save_baseline_cache(baseline)
@@ -154,9 +153,6 @@ def start_benchmarking(submission: CheckpointSubmission):
         logger.info("Using cached baseline")
 
     logger.info("Comparing submission to baseline")
-    if not MODEL_DIRECTORY.exists():
-        MODEL_DIRECTORY.mkdir()
-
     compare_checkpoints(
         submission=ModelRepositoryInfo(url=submission.get_repo_link(), revision=submission.revision),
         inputs=inputs,

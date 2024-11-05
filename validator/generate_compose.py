@@ -4,13 +4,14 @@ BASE_PORT = 8000
 
 API_SERVICE_TEMPLATE = """
   api-{id}:
+      restart: unless-stopped
+      
       build:
         context: ../
         dockerfile: ./validator/submission_tester/Dockerfile
 
       volumes:
-        - ~/edge-maxxing/baseline-sandbox-{id}:/baseline-sandbox
-        - ~/edge-maxxing/lfs-cache:/home/sandbox/.cache/lfs-cache
+        - ~/edge-maxxing/huggingface:/home/sandbox/.cache/huggingface
 
       ports:
         - 127.0.0.1:{port}:8000
@@ -30,6 +31,8 @@ API_SERVICE_TEMPLATE = """
 
 VALIDATOR_SERVICE_TEMPLATE = """
   validator:
+      restart: unless-stopped
+      
       build:
         context: ../
         dockerfile: ./validator/weight_setting/Dockerfile
