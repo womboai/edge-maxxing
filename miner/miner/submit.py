@@ -2,6 +2,7 @@ import base64
 import logging
 import re
 import json
+import shutil
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -160,6 +161,8 @@ def start_benchmarking(submission: CheckpointSubmission):
         sandbox_directory=MODEL_DIRECTORY,
         switch_user=False,
     )
+
+    shutil.rmtree(MODEL_DIRECTORY)
 
 
 def validate(provider: str, repository: str, revision: str, contest: Contest):
