@@ -198,9 +198,9 @@ And then run as follows:
 ```
 Make sure port 8000(or whichever you set) is exposed!
 
-If you want this to auto-update(which is recommended), start another pm2 process using `auto-update.sh` like the following:
+To setup auto-updating, simply run
 ```bash
-    pm2 start auto-update.sh --name edge-validator-updater --interpreter bash -- edge-maxxing-submission-tester
+./initialize-auto-update.sh edge-maxxing-submission-tester
 ```
 
 The argument at the end is the name of the main PM2 process. This will keep your PM2 validator instance up to date as long as it is running.
@@ -212,7 +212,7 @@ You can set which CUDA devices or ports to use along with that.
 In the another pod/container without a GPU, to run the scoring validator, clone the repository as per the common instructions, then do as follows
 ```bash
     cd validator
-    pm2 start uv --name edge-validator --interpreter none -- \
+    pm2 start uv --name edge-maxxing-validator --interpreter none -- \
         run start_validator \
         --netuid {netuid} \
         --subtensor.network {network} \
@@ -227,7 +227,7 @@ Make sure to replace the API component route with the routes to the API containe
 
 Additionally, the auto-updating script can be used here
 ```bash
-    pm2 start auto-update.sh --name edge-validator-updater --interpreter bash -- edge-validator
+./initialize-auto-update.sh edge-maxxing-validator
 ```
 
 ## Proposals for Optimizations
