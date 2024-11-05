@@ -20,6 +20,7 @@ NETWORK_JAIL = abspath(Path(__file__).parent / "libnetwork_jail.so")
 
 STORAGE_THRESHOLD_GB = 50
 MAX_HF_MODEL_SIZE_GB = 50
+MAX_REPO_SIZE_MB = 16
 
 with open(DEPENDENCY_BLACKLIST, 'r') as blacklist_file:
     BLACKLISTED_DEPENDENCIES = " ".join(blacklist_file.read().splitlines())
@@ -84,6 +85,10 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
     )
     logger.info(f"Cloned repository '{url}' in {perf_counter() - start:.2f} seconds")
 
+    repo_size = sum(file.stat().st_size for file in sandbox_directory.rglob("*") if ".git" not in file.parts)
+    if repo_size > MAX_REPO_SIZE_MB * 1024 ** 2:
+        raise InvalidSubmissionError(f"Size of repository exceeds {MAX_REPO_SIZE_MB} MB")
+
     try:
         with open(sandbox_directory / "pyproject.toml", 'r') as file:
             pyproject = toml.load(file)
@@ -130,7 +135,4 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
     )
     logger.info(f"Downloaded Hugging Face model in {perf_counter() - start:.2f} seconds")
 
-    return sum(
-        file.stat().st_size for file in sandbox_directory.rglob("*")
-        if ".git" not in file.parts and ".venv" not in file.parts
-    ) + total_model_size
+    return repo_size + total_model_size
