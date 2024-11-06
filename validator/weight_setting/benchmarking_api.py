@@ -14,6 +14,8 @@ from websockets.sync.client import connect
 
 from neuron import ModelRepositoryInfo, Key
 
+RETRY_TIME = 60
+
 logger = get_logger(__name__)
 
 
@@ -128,22 +130,28 @@ class BenchmarkingApiContextManager:
 
     def _connect_to_api(self):
         name = f"API - {self._index + 1}"
-        logger.info(f"Connecting to {name}")
-        url = self._api.replace("http", "ws")
+        while True:
+            logger.info(f"Connecting to {name}")
+            url = self._api.replace("http", "ws")
 
-        websocket = connect(f"{url}/logs", additional_headers=_authentication_headers(self._keypair))
+            websocket = connect(f"{url}/logs", additional_headers=_authentication_headers(self._keypair))
 
-        try:
-            version = json.loads(websocket.recv())["version"]
-        except:
-            raise InvalidAPIException(f"Validator {name} out of date")
+            try:
+                version = json.loads(websocket.recv())["version"]
+            except:
+                logger.error(f"Validator {name} out of date. Retrying in {RETRY_TIME} seconds")
+                websocket.close()
+                time.sleep(RETRY_TIME)
+                continue
 
-        if version != API_VERSION:
-            raise InvalidAPIException(
-                f"Validator {name} has mismatched version, received {version} but expected {API_VERSION}"
-            ) from None
+            if version != API_VERSION:
+                logger.error(f"Validator {name} has mismatched version, received {version} but expected {API_VERSION}. Retrying in {RETRY_TIME} seconds")
+                websocket.close()
+                time.sleep(RETRY_TIME)
+                continue
 
-        return websocket
+            logger.info(f"Connected to {name} with version {version}")
+            return websocket
 
     def _stream_logs(self):
         return self._executor.submit(self._api_logs)
