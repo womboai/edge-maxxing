@@ -49,7 +49,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (5, 0, 6)
+VALIDATOR_VERSION: tuple[int, int, int] = (5, 0, 7)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -78,11 +78,7 @@ class ContestState:
         self.miner_score_version = BENCHMARKS_VERSION
         self.miner_info = miner_info
 
-    # Backwards compatibility
     def __setstate__(self, state):
-        if "miner_score_versions" in state:
-            del state["miner_score_versions"]
-
         self.miner_score_version = state.get("miner_score_version", 0)
         self.submission_spec_version = state.get("submission_spec_version", 0)
         self.__dict__.update(state)
@@ -120,7 +116,6 @@ class Validator:
     baseline_metrics: MetricData | None
     average_benchmarking_time: float | None
     benchmarking_state: BenchmarkState
-    failed: set[int] = set()  # for backwards depickling compatibility
     invalid: dict[int, str]
     contest: Contest
 
@@ -233,6 +228,7 @@ class Validator:
 
         submission_data = {
             str(uid): {
+                "hotkey": self.hotkeys[uid],
                 "repository": info.repository.url,
                 "revision": info.repository.revision,
                 "block": info.block,
@@ -257,7 +253,6 @@ class Validator:
             data = {
                 "similarity": benchmark.average_similarity,
                 "min_similarity": benchmark.min_similarity,
-                "hotkey": self.hotkeys[uid],
             } | benchmark.model_dump()
 
             if self.baseline_metrics:
