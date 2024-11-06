@@ -30,10 +30,6 @@ def _authentication_headers(keypair: Keypair):
     }
 
 
-class InvalidAPIException(Exception):
-    pass
-
-
 class BenchmarkingApi:
     _keypair: Keypair
     _api: str
@@ -66,8 +62,6 @@ class BenchmarkingApi:
         if self._future.done():
             try:
                 self._future.result()
-            except InvalidAPIException:
-                raise
             except Exception as e:
                 logger.error("Error in log streaming", exc_info=e)
 
