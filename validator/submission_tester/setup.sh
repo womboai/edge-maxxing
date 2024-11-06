@@ -20,7 +20,7 @@ sudo -u api pipx install uv
 
 sudo -u sandbox pipx ensurepath
 sudo -u sandbox pipx install uv
-sudo -u sandbox pipx install huggingface-hub[cli]
+sudo -u sandbox pipx install huggingface-hub[cli,hf_transfer]
 
 su - api -c "cd /api/validator && uv sync"
 
