@@ -49,7 +49,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (5, 0, 4)
+VALIDATOR_VERSION: tuple[int, int, int] = (5, 0, 5)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -178,16 +178,16 @@ class Validator:
 
         self.contest = find_contest(self.contest_state.id) if self.contest_state else CURRENT_CONTEST
 
-    def new_wandb_run(self):
-        """Creates a new wandb run to save information to."""
-        day = self.last_day or self.current_time().date()
-
-        if self.wandb_run and self.wandb_run_date == day:
+    def start_wandb_run(self):
+        if self.config["wandb.off"]:
             return
 
-        hotkey = self.keypair.ss58_address
-        netuid = self.metagraph.netuid
+        if self.wandb_run:
+            logger.info("New contest day, starting a new wandb run.")
+            self.wandb_run.finish()
 
+        hotkey = self.keypair.ss58_address
+        day = self.last_day or self.current_time().date()
         name = f"validator-{self.uid}-{day.year}-{day.month}-{day.day}"
 
         contest_id = self.contest_state.id if self.contest_state else CURRENT_CONTEST.id
@@ -214,26 +214,14 @@ class Validator:
             anonymous="allow",
             tags=[
                 f"version_{VALIDATOR_VERSION_STRING}",
-                f"sn{netuid}",
+                f"sn{self.metagraph.netuid}",
             ],
         )
 
         self.wandb_run_date = day
-
         self.wandb_run.log(data={"benchmarking_state": self.benchmarking_state.name})
 
         logger.debug(f"Started a new wandb run: {name}")
-
-    def start_wandb_run(self):
-        if self.config["wandb.off"]:
-            return
-
-        if self.wandb_run:
-            logger.info("New contest day, starting a new wandb run.")
-            self.wandb_run.finish()
-            self.wandb_run = None
-
-        self.new_wandb_run()
 
     def send_wandb_metrics(self):
         if not self.wandb_run:
