@@ -49,7 +49,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (5, 0, 1)
+VALIDATOR_VERSION: tuple[int, int, int] = (5, 0, 2)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -197,6 +197,7 @@ class Validator:
 
         self.wandb_run = wandb.init(
             name=name,
+            id=name,
             resume="allow",
             mode="offline" if self.config["wandb.offline"] else "online",
             project=self.config["wandb.project_name"],
@@ -212,7 +213,7 @@ class Validator:
             allow_val_change=True,
             anonymous="allow",
             tags=[
-                f"version_{VALIDATOR_VERSION_STRING}",
+                f"version_{VALIDATOR_VERSION}",
                 f"sn{netuid}",
             ],
         )
