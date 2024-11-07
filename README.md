@@ -118,10 +118,10 @@ There is no need to manage venvs in any way, as uv will handle that.
 ### Miner setup
 1. Clone the [base inference repository](https://github.com/womboai/sdxl-newdream-20-inference)
 ```bash
-    git clone --recursive --depth 1 https://github.com/womboai/sdxl-newdream-20-inference model
+    git clone --depth 1 https://github.com/womboai/sdxl-newdream-20-inference model
 ```
 2. Make your own repository on a git provider such as `GitHub` or `HuggingFace` to optimize in
-3. Edit the `src/pipeline.py` file to include any loading or inference optimizations, and save any changed models in `models` (use git submodules for referencing huggingface models or other git provider repositories) and commit
+3. Edit the `src/pipeline.py` file to include any loading or inference optimizations, and commit when finished
 4. After creating and optimizing your repository, submit the model, changing the options as necessary
 ```bash
 cd miner
@@ -134,12 +134,13 @@ uv run submit_model \
     --logging.debug
 ```
 5. Follow the interactive prompts to submit the repository link, revision, and contest to participate in
-6. Optionally, benchmark your submission locally before submitting (make sure you have the right hardware e.g. NVIDIA GeForce RTX 4090). uv is required for benchmarking:
+6. Optionally, benchmark your submission locally before submitting (make sure you have the right hardware e.g. NVIDIA GeForce RTX 4090). uv and huggingface are required for benchmarking:
 ```bash
 pipx ensurepath
 pipx install uv
+pipx install huggingface-hub[cli,hf_transfer]
 ```
-7. Validators will collect your submission on 12PM New York time and test it in the remainder of the day
+7. Validators will collect your submission on 12PM New York time and test it in the remainder of the day. Updated weights are set at the beginning of the next contest.
 
 ### Validator setup
 The validator setup requires two components, an API container and a scoring validator

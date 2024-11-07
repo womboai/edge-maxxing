@@ -85,7 +85,7 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
     )
     logger.info(f"Cloned repository '{url}' in {perf_counter() - start:.2f} seconds")
 
-    repo_size = sum(file.stat().st_size for file in sandbox_directory.rglob("*") if ".git" not in file.parts)
+    repo_size = sum(file.stat().st_size for file in sandbox_directory.rglob("*") if ".git" not in file.parts and ".venv" not in file.parts)
     if repo_size > MAX_REPO_SIZE_MB * 1024 ** 2:
         raise InvalidSubmissionError(f"Size of repository exceeds {MAX_REPO_SIZE_MB} MB")
 

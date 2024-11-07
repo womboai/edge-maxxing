@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 RequestT = TypeVar("RequestT", bound=BaseModel)
 
 SANDBOX = "sandbox"
+START_INFERENCE_SCRIPT = abspath(Path(__file__).parent / "start_inference.sh")
 
 
 class InferenceSandbox(Generic[RequestT]):
@@ -55,13 +56,10 @@ class InferenceSandbox(Generic[RequestT]):
 
         logger.info(f"Repository {repository_info} had size {self._file_size / 1024 ** 3:.2f} GB")
 
-        home = Path(f"/home/{SANDBOX}") if self._switch_user else Path.home()
         self._process = Popen(
             [
                 *self.sandbox_args(SANDBOX),
-                f"{home}/.local/bin/uv",
-                "run",
-                "start_inference",
+                START_INFERENCE_SCRIPT,
             ],
             env={"LD_PRELOAD": NETWORK_JAIL},
             cwd=self._sandbox_directory,
@@ -93,7 +91,7 @@ class InferenceSandbox(Generic[RequestT]):
         logger.info(f"Connected to socket in {self.load_time:.2f} seconds")
 
     def _check_exit(self):
-        if self._process.returncode and not self._process.poll():
+        if self._process.poll():
             self.fail(f"Inference crashed with exit code {self._process.returncode}")
 
     def __enter__(self):
@@ -109,8 +107,6 @@ class InferenceSandbox(Generic[RequestT]):
 
         try:
             self._process.wait(timeout=30)
-
-            self._check_exit()
         except TimeoutExpired:
             self._process.kill()
             logger.warning(f"Forcefully killed inference process")
