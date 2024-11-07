@@ -60,8 +60,8 @@ class InferenceSandbox(Generic[RequestT]):
             [
                 *self.sandbox_args(SANDBOX),
                 START_INFERENCE_SCRIPT,
+                NETWORK_JAIL
             ],
-            env={"LD_PRELOAD": NETWORK_JAIL},
             cwd=self._sandbox_directory,
             stdout=PIPE,
             stderr=PIPE,
