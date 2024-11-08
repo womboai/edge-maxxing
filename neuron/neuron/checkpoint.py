@@ -9,7 +9,7 @@ from .network_commitments import Encoder, Decoder
 Uid: TypeAlias = int
 Key: TypeAlias = str
 
-BENCHMARKS_VERSION = 9
+BENCHMARKS_VERSION = 10
 SPEC_VERSION = 7
 REVISION_LENGTH = 7
 
