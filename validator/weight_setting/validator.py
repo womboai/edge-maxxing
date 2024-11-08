@@ -49,7 +49,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (5, 1, 0)
+VALIDATOR_VERSION: tuple[int, int, int] = (5, 1, 1)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -500,16 +500,17 @@ class Validator:
         blacklisted_keys = self.get_blacklisted_keys()
         for hotkey, node in self.metagraph.nodes.items():
             uid = self.hotkeys.index(hotkey)
-            if self.is_blacklisted(blacklisted_keys, hotkey, node.coldkey):
-                logger.warning(f"Not setting weights for blacklisted hotkey {hotkey}")
-                self.reset_miner(uid)
-            elif self.last_benchmarks[uid] and not self.contest_state.miner_info[uid]:
-                logger.warning(f"Not setting weights for hotkey {hotkey} as their submission was not found")
-                self.reset_miner(uid)
+            if self.last_benchmarks[uid]:
+                if self.is_blacklisted(blacklisted_keys, hotkey, node.coldkey):
+                    logger.warning(f"Not setting weights for blacklisted hotkey {hotkey}")
+                    self.reset_miner(uid)
+                elif not self.contest_state.miner_info[uid]:
+                    logger.warning(f"Not setting weights for hotkey {hotkey} as their submission was not found")
+                    self.reset_miner(uid)
 
         contestants = get_contestant_scores(self.last_benchmarks, self.baseline_metrics)
         tiers = get_tiers(contestants)
-        blocks = [info.block for info in self.contest_state.miner_info]
+        blocks = [info.block if info else None for info in self.contest_state.miner_info]
         weights = get_scores(tiers, blocks, len(self.metagraph.nodes))
 
         self.send_wandb_metrics()

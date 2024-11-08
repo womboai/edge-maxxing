@@ -48,7 +48,7 @@ def get_contestant_tier(tiers: list[list[Uid]], uid: Uid) -> int:
     return -1
 
 
-def get_scores(tiers: list[list[Uid]], blocks: list[int], node_count: int) -> list[float]:
+def get_scores(tiers: list[list[Uid]], blocks: list[int | None], node_count: int) -> list[float]:
     if not tiers:
         return [1.0] * node_count
 
