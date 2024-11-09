@@ -10,6 +10,7 @@ USER validator
 
 RUN pipx install uv
 
+COPY .git .git
 COPY README.md .
 COPY neuron/pyproject.toml neuron/
 COPY neuron/neuron/__init__.py neuron/neuron/

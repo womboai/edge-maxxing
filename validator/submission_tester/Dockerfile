@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y curl
 
 WORKDIR /api
 
+COPY .git .git
 COPY README.md .
 COPY neuron/pyproject.toml neuron/
 COPY neuron/neuron/__init__.py neuron/neuron/

@@ -18,6 +18,7 @@ from base_validator import (
     API_VERSION,
     BenchmarkState,
     BenchmarkResults,
+    AutoUpdater,
 )
 
 hotkey = os.getenv("VALIDATOR_HOTKEY_SS58_ADDRESS")
@@ -69,7 +70,7 @@ async def lifespan(_: FastAPI):
         "benchmarker": Benchmarker(),
     }
 
-
+auto_updater = AutoUpdater()
 app = FastAPI(lifespan=lifespan)
 
 
