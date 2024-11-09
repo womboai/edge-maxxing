@@ -70,7 +70,7 @@ async def lifespan(_: FastAPI):
         "benchmarker": Benchmarker(),
     }
 
-auto_updater = AutoUpdater()
+auto_updater = AutoUpdater(update_dependencies=True)
 app = FastAPI(lifespan=lifespan)
 
 

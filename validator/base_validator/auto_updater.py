@@ -6,13 +6,15 @@ from threading import Event, Thread
 from subprocess import run
 
 AUTO_UPDATE_SCRIPT = abspath(Path(__file__).parent / "auto-update.sh")
-UPDATE_RATE_MINUTES = 15
+UPDATE_RATE_MINUTES = 1
 
 class AutoUpdater:
+    _update_dependencies: bool
     _thread: Thread
     _stop_flag: Event
 
-    def __init__(self):
+    def __init__(self, update_dependencies: bool):
+        self._update_dependencies = update_dependencies
         self._stop_flag = Event()
         self._thread = Thread(target=self._monitor, daemon=True)
         self._thread.start()
@@ -29,13 +31,16 @@ class AutoUpdater:
 
     def _check_for_updates(self):
         process = run(
-            [AUTO_UPDATE_SCRIPT],
+            [AUTO_UPDATE_SCRIPT, str(self._update_dependencies).lower()],
             capture_output=True,
             encoding='utf-8',
         )
 
         if process.stdout.strip():
             print(process.stdout)
+
+        if process.stderr.strip():
+            print(process.stderr)
 
         if process.returncode == 75:
             self._restart()

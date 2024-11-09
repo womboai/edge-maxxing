@@ -121,7 +121,7 @@ class Validator:
     contest: Contest
 
     def __init__(self):
-        self.auto_updater = AutoUpdater()
+        self.auto_updater = AutoUpdater(update_dependencies=False)
         self.config = get_config(Validator.add_extra_args)
 
         from .diagnostics import save_validator_diagnostics

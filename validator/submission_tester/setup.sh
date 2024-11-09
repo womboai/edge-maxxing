@@ -18,9 +18,7 @@ DEBIAN_FRONTEND=noninteractive apt-get -y install sudo pipx git git-lfs build-es
 sudo -u api pipx ensurepath
 sudo -u api pipx install uv
 
-sudo -u sandbox pipx ensurepath
-sudo -u sandbox pipx install uv
-sudo -u sandbox pipx install huggingface-hub[cli,hf_transfer]
+./submission_tester/update.sh
 
 su - api -c "cd /api/validator && uv sync"
 
