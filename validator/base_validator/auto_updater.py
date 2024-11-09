@@ -6,7 +6,7 @@ from threading import Event, Thread
 from subprocess import run
 
 AUTO_UPDATE_SCRIPT = abspath(Path(__file__).parent / "auto-update.sh")
-UPDATE_RATE_MINUTES = 1
+UPDATE_RATE_MINUTES = 15
 
 class AutoUpdater:
     _update_dependencies: bool
