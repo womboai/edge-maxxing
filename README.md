@@ -164,11 +164,6 @@ And then start docker compose
 docker compose up -d --build
 ```
 
-To setup auto-updating, simply run
-```bash
-./initialize-docker-auto-update.sh
-```
-
 ### RunPod/Containers
 If running in a containerized environment like RunPod(which does not support Docker), then you need to run 2 pods/containers. The following setup assumes using PM2.
 
@@ -199,11 +194,6 @@ And then run as follows:
 ```
 Make sure port 8000(or whichever you set) is exposed!
 
-To setup auto-updating, simply run
-```bash
-./initialize-auto-update.sh edge-maxxing-submission-tester
-```
-
 The argument at the end is the name of the main PM2 process. This will keep your PM2 validator instance up to date as long as it is running.
 
 You can run more APIs(and are recommended to do so) and link the scoring validator to them.
@@ -225,11 +215,6 @@ In the another pod/container without a GPU, to run the scoring validator, clone 
 ```
 
 Make sure to replace the API component route with the routes to the API containers(which can be something in the format of `http://ip:port`), refer to the instructions above at [API Component](#api-component)
-
-Additionally, the auto-updating script can be used here
-```bash
-./initialize-auto-update.sh edge-maxxing-validator
-```
 
 ## Proposals for Optimizations
 
