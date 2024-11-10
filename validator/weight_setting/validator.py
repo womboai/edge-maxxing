@@ -52,7 +52,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (5, 1, 4)
+VALIDATOR_VERSION: tuple[int, int, int] = (5, 1, 5)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -301,6 +301,13 @@ class Validator:
             required=True,
         )
 
+        argument_parser.add_argument(
+            "--delayed_weights.off",
+            action="store_true",
+            help="Turn off delayed weight setting.",
+            default=False,
+        )
+
         add_wandb_args(argument_parser)
 
     @property
@@ -469,6 +476,8 @@ class Validator:
             return
 
         equal_weights = False
+        delayed_weights = not self.config["delayed_weights.off"]
+        benchmarks = self.last_benchmarks if delayed_weights else self.benchmarks
 
         if not self.contest_state:
             logger.info("Will not set new weights as the contest state has not been set, setting to all ones")
@@ -482,7 +491,7 @@ class Validator:
             if any(benchmark is not None for benchmark in self.benchmarks):
                 logger.info("Setting weights to current benchmarks as the previous day's benchmarks have not been set")
                 self.last_benchmarks = self.benchmarks
-            else:
+            elif delayed_weights:
                 logger.info("Will not set new weights as the previous day's benchmarks have not been set, setting to all ones")
                 equal_weights = True
 
@@ -507,7 +516,7 @@ class Validator:
         blacklisted_keys = self.get_blacklisted_keys()
         for hotkey, node in self.metagraph.nodes.items():
             uid = self.hotkeys.index(hotkey)
-            if self.last_benchmarks[uid]:
+            if benchmarks[uid]:
                 if self.is_blacklisted(blacklisted_keys, hotkey, node.coldkey):
                     logger.warning(f"Not setting weights for blacklisted hotkey {hotkey}")
                     self.reset_miner(uid)
@@ -515,7 +524,7 @@ class Validator:
                     logger.warning(f"Not setting weights for hotkey {hotkey} as their submission was not found")
                     self.reset_miner(uid)
 
-        contestants = get_contestant_scores(self.last_benchmarks, self.baseline_metrics)
+        contestants = get_contestant_scores(benchmarks, self.baseline_metrics)
         tiers = get_tiers(contestants)
         blocks = [info.block if info else None for info in self.contest_state.miner_info]
         weights = get_scores(tiers, blocks, len(self.metagraph.nodes))
