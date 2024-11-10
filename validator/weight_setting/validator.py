@@ -225,8 +225,6 @@ class Validator:
         if not self.wandb_run:
             return
 
-        benchmark_data = {}
-
         submission_data = {
             str(uid): {
                 "hotkey": self.hotkeys[uid],
@@ -238,34 +236,10 @@ class Validator:
             if info
         }
 
-        tiers: list[list[Uid]] = []
-        if self.baseline_metrics:
-            contestants = get_contestant_scores(self.benchmarks, self.baseline_metrics)
-            tiers = get_tiers(contestants)
-
-        for uid, benchmark in enumerate(self.benchmarks):
-            if not benchmark:
-                continue
-
-            miner_info = self.contest_state.miner_info[uid]
-            if not miner_info:
-                continue
-
-            data = {
-                "similarity": benchmark.average_similarity,
-                "min_similarity": benchmark.min_similarity,
-            } | benchmark.model_dump()
-
-            if self.baseline_metrics:
-                data["score"] = benchmark.calculate_score(self.baseline_metrics)
-            if tiers:
-                data["tier"] = get_contestant_tier(tiers, uid)
-
-            benchmark_data[str(uid)] = data
-
         log_data = {
             "submissions": submission_data,
-            "benchmarks": benchmark_data,
+            "benchmarks": self.get_wandb_benchmarks(self.benchmarks),
+            "last_benchmarks": self.get_wandb_benchmarks(self.last_benchmarks),
             "invalid": self.invalid,
             "benchmarking_state": self.benchmarking_state.name,
         }
@@ -279,6 +253,36 @@ class Validator:
         self.wandb_run.log(data=log_data)
 
         logger.info("Benchmarks uploaded to wandb")
+
+    def get_wandb_benchmarks(self, benchmarks: list[CheckpointBenchmark | None]):
+        benchmark_data = {}
+        tiers: list[list[Uid]] = []
+
+        if self.baseline_metrics:
+            contestants = get_contestant_scores(benchmarks, self.baseline_metrics)
+            tiers = get_tiers(contestants)
+
+        for uid, benchmark in enumerate(benchmarks):
+            if not benchmark:
+                continue
+
+            miner_info = self.contest_state.miner_info[uid]
+            if not miner_info:
+                continue
+
+            data = {
+               "similarity": benchmark.average_similarity,
+               "min_similarity": benchmark.min_similarity,
+            } | benchmark.model_dump()
+
+            if self.baseline_metrics:
+                data["score"] = benchmark.calculate_score(self.baseline_metrics)
+            if tiers:
+                data["tier"] = get_contestant_tier(tiers, uid)
+
+            benchmark_data[str(uid)] = data
+
+        return benchmark_data
 
     @classmethod
     def add_extra_args(cls, argument_parser: ArgumentParser):
@@ -659,11 +663,11 @@ class Validator:
                 # New contest, restart
                 self.contest = CURRENT_CONTEST
                 self.contest_state = ContestState(self.contest.id, miner_info)
-
-                logger.info(f"Setting updated benchmarks")
-                self.last_benchmarks = self.benchmarks
             else:
                 self.contest_state.miner_info = miner_info
+
+            logger.info(f"Setting updated benchmarks")
+            self.last_benchmarks = self.benchmarks
 
             self.benchmarks = self.clear_benchmarks()
             self.invalid.clear()
