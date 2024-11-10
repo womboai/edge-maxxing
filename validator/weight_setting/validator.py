@@ -1,8 +1,8 @@
 import asyncio
 import random
-import time
 from argparse import ArgumentParser
-from datetime import date, datetime
+from asyncio import sleep
+from datetime import date, datetime, timedelta, time
 from itertools import islice
 from math import ceil
 from operator import itemgetter, attrgetter
@@ -10,16 +10,19 @@ from os import makedirs
 from os.path import isfile
 from pathlib import Path
 from pickle import dump, load
+from ssl import SSLEOFError
 from typing import Any
 
 import requests
 import wandb
+
 from base_validator import BenchmarkState, BenchmarkResults
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
 from fiber.chain.weights import set_node_weights
 from fiber.logging_utils import get_logger
+from substrateinterface.exceptions import SubstrateRequestException
 from substrateinterface import SubstrateInterface, Keypair
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
@@ -222,8 +225,6 @@ class Validator:
         if not self.wandb_run:
             return
 
-        logger.info("Uploading benchmarks to wandb")
-
         benchmark_data = {}
 
         submission_data = {
@@ -277,7 +278,6 @@ class Validator:
 
         self.wandb_run.log(data=log_data)
 
-        logger.info(log_data)
         logger.info("Benchmarks uploaded to wandb")
 
     @classmethod
@@ -455,6 +455,8 @@ class Validator:
             self.attempted_set_weights = True
 
             self.sync_chain_nodes(block)
+        except SubstrateRequestException as e:
+            logger.error(f"Failed to set weights: {e}")
         except Exception as e:
             logger.error(f"Failed to set weights", exc_info=e)
 
@@ -546,7 +548,7 @@ class Validator:
     def is_blacklisted(blacklisted_keys: dict, hotkey: str, coldkey: str):
         return hotkey in blacklisted_keys["hotkeys"] or coldkey in blacklisted_keys["coldkeys"]
 
-    def get_miner_submissions(self):
+    def get_miner_submissions(self) -> list[MinerModelInfo | None]:
         visited_repositories: dict[str, tuple[Uid, int]] = {}
         visited_revisions: dict[str, tuple[Uid, int]] = {}
         blacklisted_keys = self.get_blacklisted_keys()
@@ -593,7 +595,7 @@ class Validator:
             visited_repositories[info.repository.url] = node.node_id, info.block
             visited_revisions[info.repository.revision] = node.node_id, info.block
 
-            time.sleep(0.2)
+            sleep(0.2)
 
         return miner_info
 
@@ -639,7 +641,7 @@ class Validator:
 
             miner_info = self.get_miner_submissions()
 
-            logger.info(f"Got {miner_info} submissions")
+            logger.info(f"Got {len([info for info in miner_info if info])} submissions")
 
             nodes = self.metagraph_nodes()
 
@@ -656,8 +658,9 @@ class Validator:
             if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
                 # New contest, restart
                 self.contest = CURRENT_CONTEST
-
                 self.contest_state = ContestState(self.contest.id, miner_info)
+
+                logger.info(f"Setting updated benchmarks")
                 self.last_benchmarks = self.benchmarks
             else:
                 self.contest_state.miner_info = miner_info
@@ -718,8 +721,7 @@ class Validator:
                 # to avoid multiple validators setting weights all in the same block
                 blocks_to_wait = random.randint(1, 10)
 
-            logger.info(f"Nothing to do in this step, sleeping for {blocks_to_wait} blocks")
-            await asyncio.sleep(blocks_to_wait * 12)
+            await self.sleep_for_blocks(now, blocks_to_wait)
 
             return
 
@@ -803,24 +805,22 @@ class Validator:
                     logger.info(f"{hotkey} has no submission, skipping")
                     continue
 
-                if benchmark:
+                if benchmark and self.benchmarks[uid] != benchmark:
                     logger.info(f"Updating {hotkey}'s benchmarks to {benchmark}")
                 self.benchmarks[uid] = benchmark
 
             for hotkey, error_message in result.invalid.items():
-                logger.info(f"Marking {hotkey}'s submission as invalid: '{error_message}'")
+                uid = self.hotkeys.index(hotkey)
+                if error_message != self.invalid.get(uid):
+                    logger.info(f"Marking {hotkey}'s submission as invalid: '{error_message}'")
                 if hotkey in self.hotkeys:
-                    self.invalid[self.hotkeys.index(hotkey)] = error_message
+                    self.invalid[uid] = error_message
 
         self.average_benchmarking_time = (sum(benchmark_times) / len(benchmark_times)) if benchmark_times else None
         self.send_wandb_metrics()
 
         if not not_started and not in_progress and finished:
-            logger.info(
-                "Benchmarking APIs have reported submission testing as done. "
-                "Miner metrics updated:"
-            )
-            logger.info(self.benchmarks)
+            logger.info("Benchmarking APIs have reported submission testing as done.")
 
             self.benchmarking = False
             self.step += 1
@@ -832,9 +832,13 @@ class Validator:
 
         self.save_state()
 
-        blocks = epoch_length / 4
-        logger.info(f"Benchmarking in progress, sleeping for {blocks} blocks")
-        await asyncio.sleep(blocks * 12)
+        await self.sleep_for_blocks(now, epoch_length / 4)
+
+    async def sleep_for_blocks(self, now: datetime, blocks: int):
+        next_noon = datetime.combine(now.date() + timedelta(days=int(now.hour >= 12)), time(12), tzinfo=TIMEZONE)
+        blocks_to_sleep = min(blocks, ceil((next_noon - now).total_seconds() / 12))
+        logger.info(f"Benchmarking in progress, sleeping for {blocks_to_sleep} blocks")
+        await asyncio.sleep(blocks_to_sleep * 12)
 
     @property
     def block(self):
@@ -860,7 +864,10 @@ class Validator:
                 await self.do_step(current_block)
             except Exception as e:
                 if not isinstance(e, ContestDeviceValidationError):
-                    logger.error(f"Error during validation step {self.step}", exc_info=e)
+                    if isinstance(e, SSLEOFError):
+                        logger.error(f"Error during validation step {self.step}: {e}")
+                    else:
+                        logger.error(f"Error during validation step {self.step}", exc_info=e)
 
                     self.substrate = get_substrate(subtensor_address=self.substrate.url)
 
