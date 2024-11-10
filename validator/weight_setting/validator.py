@@ -52,7 +52,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (5, 1, 5)
+VALIDATOR_VERSION: tuple[int, int, int] = (5, 1, 6)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -307,7 +307,7 @@ class Validator:
             "--delayed_weights.off",
             action="store_true",
             help="Turn off delayed weight setting.",
-            default=False,
+            default=True,
         )
 
         add_wandb_args(argument_parser)
@@ -736,7 +736,7 @@ class Validator:
                 # to avoid multiple validators setting weights all in the same block
                 blocks_to_wait = random.randint(1, 10)
 
-            await self.sleep_for_blocks(now, blocks_to_wait)
+            await self.sleep_for_blocks(now, blocks_to_wait, "Nothing to do in this step")
 
             return
 
@@ -847,12 +847,12 @@ class Validator:
 
         self.save_state()
 
-        await self.sleep_for_blocks(now, epoch_length / 4)
+        await self.sleep_for_blocks(now, epoch_length / 4, "Benchmarking in progress")
 
-    async def sleep_for_blocks(self, now: datetime, blocks: int):
+    async def sleep_for_blocks(self, now: datetime, blocks: int, reason: str):
         next_noon = datetime.combine(now.date() + timedelta(days=int(now.hour >= 12)), time(12), tzinfo=TIMEZONE)
         blocks_to_sleep = min(blocks, ceil((next_noon - now).total_seconds() / 12))
-        logger.info(f"Benchmarking in progress, sleeping for {blocks_to_sleep} blocks")
+        logger.info(f"{reason}, sleeping for {blocks_to_sleep} blocks")
         await asyncio.sleep(blocks_to_sleep * 12)
 
     @property
