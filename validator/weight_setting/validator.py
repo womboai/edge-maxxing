@@ -1,8 +1,8 @@
 import asyncio
 import random
-import time
 from argparse import ArgumentParser
-from datetime import date, datetime
+from asyncio import sleep
+from datetime import date, datetime, timedelta, time
 from itertools import islice
 from math import ceil
 from operator import itemgetter, attrgetter
@@ -10,16 +10,19 @@ from os import makedirs
 from os.path import isfile
 from pathlib import Path
 from pickle import dump, load
+from ssl import SSLEOFError
 from typing import Any
 
 import requests
 import wandb
+
 from base_validator import BenchmarkState, BenchmarkResults, AutoUpdater
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
 from fiber.chain.weights import set_node_weights
 from fiber.logging_utils import get_logger
+from substrateinterface.exceptions import SubstrateRequestException
 from substrateinterface import SubstrateInterface, Keypair
 from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
@@ -224,10 +227,6 @@ class Validator:
         if not self.wandb_run:
             return
 
-        logger.info("Uploading benchmarks to wandb")
-
-        benchmark_data = {}
-
         submission_data = {
             str(uid): {
                 "hotkey": self.hotkeys[uid],
@@ -239,34 +238,10 @@ class Validator:
             if info
         }
 
-        tiers: list[list[Uid]] = []
-        if self.baseline_metrics:
-            contestants = get_contestant_scores(self.benchmarks, self.baseline_metrics)
-            tiers = get_tiers(contestants)
-
-        for uid, benchmark in enumerate(self.benchmarks):
-            if not benchmark:
-                continue
-
-            miner_info = self.contest_state.miner_info[uid]
-            if not miner_info:
-                continue
-
-            data = {
-                "similarity": benchmark.average_similarity,
-                "min_similarity": benchmark.min_similarity,
-            } | benchmark.model_dump()
-
-            if self.baseline_metrics:
-                data["score"] = benchmark.calculate_score(self.baseline_metrics)
-            if tiers:
-                data["tier"] = get_contestant_tier(tiers, uid)
-
-            benchmark_data[str(uid)] = data
-
         log_data = {
             "submissions": submission_data,
-            "benchmarks": benchmark_data,
+            "benchmarks": self.get_wandb_benchmarks(self.benchmarks),
+            "last_benchmarks": self.get_wandb_benchmarks(self.last_benchmarks),
             "invalid": self.invalid,
             "benchmarking_state": self.benchmarking_state.name,
         }
@@ -279,8 +254,37 @@ class Validator:
 
         self.wandb_run.log(data=log_data)
 
-        logger.info(log_data)
         logger.info("Benchmarks uploaded to wandb")
+
+    def get_wandb_benchmarks(self, benchmarks: list[CheckpointBenchmark | None]):
+        benchmark_data = {}
+        tiers: list[list[Uid]] = []
+
+        if self.baseline_metrics:
+            contestants = get_contestant_scores(benchmarks, self.baseline_metrics)
+            tiers = get_tiers(contestants)
+
+        for uid, benchmark in enumerate(benchmarks):
+            if not benchmark:
+                continue
+
+            miner_info = self.contest_state.miner_info[uid]
+            if not miner_info:
+                continue
+
+            data = {
+               "similarity": benchmark.average_similarity,
+               "min_similarity": benchmark.min_similarity,
+            } | benchmark.model_dump()
+
+            if self.baseline_metrics:
+                data["score"] = benchmark.calculate_score(self.baseline_metrics)
+            if tiers:
+                data["tier"] = get_contestant_tier(tiers, uid)
+
+            benchmark_data[str(uid)] = data
+
+        return benchmark_data
 
     @classmethod
     def add_extra_args(cls, argument_parser: ArgumentParser):
@@ -297,6 +301,13 @@ class Validator:
             nargs="*",
             help="The API route to the validator benchmarking API.",
             required=True,
+        )
+
+        argument_parser.add_argument(
+            "--delayed_weights.off",
+            action="store_true",
+            help="Turn off delayed weight setting.",
+            default=False,
         )
 
         add_wandb_args(argument_parser)
@@ -457,6 +468,8 @@ class Validator:
             self.attempted_set_weights = True
 
             self.sync_chain_nodes(block)
+        except SubstrateRequestException as e:
+            logger.error(f"Failed to set weights: {e}")
         except Exception as e:
             logger.error(f"Failed to set weights", exc_info=e)
 
@@ -465,6 +478,8 @@ class Validator:
             return
 
         equal_weights = False
+        delayed_weights = not self.config["delayed_weights.off"]
+        benchmarks = self.last_benchmarks if delayed_weights else self.benchmarks
 
         if not self.contest_state:
             logger.info("Will not set new weights as the contest state has not been set, setting to all ones")
@@ -478,7 +493,7 @@ class Validator:
             if any(benchmark is not None for benchmark in self.benchmarks):
                 logger.info("Setting weights to current benchmarks as the previous day's benchmarks have not been set")
                 self.last_benchmarks = self.benchmarks
-            else:
+            elif delayed_weights:
                 logger.info("Will not set new weights as the previous day's benchmarks have not been set, setting to all ones")
                 equal_weights = True
 
@@ -503,7 +518,7 @@ class Validator:
         blacklisted_keys = self.get_blacklisted_keys()
         for hotkey, node in self.metagraph.nodes.items():
             uid = self.hotkeys.index(hotkey)
-            if self.last_benchmarks[uid]:
+            if benchmarks[uid]:
                 if self.is_blacklisted(blacklisted_keys, hotkey, node.coldkey):
                     logger.warning(f"Not setting weights for blacklisted hotkey {hotkey}")
                     self.reset_miner(uid)
@@ -511,7 +526,7 @@ class Validator:
                     logger.warning(f"Not setting weights for hotkey {hotkey} as their submission was not found")
                     self.reset_miner(uid)
 
-        contestants = get_contestant_scores(self.last_benchmarks, self.baseline_metrics)
+        contestants = get_contestant_scores(benchmarks, self.baseline_metrics)
         tiers = get_tiers(contestants)
         blocks = [info.block if info else None for info in self.contest_state.miner_info]
         weights = get_scores(tiers, blocks, len(self.metagraph.nodes))
@@ -548,7 +563,7 @@ class Validator:
     def is_blacklisted(blacklisted_keys: dict, hotkey: str, coldkey: str):
         return hotkey in blacklisted_keys["hotkeys"] or coldkey in blacklisted_keys["coldkeys"]
 
-    def get_miner_submissions(self):
+    def get_miner_submissions(self) -> list[MinerModelInfo | None]:
         visited_repositories: dict[str, tuple[Uid, int]] = {}
         visited_revisions: dict[str, tuple[Uid, int]] = {}
         blacklisted_keys = self.get_blacklisted_keys()
@@ -595,7 +610,7 @@ class Validator:
             visited_repositories[info.repository.url] = node.node_id, info.block
             visited_revisions[info.repository.revision] = node.node_id, info.block
 
-            time.sleep(0.2)
+            sleep(0.2)
 
         return miner_info
 
@@ -641,7 +656,7 @@ class Validator:
 
             miner_info = self.get_miner_submissions()
 
-            logger.info(f"Got {miner_info} submissions")
+            logger.info(f"Got {len([info for info in miner_info if info])} submissions")
 
             nodes = self.metagraph_nodes()
 
@@ -658,11 +673,12 @@ class Validator:
             if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
                 # New contest, restart
                 self.contest = CURRENT_CONTEST
-
                 self.contest_state = ContestState(self.contest.id, miner_info)
-                self.last_benchmarks = self.benchmarks
             else:
                 self.contest_state.miner_info = miner_info
+
+            logger.info(f"Setting updated benchmarks")
+            self.last_benchmarks = self.benchmarks
 
             self.benchmarks = self.clear_benchmarks()
             self.invalid.clear()
@@ -720,8 +736,7 @@ class Validator:
                 # to avoid multiple validators setting weights all in the same block
                 blocks_to_wait = random.randint(1, 10)
 
-            logger.info(f"Nothing to do in this step, sleeping for {blocks_to_wait} blocks")
-            await asyncio.sleep(blocks_to_wait * 12)
+            await self.sleep_for_blocks(now, blocks_to_wait)
 
             return
 
@@ -805,24 +820,22 @@ class Validator:
                     logger.info(f"{hotkey} has no submission, skipping")
                     continue
 
-                if benchmark:
+                if benchmark and self.benchmarks[uid] != benchmark:
                     logger.info(f"Updating {hotkey}'s benchmarks to {benchmark}")
                 self.benchmarks[uid] = benchmark
 
             for hotkey, error_message in result.invalid.items():
-                logger.info(f"Marking {hotkey}'s submission as invalid: '{error_message}'")
+                uid = self.hotkeys.index(hotkey)
+                if error_message != self.invalid.get(uid):
+                    logger.info(f"Marking {hotkey}'s submission as invalid: '{error_message}'")
                 if hotkey in self.hotkeys:
-                    self.invalid[self.hotkeys.index(hotkey)] = error_message
+                    self.invalid[uid] = error_message
 
         self.average_benchmarking_time = (sum(benchmark_times) / len(benchmark_times)) if benchmark_times else None
         self.send_wandb_metrics()
 
         if not not_started and not in_progress and finished:
-            logger.info(
-                "Benchmarking APIs have reported submission testing as done. "
-                "Miner metrics updated:"
-            )
-            logger.info(self.benchmarks)
+            logger.info("Benchmarking APIs have reported submission testing as done.")
 
             self.benchmarking = False
             self.step += 1
@@ -834,9 +847,13 @@ class Validator:
 
         self.save_state()
 
-        blocks = epoch_length / 4
-        logger.info(f"Benchmarking in progress, sleeping for {blocks} blocks")
-        await asyncio.sleep(blocks * 12)
+        await self.sleep_for_blocks(now, epoch_length / 4)
+
+    async def sleep_for_blocks(self, now: datetime, blocks: int):
+        next_noon = datetime.combine(now.date() + timedelta(days=int(now.hour >= 12)), time(12), tzinfo=TIMEZONE)
+        blocks_to_sleep = min(blocks, ceil((next_noon - now).total_seconds() / 12))
+        logger.info(f"Benchmarking in progress, sleeping for {blocks_to_sleep} blocks")
+        await asyncio.sleep(blocks_to_sleep * 12)
 
     @property
     def block(self):
@@ -862,7 +879,10 @@ class Validator:
                 await self.do_step(current_block)
             except Exception as e:
                 if not isinstance(e, ContestDeviceValidationError):
-                    logger.error(f"Error during validation step {self.step}", exc_info=e)
+                    if isinstance(e, SSLEOFError):
+                        logger.error(f"Error during validation step {self.step}: {e}")
+                    else:
+                        logger.error(f"Error during validation step {self.step}", exc_info=e)
 
                     self.substrate = get_substrate(subtensor_address=self.substrate.url)
 
