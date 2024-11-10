@@ -19,7 +19,7 @@ from .. import (
 )
 
 SANDBOX_DIRECTORY = Path("/sandbox")
-DEFAULT_LOAD_TIMEOUT = 500
+DEFAULT_LOAD_TIMEOUT = 1000
 MIN_LOAD_TIMEOUT = 240
 
 debug = int(os.getenv("VALIDATOR_DEBUG") or 0) > 0

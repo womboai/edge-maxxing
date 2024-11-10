@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from asyncio import sleep
 from datetime import date, datetime, timedelta, time
 from itertools import islice
+from json import JSONDecodeError
 from math import ceil
 from operator import itemgetter, attrgetter
 from os import makedirs
@@ -52,7 +53,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (5, 1, 6)
+VALIDATOR_VERSION: tuple[int, int, int] = (5, 1, 7)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -479,6 +480,11 @@ class Validator:
         delayed_weights = not self.config["delayed_weights.off"]
         benchmarks = self.last_benchmarks if delayed_weights else self.benchmarks
 
+        if not delayed_weights and self.benchmarking:
+            logger.info("Not setting new weights as benchmarking is not done, reusing old weights")
+            delayed_weights = True
+            benchmarks = self.last_benchmarks
+
         if not self.contest_state:
             logger.info("Will not set new weights as the contest state has not been set, setting to all ones")
             equal_weights = True
@@ -674,6 +680,9 @@ class Validator:
                 self.contest_state = ContestState(self.contest.id, miner_info)
             else:
                 self.contest_state.miner_info = miner_info
+
+            self.average_benchmarking_time = None
+            self.benchmarking_state = BenchmarkState.NOT_STARTED
 
             logger.info(f"Setting updated benchmarks")
             self.last_benchmarks = self.benchmarks
@@ -877,7 +886,7 @@ class Validator:
                 await self.do_step(current_block)
             except Exception as e:
                 if not isinstance(e, ContestDeviceValidationError):
-                    if isinstance(e, SSLEOFError):
+                    if isinstance(e, (SSLEOFError, JSONDecodeError)):
                         logger.error(f"Error during validation step {self.step}: {e}")
                     else:
                         logger.error(f"Error during validation step {self.step}", exc_info=e)
