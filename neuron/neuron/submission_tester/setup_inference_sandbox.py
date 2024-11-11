@@ -15,6 +15,7 @@ DEPENDENCY_BLACKLIST = abspath(Path(__file__).parent / "dependency_blacklist.txt
 CLEAR_CACHE_SCRIPT = abspath(Path(__file__).parent / "clear_cache.sh")
 CLONE_SCRIPT = abspath(Path(__file__).parent / "clone.sh")
 BLACKLIST_SCRIPT = abspath(Path(__file__).parent / "blacklist.sh")
+SYNC_UV = abspath(Path(__file__).parent / "sync_uv.sh")
 DOWNLOAD_HUGGINGFACE_MODELS = abspath(Path(__file__).parent / "download_huggingface_models.sh")
 NETWORK_JAIL = abspath(Path(__file__).parent / "libnetwork_jail.so")
 
@@ -111,6 +112,17 @@ def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bo
             "Detected a blacklisted dependency"
         )
         logger.info(f"Found no blacklisted dependencies after {perf_counter() - start:.2f} seconds")
+
+    start = perf_counter()
+    logger.info(f"Syncing uv...")
+    _run(
+        SYNC_UV,
+        sandbox_args,
+        sandbox_directory,
+        [],
+        "Failed to sync uv"
+    )
+    logger.info(f"Synced uv in {perf_counter() - start:.2f} seconds")
 
     start = perf_counter()
     logger.info(f"Downloading Hugging Face models...")
