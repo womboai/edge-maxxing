@@ -1,4 +1,4 @@
 from .metrics import *
 from .auto_updater import *
 
-API_VERSION = "5.1.3"
+API_VERSION = "5.2.0"

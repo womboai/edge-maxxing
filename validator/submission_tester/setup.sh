@@ -12,12 +12,6 @@ useradd --create-home --home-dir /home/api api || true
 
 chown -R api:api /api
 
-apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get -y install sudo pipx git git-lfs build-essential python3-dev python3-opencv
-
-sudo -u api pipx ensurepath
-sudo -u api pipx install uv
-
 ./submission_tester/update.sh
 
 su - api -c "cd /api/validator && uv sync"

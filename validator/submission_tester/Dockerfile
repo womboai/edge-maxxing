@@ -1,11 +1,9 @@
-FROM pytorch/pytorch:2.4.0-cuda12.4-cudnn9-runtime
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
 
 RUN apt-get update && apt-get install -y curl
 
 WORKDIR /api
 
-COPY .git .git
-COPY README.md .
 COPY neuron/pyproject.toml neuron/
 COPY neuron/neuron/__init__.py neuron/neuron/
 COPY pipelines/pyproject.toml pipelines/
@@ -27,6 +25,9 @@ COPY validator/base_validator validator/base_validator
 COPY validator/submission_tester validator/submission_tester
 COPY neuron/neuron neuron/neuron
 COPY pipelines/pipelines pipelines/pipelines
+
+COPY .git .git
+COPY README.md .
 
 WORKDIR /api/validator
 

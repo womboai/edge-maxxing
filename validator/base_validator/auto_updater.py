@@ -9,12 +9,10 @@ AUTO_UPDATE_SCRIPT = abspath(Path(__file__).parent / "auto-update.sh")
 UPDATE_RATE_MINUTES = 15
 
 class AutoUpdater:
-    _update_dependencies: bool
     _thread: Thread
     _stop_flag: Event
 
-    def __init__(self, update_dependencies: bool):
-        self._update_dependencies = update_dependencies
+    def __init__(self):
         self._stop_flag = Event()
         self._thread = Thread(target=self._monitor, daemon=True)
         self._thread.start()
@@ -31,7 +29,7 @@ class AutoUpdater:
 
     def _check_for_updates(self):
         process = run(
-            [AUTO_UPDATE_SCRIPT, str(self._update_dependencies).lower()],
+            [AUTO_UPDATE_SCRIPT],
             capture_output=True,
             encoding='utf-8',
         )
