@@ -4,7 +4,7 @@ from concurrent.futures import CancelledError
 from datetime import timedelta, datetime
 from random import choice
 from threading import Lock, Event, Thread
-from time import perf_counter
+from time import perf_counter, sleep
 from typing import cast
 
 from neuron import (
@@ -95,7 +95,8 @@ class Benchmarker:
                 logger.warning("Benchmarking was canceled while testing the baseline")
                 return
             except Exception as e:
-                logger.error("Failed to generate baseline samples, retrying", exc_info=e)
+                logger.error("Failed to generate baseline samples, retrying in 60 seconds", exc_info=e)
+                sleep(60)
 
         while len(self.benchmarks) != len(self.submissions) and not self.cancelled_event.is_set():
             hotkey = choice(list(self.submissions.keys() - self.benchmarks.keys()))
