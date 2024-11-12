@@ -18,6 +18,7 @@ from base_validator import (
     API_VERSION,
     BenchmarkState,
     BenchmarkResults,
+    AutoUpdater,
 )
 
 hotkey = os.getenv("VALIDATOR_HOTKEY_SS58_ADDRESS")
@@ -62,13 +63,13 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    auto_updater = AutoUpdater()
     if not debug:
         CURRENT_CONTEST.validate()
 
     yield {
         "benchmarker": Benchmarker(),
     }
-
 
 app = FastAPI(lifespan=lifespan)
 

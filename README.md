@@ -164,11 +164,6 @@ And then start docker compose
 docker compose up -d --build
 ```
 
-To setup auto-updating, simply run
-```bash
-./initialize-docker-auto-update.sh
-```
-
 ### RunPod/Containers
 If running in a containerized environment like RunPod(which does not support Docker), then you need to run 2 pods/containers. The following setup assumes using PM2.
 
@@ -178,31 +173,19 @@ In one pod/container with a GPU, we'll set up the API component, start as follow
 ```bash
     git clone https://github.com/womboai/edge-maxxing /api
     cd /api/validator
-    ./submission_tester/setup.sh
 ```
 
 And then run as follows:
 ```bash
-    su api -s /bin/bash
-
-    pipx ensurepath
-
     export CUDA_VISIBLE_DEVICES=0
-
     export VALIDATOR_HOTKEY_SS58_ADDRESS={ss58-address}
-
-    pm2 start uv --name edge-maxxing-submission-tester --interpreter none -- \
-      run uvicorn \
+    
+    pm2 start ./submission_tester/start.sh --name edge-maxxing-submission-tester --interpreter /bin/bash -- \
       --host 0.0.0.0 \
       --port 8000 \
       submission_tester:app
 ```
 Make sure port 8000(or whichever you set) is exposed!
-
-To setup auto-updating, simply run
-```bash
-./initialize-auto-update.sh edge-maxxing-submission-tester
-```
 
 The argument at the end is the name of the main PM2 process. This will keep your PM2 validator instance up to date as long as it is running.
 
@@ -225,11 +208,6 @@ In the another pod/container without a GPU, to run the scoring validator, clone 
 ```
 
 Make sure to replace the API component route with the routes to the API containers(which can be something in the format of `http://ip:port`), refer to the instructions above at [API Component](#api-component)
-
-Additionally, the auto-updating script can be used here
-```bash
-./initialize-auto-update.sh edge-maxxing-validator
-```
 
 ## Proposals for Optimizations
 

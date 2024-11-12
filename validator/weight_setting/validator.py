@@ -17,7 +17,7 @@ from typing import Any
 import requests
 import wandb
 
-from base_validator import BenchmarkState, BenchmarkResults
+from base_validator import BenchmarkState, BenchmarkResults, AutoUpdater
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
@@ -53,7 +53,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (5, 1, 8)
+VALIDATOR_VERSION: tuple[int, int, int] = (5, 2, 0)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -92,6 +92,7 @@ class ContestState:
 
 
 class Validator:
+    auto_updater: AutoUpdater
     config: dict[str, Any]
     substrate: SubstrateInterface
     metagraph: Metagraph
@@ -124,6 +125,7 @@ class Validator:
     contest: Contest
 
     def __init__(self):
+        self.auto_updater = AutoUpdater()
         self.config = get_config(Validator.add_extra_args)
 
         from .diagnostics import save_validator_diagnostics
