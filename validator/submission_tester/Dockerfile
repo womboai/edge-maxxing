@@ -24,12 +24,11 @@ RUN cd validator && ./submission_tester/setup.sh
 COPY README.md .
 COPY validator/submission_tester/start.sh validator/submission_tester/
 
+COPY --chown=api:api .git .git
 COPY validator/base_validator validator/base_validator
 COPY validator/submission_tester validator/submission_tester
 COPY neuron/neuron neuron/neuron
 COPY pipelines/pipelines pipelines/pipelines
-
-COPY --chown=api:api .git .git
 
 WORKDIR /api/validator
 
