@@ -9,6 +9,5 @@ while true; do
 
   if [ $exit_code -eq 75 ]; then
     echo "Auto update initiated, restarting Validator"
-    sleep 3
   fi
 done

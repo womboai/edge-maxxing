@@ -5,7 +5,7 @@ set -e
 echo "Checking for updates..."
 VERSION=$(git rev-parse HEAD)
 
-git pull --rebase --autostash origin builtin-auto-updating
+git pull --autostash origin main
 
 NEW_VERSION=$(git rev-parse HEAD)
 

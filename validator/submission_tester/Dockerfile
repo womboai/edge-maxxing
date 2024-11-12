@@ -18,16 +18,17 @@ COPY validator/weight_setting/__init__.py validator/weight_setting/
 
 COPY validator/submission_tester/setup.sh validator/submission_tester/
 COPY validator/submission_tester/update.sh validator/submission_tester/
+COPY .git .git
 
 RUN cd validator && ./submission_tester/setup.sh
+
+COPY README.md .
+COPY validator/submission_tester/start.sh validator/submission_tester/
 
 COPY validator/base_validator validator/base_validator
 COPY validator/submission_tester validator/submission_tester
 COPY neuron/neuron neuron/neuron
 COPY pipelines/pipelines pipelines/pipelines
-
-COPY .git .git
-COPY README.md .
 
 WORKDIR /api/validator
 
