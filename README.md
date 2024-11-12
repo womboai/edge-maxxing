@@ -178,17 +178,9 @@ In one pod/container with a GPU, we'll set up the API component, start as follow
 
 And then run as follows:
 ```bash
-    su api -s /bin/bash
-
-    pipx ensurepath
-
     export CUDA_VISIBLE_DEVICES=0
-
     export VALIDATOR_HOTKEY_SS58_ADDRESS={ss58-address}
     
-    # Return back to the root user
-    exit
-
     pm2 start ./submission_tester/update.sh --name edge-maxxing-submission-tester --interpreter /bin/bash -- \
       --host 0.0.0.0 \
       --port 8000 \
