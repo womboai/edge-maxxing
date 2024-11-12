@@ -18,9 +18,11 @@ COPY validator/weight_setting/__init__.py validator/weight_setting/
 
 COPY validator/submission_tester/setup.sh validator/submission_tester/
 COPY validator/submission_tester/update.sh validator/submission_tester/
-COPY .git .git
 
 RUN cd validator && ./submission_tester/setup.sh
+
+COPY .git .git
+RUN chown -R api:api /api/.git
 
 COPY README.md .
 COPY validator/submission_tester/start.sh validator/submission_tester/
