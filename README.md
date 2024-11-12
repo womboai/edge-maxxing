@@ -173,7 +173,7 @@ In one pod/container with a GPU, we'll set up the API component, start as follow
 ```bash
     git clone https://github.com/womboai/edge-maxxing /api
     cd /api/validator
-    ./submission_tester/setup.sh
+    ./submission_tester/update.sh
 ```
 
 And then run as follows:
