@@ -3,10 +3,13 @@ import time
 from os.path import abspath
 from pathlib import Path
 from threading import Event, Thread
-from subprocess import run
+from fiber.logging_utils import get_logger
+import git
 
 AUTO_UPDATE_SCRIPT = abspath(Path(__file__).parent / "auto-update.sh")
 UPDATE_RATE_MINUTES = 15
+
+logger = get_logger(__name__)
 
 class AutoUpdater:
     _thread: Thread
@@ -29,20 +32,23 @@ class AutoUpdater:
                 time.sleep(sleep_minutes * 60 - current_time.tm_sec)
 
     def _check_for_updates(self):
-        process = run(
-            [AUTO_UPDATE_SCRIPT],
-            capture_output=True,
-            encoding='utf-8',
-        )
+        logger.info("Checking for updates...")
+        repo = git.Repo(search_parent_directories=True)
+        current_version = repo.head.commit.hexsha
 
-        if process.stdout.strip():
-            print(process.stdout)
+        with repo.git.custom_environment(GIT_AUTO_STASH='1'):
+            repo.remotes.origin.pull("main")
 
-        if process.stderr.strip():
-            print(process.stderr)
+        new_version = repo.head.commit.hexsha
 
-        if process.returncode == 75:
+        logger.info(f"Current version: '{current_version}'")
+        logger.info(f"New version: '{new_version}'")
+        if current_version != new_version:
+            logger.info(f"New version detected: '{new_version}'. Restarting...")
             self._restart()
+        else:
+            logger.info("Already up to date.")
+
 
     def _restart(self):
         self._stop_flag.set()

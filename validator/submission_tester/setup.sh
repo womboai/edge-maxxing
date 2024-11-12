@@ -17,6 +17,6 @@ chown -R api:api /api
 su - api -c "cd /api/validator && uv sync"
 
 echo "api ALL = (sandbox) NOPASSWD: ALL" >> /etc/sudoers
-echo "Defaults env_keep += \"VALIDATOR_HOTKEY_SS58_ADDRESS VALIDATOR_DEBUG\"" >> /etc/sudoers
+echo "Defaults env_keep += \"VALIDATOR_HOTKEY_SS58_ADDRESS VALIDATOR_DEBUG CUDA_VISIBLE_DEVICES\"" >> /etc/sudoers
 
 git config --system advice.detachedHead false
