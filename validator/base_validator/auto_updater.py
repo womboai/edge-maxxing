@@ -15,6 +15,7 @@ class AutoUpdater:
     def __init__(self):
         self._stop_flag = Event()
         self._thread = Thread(target=self._monitor, daemon=True)
+        self._check_for_updates()
         self._thread.start()
 
     def _monitor(self):
