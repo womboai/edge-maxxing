@@ -181,7 +181,7 @@ And then run as follows:
     export CUDA_VISIBLE_DEVICES=0
     export VALIDATOR_HOTKEY_SS58_ADDRESS={ss58-address}
     
-    pm2 start ./submission_tester/update.sh --name edge-maxxing-submission-tester --interpreter /bin/bash -- \
+    pm2 start ./submission_tester/start.sh --name edge-maxxing-submission-tester --interpreter /bin/bash -- \
       --host 0.0.0.0 \
       --port 8000 \
       submission_tester:app
