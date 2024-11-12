@@ -23,6 +23,7 @@ COPY README.md .
 COPY validator/base_validator/__init__.py validator/base_validator/
 COPY validator/submission_tester/__init__.py validator/submission_tester/
 COPY validator/weight_setting/__init__.py validator/weight_setting/
+COPY --chown=api:api .git .git
 
 USER root
 RUN chown -R validator:validator /app
@@ -33,7 +34,6 @@ ENV PATH="/home/validator/.local/bin:$PATH"
 
 RUN uv sync
 
-COPY --chown=api:api .git .git
 COPY validator/base_validator base_validator
 COPY validator/weight_setting weight_setting
 COPY neuron/neuron ../neuron/neuron

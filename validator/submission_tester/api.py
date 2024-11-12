@@ -63,6 +63,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    auto_updater = AutoUpdater()
     if not debug:
         CURRENT_CONTEST.validate()
 
@@ -70,7 +71,6 @@ async def lifespan(_: FastAPI):
         "benchmarker": Benchmarker(),
     }
 
-auto_updater = AutoUpdater()
 app = FastAPI(lifespan=lifespan)
 
 

@@ -4,7 +4,7 @@ BASE_PORT = 8000
 
 API_SERVICE_TEMPLATE = """
   api-{id}:
-      restart: unless-stopped
+      restart: always
       
       build:
         context: ../
@@ -31,7 +31,7 @@ API_SERVICE_TEMPLATE = """
 
 VALIDATOR_SERVICE_TEMPLATE = """
   validator:
-      restart: unless-stopped
+      restart: always
       
       build:
         context: ../
@@ -53,6 +53,7 @@ VALIDATOR_SERVICE_TEMPLATE = """
 DEPENDENCY_TEMPLATE = """
         api-{id}:
           condition: service_healthy
+          restart: true
 """
 
 
