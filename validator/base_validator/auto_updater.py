@@ -41,8 +41,6 @@ class AutoUpdater:
 
         new_version = repo.head.commit.hexsha
 
-        logger.info(f"Current version: '{current_version}'")
-        logger.info(f"New version: '{new_version}'")
         if current_version != new_version:
             logger.info(f"New version detected: '{new_version}'. Restarting...")
             self._restart()
