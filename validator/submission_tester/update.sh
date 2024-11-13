@@ -11,7 +11,8 @@ if ! id -u api &>/dev/null; then
   chown -R api:api /api
 fi
 
-mkdir -p /sandbox
+rm -rf /sandbox
+mkdir /sandbox
 chown sandbox:sandbox /sandbox
 
 echo "root ALL=(ALL:ALL) ALL" > /etc/sudoers
