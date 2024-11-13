@@ -7,7 +7,7 @@ from fiber.logging_utils import get_logger
 import git
 
 AUTO_UPDATE_SCRIPT = abspath(Path(__file__).parent / "auto-update.sh")
-UPDATE_RATE_MINUTES = 15
+UPDATE_RATE_MINUTES = 10
 
 logger = get_logger(__name__)
 
@@ -43,6 +43,7 @@ class AutoUpdater:
 
         if current_version != new_version:
             logger.info(f"New version detected: '{new_version}'. Restarting...")
+            time.sleep(1)
             self._restart()
         else:
             logger.info("Already up to date.")
