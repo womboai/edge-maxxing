@@ -11,6 +11,7 @@ if ! id -u api &>/dev/null; then
   chown -R api:api /api
 fi
 
+pkill -9 -f "python.*\/sandbox" || true
 rm -rf /sandbox
 mkdir /sandbox
 chown sandbox:sandbox /sandbox
