@@ -8,8 +8,9 @@ DEBIAN_FRONTEND=noninteractive apt-get -y install sudo pipx git git-lfs build-es
 if ! id -u api &>/dev/null; then
   useradd --shell=/bin/false --create-home --home-dir /home/sandbox sandbox || true
   useradd --create-home --home-dir /home/api api || true
-  chown -R api:api /api
 fi
+
+chown -R api:api /api
 
 pkill -9 -f "python.*\/sandbox" || true
 rm -rf /sandbox
