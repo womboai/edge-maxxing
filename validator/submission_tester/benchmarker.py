@@ -88,15 +88,14 @@ class Benchmarker:
 
         while not self.baseline and not self.cancelled_event.is_set():
             try:
-                if not self.baseline or self.baseline.inputs != self.inputs:
-                    logger.info("Generating baseline samples to compare")
-                    self.baseline = generate_baseline(self.inputs, cancelled_event=self.cancelled_event)
+                logger.info("Generating baseline samples to compare")
+                self.baseline = generate_baseline(self.inputs, cancelled_event=self.cancelled_event)
             except CancelledError:
                 logger.warning("Benchmarking was canceled while testing the baseline")
                 return
             except Exception as e:
-                logger.error("Failed to generate baseline samples, retrying in 60 seconds", exc_info=e)
-                sleep(60)
+                logger.error("Failed to generate baseline samples, retrying in 10 minutes", exc_info=e)
+                sleep(600)
 
         while len(self.benchmarks) != len(self.submissions) and not self.cancelled_event.is_set():
             hotkey = choice(list(self.submissions.keys() - self.benchmarks.keys()))
