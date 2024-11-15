@@ -57,6 +57,7 @@ def generate_baseline(
 ) -> BaselineBenchmark:
     outputs: list[GenerationOutput] = []
 
+    start_vram = CURRENT_CONTEST.get_vram_used()
     with InferenceSandbox(
         repository_info=CURRENT_CONTEST.baseline_repository,
         baseline=True,
@@ -82,7 +83,7 @@ def generate_baseline(
             outputs.append(output)
 
     generation_time = mean(output.generation_time for output in outputs)
-    vram_used = max(output.vram_used for output in outputs)
+    vram_used = max(output.vram_used for output in outputs) - start_vram
     watts_used = max(output.watts_used for output in outputs)
 
     return BaselineBenchmark(
@@ -111,6 +112,7 @@ def compare_checkpoints(
 
     outputs: list[GenerationOutput] = []
 
+    start_vram = CURRENT_CONTEST.get_vram_used()
     with InferenceSandbox(
         repository_info=submission,
         baseline=False,
@@ -144,7 +146,7 @@ def compare_checkpoints(
             raise InvalidSubmissionError(f"Failed to run inference") from e
 
     average_time = sum(output.generation_time for output in outputs) / len(outputs)
-    vram_used = max(output.vram_used for output in outputs)
+    vram_used = max(output.vram_used for output in outputs) - start_vram
     watts_used = max(output.watts_used for output in outputs)
 
     with CURRENT_CONTEST.output_comparator() as output_comparator:
