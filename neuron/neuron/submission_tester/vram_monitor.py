@@ -3,7 +3,7 @@ from time import sleep
 
 from .. import Contest
 
-SAMPLE_RATE_MS = 1
+SAMPLE_RATE_MS = 10
 
 class VRamMonitor:
     _contest: Contest
