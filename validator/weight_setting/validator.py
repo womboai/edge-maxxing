@@ -53,7 +53,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (5, 2, 2)
+VALIDATOR_VERSION: tuple[int, int, int] = (5, 2, 3)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -818,15 +818,23 @@ class Validator:
         ]
 
         for _, result in with_results:
-            for hotkey, benchmark in result.results.items():
+            def get_uid(hotkey: Key) -> Uid | None:
                 if not hotkey in self.hotkeys:
                     logger.info(f"{hotkey} not found, skipping")
-                    continue
+                    return None
 
                 uid = self.hotkeys.index(hotkey)
 
                 if not self.contest_state.miner_info[uid]:
                     logger.info(f"{hotkey} has no submission, skipping")
+                    return None
+
+                return uid
+
+
+            for hotkey, benchmark in result.results.items():
+                uid = get_uid(hotkey)
+                if not uid:
                     continue
 
                 if benchmark and self.benchmarks[uid] != benchmark:
@@ -834,11 +842,13 @@ class Validator:
                 self.benchmarks[uid] = benchmark
 
             for hotkey, error_message in result.invalid.items():
-                uid = self.hotkeys.index(hotkey)
+                uid = get_uid(hotkey)
+                if not uid:
+                    continue
+
                 if error_message != self.invalid.get(uid):
                     logger.info(f"Marking {hotkey}'s submission as invalid: '{error_message}'")
-                if hotkey in self.hotkeys:
-                    self.invalid[uid] = error_message
+                self.invalid[uid] = error_message
 
         self.average_benchmarking_time = (sum(benchmark_times) / len(benchmark_times)) if benchmark_times else None
         self.send_wandb_metrics()
