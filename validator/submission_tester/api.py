@@ -53,7 +53,7 @@ class LogsIO(TextIOWrapper):
 sys.stdout = LogsIO(sys.stdout, "out")
 sys.stderr = LogsIO(sys.stderr, "err")
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(filename)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
     stream=sys.stdout
