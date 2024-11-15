@@ -846,7 +846,7 @@ class Validator:
                 if not uid:
                     continue
 
-                if error_message != self.invalid.get(uid):
+                if error_message and error_message != self.invalid.get(uid):
                     logger.info(f"Marking {hotkey}'s submission as invalid: '{error_message}'")
                 self.invalid[uid] = error_message
 

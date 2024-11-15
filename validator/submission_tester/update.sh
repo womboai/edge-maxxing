@@ -12,7 +12,7 @@ fi
 
 chown -R api:api /api
 
-pkill -9 -f "python.*\/sandbox" || true
+pkill -9 -u sandbox || true
 rm -rf /sandbox
 mkdir /sandbox
 chown sandbox:sandbox /sandbox
