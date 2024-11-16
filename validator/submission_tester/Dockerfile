@@ -33,12 +33,4 @@ WORKDIR /api/validator
 
 EXPOSE 8000
 
-HEALTHCHECK \
-    --interval=1m \
-    --timeout=5s \
-    --start-period=15s \
-    --start-interval=10s \
-    --retries=5 \
-    CMD curl -f http://localhost:8000/state || exit 1
-
 ENTRYPOINT ["submission_tester/entrypoint.sh"]

@@ -47,16 +47,7 @@ VALIDATOR_SERVICE_TEMPLATE = """
       command: --benchmarker_api {apis} $VALIDATOR_ARGS
 
       network_mode: host
-
-      depends_on:
 """
-
-DEPENDENCY_TEMPLATE = """
-        api-{id}:
-          condition: service_healthy
-          restart: true
-"""
-
 
 def main():
     with open("compose-gpu-layout.json") as f:
@@ -78,9 +69,6 @@ def main():
                 )
             )
         )
-
-        for device_id in layout:
-            compose.write(DEPENDENCY_TEMPLATE.format(id=device_id))
 
 
 if __name__ == '__main__':

@@ -111,7 +111,7 @@ def start_benchmarking(
     with benchmarker.lock:
         timestamp = time.time_ns()
 
-        if timestamp - benchmarker.start_timestamp < 120_000_000_000:
+        if timestamp - benchmarker.start_timestamp < 600_000_000_000:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Started recently",

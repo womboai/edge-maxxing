@@ -1,4 +1,5 @@
 import os
+import signal
 import time
 from os.path import abspath
 from pathlib import Path
@@ -47,7 +48,6 @@ class AutoUpdater:
 
         if current_version != new_version:
             logger.info(f"New version detected: '{new_version}'. Restarting...")
-            time.sleep(1)
             self._restart()
         else:
             logger.info("Already up to date.")
@@ -55,4 +55,5 @@ class AutoUpdater:
 
     def _restart(self):
         self._stop_flag.set()
-        os._exit(75)
+        time.sleep(1)
+        os.kill(os.getpid(), signal.SIGTERM)

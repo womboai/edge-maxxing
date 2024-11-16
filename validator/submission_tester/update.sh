@@ -12,7 +12,10 @@ fi
 
 chown -R api:api /api
 
-pkill -9 -u sandbox || true
+pkill -u sandbox || true
+pkill -u api || true
+pkill -f start_inference || true
+
 rm -rf /sandbox
 mkdir /sandbox
 chown sandbox:sandbox /sandbox
