@@ -85,6 +85,7 @@ class Benchmarker:
         self.submission_times.clear()
         self.inputs = random_inputs()
         self.done = False
+        self.baseline = None
 
         while not self.baseline and not self.cancelled_event.is_set():
             try:
@@ -117,6 +118,10 @@ class Benchmarker:
         self.done = True
 
     def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
+        if not submissions:
+            logger.warning("No submissions to benchmark")
+            return
+
         logger.info(f"Starting benchmarking for {len(submissions)} submissions")
 
         if self.thread and self.thread.is_alive():
