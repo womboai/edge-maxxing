@@ -98,7 +98,7 @@ class Benchmarker:
                 logger.error("Failed to generate baseline samples, retrying in 10 minutes", exc_info=e)
                 sleep(600)
 
-        while len(self.benchmarks) != len(self.submissions) and not self.cancelled_event.is_set():
+        while len(self.benchmarks) != len(self.submissions) and self.baseline and not self.cancelled_event.is_set():
             hotkey = choice(list(self.submissions.keys() - self.benchmarks.keys()))
             self._benchmark_submission(hotkey)
 

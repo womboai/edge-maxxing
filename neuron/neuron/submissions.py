@@ -86,7 +86,7 @@ def get_submissions(
                     continue
 
                 repository = ModelRepositoryInfo(url=repository_url, revision=info.revision)
-                submissions[hotkeys.index(hotkey)] = MinerModelInfo(repository, block)
+                submissions[hotkeys.index(hotkey)] = MinerModelInfo(repository, int(commitment.value["block"]))
         except Exception as e:
             logger.error(f"Failed to get submission from miner {hotkey}")
             logger.debug(f"Submission parsing error", exc_info=e)
