@@ -741,7 +741,7 @@ class Validator:
 
             # API likely crashed or got restarted, need to re-benchmark any submissions sent to API
             logger.info(
-                f"APIs {api_names} are in a different state than expected, likely restarted."
+                f"APIs {api_names} are in a different state than expected, likely restarted. "
                 "Sending submissions again for testing"
             )
 
