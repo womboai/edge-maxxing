@@ -1,6 +1,7 @@
-from fiber.chain.commitments import publish_raw_commitment, get_raw_commitment
+from fiber.chain.commitments import publish_raw_commitment, _deserialize_commitment_field
 from fiber.logging_utils import get_logger
 from substrateinterface import SubstrateInterface, Keypair
+from substrateinterface.storage import StorageKey
 
 from .checkpoint import CheckpointSubmission, SPEC_VERSION, Key, MinerModelInfo
 from .contest import CURRENT_CONTEST, ModelRepositoryInfo
@@ -34,41 +35,61 @@ def make_submission(
     )
 
 
-def get_submission(
+def get_submissions(
     substrate: SubstrateInterface,
+    hotkeys: list[Key],
     netuid: int,
-    hotkey: Key,
-) -> MinerModelInfo | None:
-    try:
-        commitment = get_raw_commitment(substrate, netuid, hotkey)
+    block: int
+) -> list[MinerModelInfo | None]:
+    submissions: list[MinerModelInfo | None] = [None] * len(hotkeys)
 
-        if not commitment:
-            return None
+    storage_keys: list[StorageKey] = []
+    for hotkey in hotkeys:
+        storage_keys.append(substrate.create_storage_key(
+            "Commitments",
+            "CommitmentOf",
+            [netuid, hotkey]
+        ))
 
-        decoder = Decoder(commitment.data)
+    commitments = substrate.query_multi(
+        storage_keys=storage_keys,
+        block_hash=substrate.get_block_hash(block),
+    )
 
-        spec_version = decoder.read_uint16()
-
-        if spec_version != SPEC_VERSION:
-            return None
-
-        while not decoder.eof:
-            info = CheckpointSubmission.decode(decoder)
-            repository_url = info.get_repo_link()
-
-            if (
-                info.contest != CURRENT_CONTEST.id or
-                repository_url == CURRENT_CONTEST.baseline_repository.url or
-                info.revision == CURRENT_CONTEST.baseline_repository.revision
-            ):
+    for storage, commitment in commitments:
+        hotkey = storage.params[1]
+        try:
+            if not commitment or not commitment.value:
                 continue
 
-            repository = ModelRepositoryInfo(url=repository_url, revision=info.revision)
+            fields = commitment.value["info"]["fields"]
+            if not fields:
+                continue
 
-            return MinerModelInfo(repository, commitment.block)
+            field = _deserialize_commitment_field(fields[0])
+            if field is None:
+                continue
 
-        return None
-    except Exception as e:
-        logger.error(f"Failed to get submission from miner {hotkey}")
-        logger.debug(f"Submission parsing error", exc_info=e)
-        return None
+            decoder = Decoder(field[1])
+            spec_version = decoder.read_uint16()
+            if spec_version != SPEC_VERSION:
+                continue
+
+            while not decoder.eof:
+                info = CheckpointSubmission.decode(decoder)
+                repository_url = info.get_repo_link()
+
+                if (
+                    info.contest != CURRENT_CONTEST.id or
+                    repository_url == CURRENT_CONTEST.baseline_repository.url
+                ):
+                    continue
+
+                repository = ModelRepositoryInfo(url=repository_url, revision=info.revision)
+                submissions[hotkeys.index(hotkey)] = MinerModelInfo(repository, block)
+        except Exception as e:
+            logger.error(f"Failed to get submission from miner {hotkey}")
+            logger.debug(f"Submission parsing error", exc_info=e)
+            continue
+
+    return submissions

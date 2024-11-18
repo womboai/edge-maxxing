@@ -2,6 +2,7 @@ import asyncio
 import random
 from argparse import ArgumentParser
 from asyncio import sleep
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta, time
 from itertools import islice
 from json import JSONDecodeError
@@ -25,7 +26,6 @@ from fiber.chain.weights import set_node_weights
 from fiber.logging_utils import get_logger
 from substrateinterface.exceptions import SubstrateRequestException
 from substrateinterface import SubstrateInterface, Keypair
-from tqdm import tqdm
 from wandb.sdk.wandb_run import Run
 
 from neuron import (
@@ -42,7 +42,7 @@ from neuron import (
     TIMEZONE,
     ModelRepositoryInfo,
     SPEC_VERSION,
-    get_submission,
+    get_submissions,
     BENCHMARKS_VERSION,
 )
 from neuron.submission_tester import (
@@ -53,7 +53,7 @@ from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (5, 2, 7)
+VALIDATOR_VERSION: tuple[int, int, int] = (5, 2, 8)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -67,6 +67,7 @@ COLLECTED_SUBMISSIONS_VERSION = SPEC_VERSION * 10 + 1
 logger = get_logger(__name__)
 
 
+@dataclass
 class ContestState:
     id: ContestId
     miner_score_version: int
@@ -80,15 +81,8 @@ class ContestState:
     ):
         self.id = contest_id
         self.miner_score_version = BENCHMARKS_VERSION
+        self.submission_spec_version = COLLECTED_SUBMISSIONS_VERSION
         self.miner_info = miner_info
-
-    def __setstate__(self, state):
-        self.miner_score_version = state.get("miner_score_version", 0)
-        self.submission_spec_version = state.get("submission_spec_version", 0)
-        self.__dict__.update(state)
-
-    def __repr__(self):
-        return f"ContestState(id={self.id}, miner_score_version={self.miner_score_version}, miner_info={self.miner_info})"
 
 
 class Validator:
@@ -570,55 +564,16 @@ class Validator:
         return hotkey in blacklisted_keys["hotkeys"] or coldkey in blacklisted_keys["coldkeys"]
 
     def get_miner_submissions(self) -> list[MinerModelInfo | None]:
-        visited_repositories: dict[str, tuple[Uid, int]] = {}
-        visited_revisions: dict[str, tuple[Uid, int]] = {}
         blacklisted_keys = self.get_blacklisted_keys()
 
-        miner_info: list[MinerModelInfo | None] = []
+        hotkeys = [hotkey for hotkey, node in self.metagraph.nodes.items() if not self.is_blacklisted(blacklisted_keys, hotkey, node.coldkey)]
 
-        for hotkey, node in tqdm(self.metagraph.nodes.items()):
-            if self.is_blacklisted(blacklisted_keys, hotkey, node.coldkey):
-                miner_info.append(None)
-                continue
-
-            logger.info(f"Getting submission for hotkey {hotkey}")
-
-            info = get_submission(
-                self.substrate,
-                self.metagraph.netuid,
-                hotkey,
-            )
-
-            if not info:
-                miner_info.append(None)
-                continue
-
-            existing_repository_submission = visited_repositories.get(info.repository.url)
-            existing_revision_submission = visited_revisions.get(info.repository.revision)
-
-            if existing_repository_submission and existing_revision_submission:
-                existing_submission = min(
-                    existing_repository_submission, existing_revision_submission, key=itemgetter(1)
-                )
-            else:
-                existing_submission = existing_repository_submission or existing_revision_submission
-
-            if existing_submission:
-                existing_uid, existing_block = existing_submission
-
-                if info.block > existing_block:
-                    miner_info.append(None)
-                    continue
-
-                miner_info[existing_uid] = None
-
-            miner_info.append(info)
-            visited_repositories[info.repository.url] = node.node_id, info.block
-            visited_revisions[info.repository.revision] = node.node_id, info.block
-
-            sleep(0.2)
-
-        return miner_info
+        return get_submissions(
+            substrate=self.substrate,
+            hotkeys=hotkeys,
+            netuid=self.metagraph.netuid,
+            block=self.block,
+        )
 
     async def send_submissions_to_api(self, apis: list[BenchmarkingApi], submissions: dict[Key, ModelRepositoryInfo]):
         iterator = iter(submissions.items())
@@ -653,52 +608,45 @@ class Validator:
             }
         )
 
+    def initialize_contest(self, now: datetime):
+        logger.info("Collecting all submissions")
+
+        miner_info = self.get_miner_submissions()
+
+        logger.info(f"Got {len([info for info in miner_info if info])} submissions")
+
+        logger.info(f"Working on contest {self.contest.id.name}")
+
+        if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
+            # New contest, restart
+            self.contest = CURRENT_CONTEST
+            self.contest_state = ContestState(self.contest.id, miner_info)
+        else:
+            self.contest_state.miner_info = miner_info
+
+        self.average_benchmarking_time = None
+        self.benchmarking_state = BenchmarkState.NOT_STARTED
+
+        logger.info(f"Setting updated benchmarks")
+        self.last_benchmarks = self.benchmarks
+
+        self.benchmarks = self.clear_benchmarks()
+        self.invalid.clear()
+
+        self.last_day = now.date()
+
+        self.start_wandb_run()
+
+        self.benchmarking = False
+
+        self.step += 1
+
     async def do_step(self, block: int):
         now = self.current_time()
 
         if (not self.last_day or self.last_day < now.date()) and now.hour >= 12:
             # Past noon, should start collecting submissions
-            logger.info("Collecting all submissions")
-
-            miner_info = self.get_miner_submissions()
-
-            logger.info(f"Got {len([info for info in miner_info if info])} submissions")
-
-            nodes = self.metagraph_nodes()
-
-            logger.info(f"Working on contest {self.contest.id.name} today's submissions")
-
-            submissions = {
-                nodes[uid].hotkey: submission.repository
-                for uid, submission in enumerate(miner_info)
-                if submission
-            }
-
-            await self.start_benchmarking(submissions)
-
-            if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
-                # New contest, restart
-                self.contest = CURRENT_CONTEST
-                self.contest_state = ContestState(self.contest.id, miner_info)
-            else:
-                self.contest_state.miner_info = miner_info
-
-            self.average_benchmarking_time = None
-            self.benchmarking_state = BenchmarkState.NOT_STARTED
-
-            logger.info(f"Setting updated benchmarks")
-            self.last_benchmarks = self.benchmarks
-
-            self.benchmarks = self.clear_benchmarks()
-            self.invalid.clear()
-
-            self.last_day = now.date()
-
-            self.start_wandb_run()
-
-            self.benchmarking = True
-
-            self.step += 1
+            self.initialize_contest(now)
             return
 
         last_update = self.metagraph.nodes[self.keypair.ss58_address].last_updated
@@ -731,7 +679,13 @@ class Validator:
                         for uid in remaining
                     }
 
-                    await self.start_benchmarking(submissions)
+                    try:
+                        await self.start_benchmarking(submissions)
+                    except Exception as e:
+                        logger.error(f"Failed to start benchmarking, retrying in 60 seconds", exc_info=e)
+                        await sleep(60)
+                        return
+
                     self.benchmarking = True
 
                     self.save_state()
@@ -787,7 +741,7 @@ class Validator:
 
             # API likely crashed or got restarted, need to re-benchmark any submissions sent to API
             logger.info(
-                f"APIs {api_names} are in a different state than expected, likely restarted. "
+                f"APIs {api_names} are in a different state than expected, likely restarted."
                 "Sending submissions again for testing"
             )
 
@@ -872,7 +826,7 @@ class Validator:
         next_noon = datetime.combine(now.date() + timedelta(days=int(now.hour >= 12)), time(12), tzinfo=TIMEZONE)
         blocks_to_sleep = min(blocks, ceil((next_noon - now).total_seconds() / 12))
         logger.info(f"{reason}, sleeping for {blocks_to_sleep} blocks")
-        await asyncio.sleep(blocks_to_sleep * 12)
+        await sleep(blocks_to_sleep * 12)
 
     @property
     def block(self):

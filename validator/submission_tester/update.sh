@@ -25,6 +25,9 @@ echo "api ALL = (sandbox) NOPASSWD: ALL" >> /etc/sudoers
 echo "Defaults env_keep += \"VALIDATOR_HOTKEY_SS58_ADDRESS VALIDATOR_DEBUG CUDA_VISIBLE_DEVICES\"" >> /etc/sudoers
 
 git config --system advice.detachedHead false
+git config --system rebase.autostash true
+git config --system rebase.autosquash true
+git config --system pull.autostash true
 
 sudo -u api pipx ensurepath
 sudo -u api pipx install uv
