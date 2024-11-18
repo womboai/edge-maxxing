@@ -1,13 +1,10 @@
 import os
 import signal
 import time
-from os.path import abspath
-from pathlib import Path
 from threading import Event, Thread
 from fiber.logging_utils import get_logger
 import git
 
-AUTO_UPDATE_SCRIPT = abspath(Path(__file__).parent / "auto-update.sh")
 UPDATE_RATE_MINUTES = 10
 
 logger = get_logger(__name__)
@@ -56,3 +53,13 @@ class AutoUpdater:
         self._stop_flag.set()
         time.sleep(5)
         os.kill(os.getpid(), signal.SIGTERM)
+
+        logger.info("Waiting for process to terminate...")
+        for _ in range(60):
+            time.sleep(1)
+            try:
+                os.kill(os.getpid(), 0)
+            except ProcessLookupError:
+                break
+
+        os.kill(os.getpid(), signal.SIGKILL)

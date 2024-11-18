@@ -137,6 +137,7 @@ class Benchmarker:
         self.thread = Thread(
             target=self._start_benchmarking,
             args=(submissions,),
+            daemon=True,
         )
         self.thread.start()
 

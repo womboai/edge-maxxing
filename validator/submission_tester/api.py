@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 import time
+from asyncio import CancelledError
 from contextlib import asynccontextmanager
 from io import TextIOWrapper
 from queue import Queue
@@ -10,6 +11,7 @@ from typing import Annotated, TextIO
 
 from fastapi import FastAPI, WebSocket, Request, Header, HTTPException
 from starlette import status
+from starlette.websockets import WebSocketDisconnect
 from substrateinterface import Keypair
 
 from neuron import CURRENT_CONTEST, Key, ModelRepositoryInfo
@@ -169,5 +171,7 @@ async def stream_logs(
                 message = logs.get()
                 await websocket.send_text(message)
             await asyncio.sleep(0.1)
+    except (CancelledError, WebSocketDisconnect):
+        ...
     except Exception as e:
         logger.error(f"WebSocket error", exc_info=e)
