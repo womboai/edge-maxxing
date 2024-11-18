@@ -43,7 +43,7 @@ MODEL_DIRECTORY = Path("model")
 BASELINE_CACHE_JSON = Path("baseline_cache.json")
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(filename)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )

@@ -18,7 +18,7 @@ class AutoUpdater:
 
     def __init__(self):
         self._stop_flag = Event()
-        self._thread = Thread(target=self._monitor)
+        self._thread = Thread(target=self._monitor, daemon=True)
         self._check_for_updates()
         self._thread.start()
 
@@ -41,8 +41,7 @@ class AutoUpdater:
         repo = git.Repo(search_parent_directories=True)
         current_version = repo.head.commit.hexsha
 
-        with repo.git.custom_environment(GIT_AUTO_STASH="1"):
-            repo.remotes.origin.pull("main")
+        repo.remotes.origin.pull("main")
 
         new_version = repo.head.commit.hexsha
 
@@ -55,5 +54,5 @@ class AutoUpdater:
 
     def _restart(self):
         self._stop_flag.set()
-        time.sleep(1)
+        time.sleep(5)
         os.kill(os.getpid(), signal.SIGTERM)
