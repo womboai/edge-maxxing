@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class BaselineBenchmark(BaseModel):
+    inputs: list[TextToImageRequest]
     outputs: list[GenerationOutput]
     metric_data: MetricData
 
@@ -38,14 +39,14 @@ def generate(
     container: InferenceSandbox,
     request: TextToImageRequest,
 ) -> GenerationOutput:
-    start_joules = CURRENT_CONTEST.get_joules()
+    start_joules = CURRENT_CONTEST.device.get_joules()
     vram_monitor = VRamMonitor(CURRENT_CONTEST)
     start = perf_counter()
 
     output = container(request)
 
     generation_time = perf_counter() - start
-    joules_used = CURRENT_CONTEST.get_joules() - start_joules
+    joules_used = CURRENT_CONTEST.device.get_joules() - start_joules
     watts_used = joules_used / generation_time
     vram_used = vram_monitor.complete()
 
@@ -65,7 +66,7 @@ def generate_baseline(
 ) -> BaselineBenchmark:
     outputs: list[GenerationOutput] = []
 
-    start_vram = CURRENT_CONTEST.get_vram_used()
+    start_vram = CURRENT_CONTEST.device.get_vram_used()
     with InferenceSandbox(
         repository_info=CURRENT_CONTEST.baseline_repository,
         baseline=True,
@@ -120,7 +121,7 @@ def compare_checkpoints(
 
     outputs: list[GenerationOutput] = []
 
-    start_vram = CURRENT_CONTEST.get_vram_used()
+    start_vram = CURRENT_CONTEST.device.get_vram_used()
     with InferenceSandbox(
         repository_info=submission,
         baseline=False,

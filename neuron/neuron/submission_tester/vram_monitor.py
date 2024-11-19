@@ -20,7 +20,7 @@ class VRamMonitor:
 
     def _monitor(self):
         while not self._stop_flag.is_set():
-            self._vram_usage = max(self._vram_usage, self._contest.get_vram_used())
+            self._vram_usage = max(self._vram_usage, self._contest.device.get_vram_used())
             sleep(SAMPLE_RATE_MS / 1000)
 
     def complete(self) -> int:
