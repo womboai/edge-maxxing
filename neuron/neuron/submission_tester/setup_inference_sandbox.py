@@ -20,7 +20,7 @@ DOWNLOAD_HUGGINGFACE_MODELS = abspath(Path(__file__).parent / "download_huggingf
 NETWORK_JAIL = abspath(Path(__file__).parent / "libnetwork_jail.so")
 
 STORAGE_THRESHOLD_GB = 50
-MAX_HF_MODEL_SIZE_GB = 50
+MAX_HF_MODEL_SIZE_GB = 100
 MAX_REPO_SIZE_MB = 16
 
 with open(DEPENDENCY_BLACKLIST, 'r') as blacklist_file:
