@@ -74,17 +74,21 @@ class Contest:
         scale = 1 / (1 - SIMILARITY_SCORE_THRESHOLD)
         similarity = sqrt((benchmark.average_similarity - SIMILARITY_SCORE_THRESHOLD) * scale)
 
-        def normalize(value: float, metric_type: MetricType) -> float:
-            return (value * self.metric_weights.get(metric_type, 0)) / total_weight
+        def normalize(baseline_value: float, benchmark_value: float, metric_type: MetricType) -> float:
+            if baseline_value == 0:
+                return 0
+            relative_improvement = (baseline_value - benchmark_value) / baseline_value
+            return (relative_improvement * self.metric_weights.get(metric_type, 0)) / total_weight
 
-        return sum([
-            normalize(similarity, MetricType.SIMILARITY_SCORE),
-            normalize(baseline.generation_time - benchmark.model.generation_time, MetricType.GENERATION_TIME),
-            normalize(baseline.size - benchmark.model.size, MetricType.SIZE),
-            normalize(baseline.vram_used - benchmark.model.vram_used, MetricType.VRAM_USED),
-            normalize(baseline.watts_used - benchmark.model.watts_used, MetricType.WATTS_USED),
-            normalize(baseline.load_time - benchmark.model.load_time, MetricType.LOAD_TIME)
+        score = sum([
+            normalize(baseline.generation_time, benchmark.model.generation_time, MetricType.GENERATION_TIME),
+            normalize(baseline.size, benchmark.model.size, MetricType.SIZE),
+            normalize(baseline.vram_used, benchmark.model.vram_used, MetricType.VRAM_USED),
+            normalize(baseline.watts_used, benchmark.model.watts_used, MetricType.WATTS_USED),
+            normalize(baseline.load_time, benchmark.model.load_time, MetricType.LOAD_TIME)
         ])
+
+        return score * similarity * self.metric_weights.get(MetricType.SIMILARITY_SCORE, 0) / total_weight
 
 
 CONTESTS = [
