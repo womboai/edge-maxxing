@@ -210,7 +210,7 @@ CONTESTS = [
     ),
     CudaContest(
         ContestId.FLUX_NVIDIA_4090,
-        ModelRepositoryInfo(url="https://github.com/womboai/flux-schnell-edge-inference", revision="2ed5cf1b"),
+        ModelRepositoryInfo(url="https://github.com/womboai/flux-schnell-edge-inference", revision="fbfb8f0"),
         "NVIDIA GeForce RTX 4090",
     ),
 ]
