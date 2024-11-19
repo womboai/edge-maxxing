@@ -6,16 +6,19 @@ from statistics import mean
 from threading import Event
 from time import perf_counter
 
+from pydantic import BaseModel
+
 from pipelines import TextToImageRequest
 from . import InvalidSubmissionError
 from .inference_sandbox import InferenceSandbox
-from .metrics import CheckpointBenchmark, MetricData, BaselineBenchmark
 from .vram_monitor import VRamMonitor
 from .. import (
     GenerationOutput,
     ModelRepositoryInfo,
     CURRENT_CONTEST,
     OutputComparator,
+    CheckpointBenchmark,
+    MetricData,
 )
 
 SANDBOX_DIRECTORY = Path("/sandbox")
@@ -26,18 +29,24 @@ debug = int(os.getenv("VALIDATOR_DEBUG") or 0) > 0
 logger = logging.getLogger(__name__)
 
 
+class BaselineBenchmark(BaseModel):
+    inputs: list[TextToImageRequest]
+    outputs: list[GenerationOutput]
+    metric_data: MetricData
+
+
 def generate(
     container: InferenceSandbox,
     request: TextToImageRequest,
 ) -> GenerationOutput:
-    start_joules = CURRENT_CONTEST.get_joules()
+    start_joules = CURRENT_CONTEST.device.get_joules()
     vram_monitor = VRamMonitor(CURRENT_CONTEST)
     start = perf_counter()
 
     output = container(request)
 
     generation_time = perf_counter() - start
-    joules_used = CURRENT_CONTEST.get_joules() - start_joules
+    joules_used = CURRENT_CONTEST.device.get_joules() - start_joules
     watts_used = joules_used / generation_time
     vram_used = vram_monitor.complete()
 
@@ -57,7 +66,7 @@ def generate_baseline(
 ) -> BaselineBenchmark:
     outputs: list[GenerationOutput] = []
 
-    start_vram = CURRENT_CONTEST.get_vram_used()
+    start_vram = CURRENT_CONTEST.device.get_vram_used()
     with InferenceSandbox(
         repository_info=CURRENT_CONTEST.baseline_repository,
         baseline=True,
@@ -112,7 +121,7 @@ def compare_checkpoints(
 
     outputs: list[GenerationOutput] = []
 
-    start_vram = CURRENT_CONTEST.get_vram_used()
+    start_vram = CURRENT_CONTEST.device.get_vram_used()
     with InferenceSandbox(
         repository_info=submission,
         baseline=False,
@@ -191,7 +200,7 @@ def compare_checkpoints(
 
     logger.info(
         f"Tested {len(inputs)} Samples\n"
-        f"Score: {benchmark.calculate_score(baseline.metric_data)}\n"
+        f"Score: {CURRENT_CONTEST.calculate_score(baseline.metric_data, benchmark)}\n"
         f"Average Similarity: {average_similarity}\n"
         f"Min Similarity: {min_similarity}\n"
         f"Average Generation Time: {average_time}s\n"
