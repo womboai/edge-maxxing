@@ -122,4 +122,4 @@ def find_contest(contest_id: ContestId):
     raise RuntimeError(f"Unknown contest ID requested {contest_id}")
 
 
-CURRENT_CONTEST: Contest = find_contest(ContestId.FLUX_NVIDIA_4090)
+CURRENT_CONTEST: Contest = find_contest(ContestId.SDXL_NEWDREAM_NVIDIA_4090)
