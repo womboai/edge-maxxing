@@ -208,6 +208,11 @@ CONTESTS = [
         ModelRepositoryInfo(url="https://github.com/womboai/sdxl-newdream-20-inference", revision="1b3f9ea"),
         "NVIDIA GeForce RTX 4090",
     ),
+    CudaContest(
+        ContestId.FLUX_NVIDIA_4090,
+        ModelRepositoryInfo(url="https://github.com/womboai/flux-schnell-edge-inference", revision="0c03ece"),
+        "NVIDIA GeForce RTX 4090",
+    ),
 ]
 
 
@@ -221,4 +226,4 @@ def find_contest(contest_id: ContestId):
     raise RuntimeError(f"Unknown contest ID requested {contest_id}")
 
 
-CURRENT_CONTEST: CudaContest = find_contest(ContestId.SDXL_NEWDREAM_NVIDIA_4090)
+CURRENT_CONTEST: CudaContest = find_contest(ContestId.FLUX_NVIDIA_4090)
