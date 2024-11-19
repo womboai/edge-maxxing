@@ -34,7 +34,6 @@ from neuron import (
     CURRENT_CONTEST,
     INPUTS_ENDPOINT,
     find_contest,
-    ContestDeviceValidationError,
     Contest,
     Key,
     Uid,
@@ -44,16 +43,15 @@ from neuron import (
     SPEC_VERSION,
     get_submissions,
     BENCHMARKS_VERSION,
-)
-from neuron.submission_tester import (
     CheckpointBenchmark,
     MetricData,
 )
+from neuron.device import ContestDeviceValidationError
 from .benchmarking_api import BenchmarkingApi, benchmarking_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (5, 3, 0)
+VALIDATOR_VERSION: tuple[int, int, int] = (5, 3, 1)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 
 WEIGHTS_VERSION = (
@@ -273,7 +271,7 @@ class Validator:
             } | benchmark.model_dump()
 
             if self.baseline_metrics:
-                data["score"] = benchmark.calculate_score(self.baseline_metrics)
+                data["score"] = CURRENT_CONTEST.calculate_score(self.baseline_metrics, benchmark)
             if tiers:
                 data["tier"] = get_contestant_tier(tiers, uid)
 

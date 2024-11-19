@@ -1,12 +1,37 @@
-from abc import ABC, abstractmethod
-from collections.abc import Callable
 from enum import Enum
 from functools import partial
-from io import BytesIO
-from typing import ContextManager
+from math import sqrt
+from typing import Callable
 
 from pydantic import BaseModel
-from transformers import CLIPProcessor, CLIPVisionModelWithProjection
+
+from .device import Device, CudaDevice, Gpu
+from .output_comparator import OutputComparator, ImageOutputComparator
+
+SIMILARITY_SCORE_THRESHOLD = 0.8
+
+
+class MetricType(Enum):
+    SIMILARITY_SCORE = 0
+    GENERATION_TIME = 1
+    SIZE = 2
+    VRAM_USED = 3
+    WATTS_USED = 4
+    LOAD_TIME = 5
+
+
+class MetricData(BaseModel):
+    generation_time: float
+    size: int
+    vram_used: float
+    watts_used: float
+    load_time: float
+
+
+class CheckpointBenchmark(BaseModel):
+    model: MetricData
+    average_similarity: float
+    min_similarity: float
 
 
 class ModelRepositoryInfo(BaseModel):
@@ -15,215 +40,86 @@ class ModelRepositoryInfo(BaseModel):
 
 
 class ContestId(Enum):
-    SDXL_APPLE_SILICON = 0
+    FLUX_NVIDIA_4090 = 0
     SDXL_NEWDREAM_NVIDIA_4090 = 1
-    FLUX_NVIDIA_4090 = 2
 
 
-class OutputComparator(ContextManager, ABC):
-    @abstractmethod
-    def compare(self, baseline: bytes, optimized: bytes) -> float:
-        pass
-
-    def __wrapped_compare(self, baseline: bytes, optimized: bytes):
-        return self.compare(baseline, optimized)
-
-    __call__ = __wrapped_compare
-
-
-class ImageOutputComparator(OutputComparator):
-    def __init__(self, device: str):
-        self.device = device
-        self.clip = CLIPVisionModelWithProjection.from_pretrained("laion/CLIP-ViT-bigG-14-laion2B-39B-b160k").to(self.device)
-        self.processor = CLIPProcessor.from_pretrained("laion/CLIP-ViT-bigG-14-laion2B-39B-b160k")
-
-    def compare(self, baseline: bytes, optimized: bytes):
-        from torch import manual_seed
-        from torch.nn.functional import cosine_similarity
-
-        from PIL import Image
-
-        from skimage import metrics
-        import cv2
-
-        import numpy
-
-        manual_seed(0)
-
-        def load_image(data: bytes):
-            with BytesIO(data) as fp:
-                return numpy.array(Image.open(fp).convert("RGB"))
-
-        def clip_embeddings(image: numpy.ndarray):
-            processed_input = self.processor(images=image, return_tensors="pt").to(self.device)
-
-            return self.clip(**processed_input).image_embeds.to(self.device)
-
-        baseline_array = load_image(baseline)
-        optimized_array = load_image(optimized)
-
-        grayscale_baseline = cv2.cvtColor(baseline_array, cv2.COLOR_RGB2GRAY)
-        grayscale_optimized = cv2.cvtColor(optimized_array, cv2.COLOR_RGB2GRAY)
-
-        structural_similarity = metrics.structural_similarity(grayscale_baseline, grayscale_optimized, full=True)[0]
-
-        del grayscale_baseline
-        del grayscale_optimized
-
-        baseline_embeddings = clip_embeddings(baseline_array)
-        optimized_embeddings = clip_embeddings(optimized_array)
-
-        clip_similarity = cosine_similarity(baseline_embeddings, optimized_embeddings)[0].item()
-
-        return clip_similarity * 0.35 + structural_similarity * 0.65
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        import torch
-
-        del self.clip
-        del self.processor
-        getattr(torch, self.device).empty_cache()
-
-
-class Contest(ABC):
+class Contest:
     id: ContestId
+    device: Device
     output_comparator: Callable[[], OutputComparator]
     baseline_repository: ModelRepositoryInfo
+    metric_weights: dict[MetricType, int]
 
     def __init__(
         self,
         contest_id: ContestId,
+        device: Device,
         output_comparator: Callable[[], OutputComparator],
         baseline_repository: ModelRepositoryInfo,
+        metric_weights: dict[MetricType, int]
     ):
         self.id = contest_id
+        self.device = device
         self.output_comparator = output_comparator
         self.baseline_repository = baseline_repository
+        self.metric_weights = metric_weights
 
-    @abstractmethod
-    def get_vram_used(self) -> int:
-        ...
+    def calculate_score(self, baseline: MetricData, benchmark: CheckpointBenchmark) -> float:
+        if benchmark.min_similarity < SIMILARITY_SCORE_THRESHOLD:
+            return 0.0
 
-    @abstractmethod
-    def get_joules(self) -> float:
-        ...
+        total_weight = sum(self.metric_weights.values())
 
-    @abstractmethod
-    def validate(self) -> None:
-        ...
+        scale = 1 / (1 - SIMILARITY_SCORE_THRESHOLD)
+        similarity = sqrt((benchmark.average_similarity - SIMILARITY_SCORE_THRESHOLD) * scale)
 
-    @abstractmethod
-    def clear_cache(self):
-        ...
+        def normalize(value: float, metric_type: MetricType) -> float:
+            return (value * self.metric_weights.get(metric_type, 0)) / total_weight
 
-
-class CudaContest(Contest):
-    def __init__(
-        self,
-        contest_id: ContestId,
-        baseline_repository: ModelRepositoryInfo,
-        expected_device_name: str,
-    ):
-        super().__init__(contest_id, partial(ImageOutputComparator, "cuda"), baseline_repository)
-
-        self.expected_device_name = expected_device_name
-
-    def get_vram_used(self):
-        import pynvml
-        import torch
-
-        pynvml.nvmlInit()
-        handle = pynvml.nvmlDeviceGetHandleByIndex(torch.cuda.current_device())
-        vram = pynvml.nvmlDeviceGetMemoryInfo(handle).used
-        pynvml.nvmlShutdown()
-        return vram
-
-    def get_joules(self):
-        import pynvml
-        import torch
-
-        pynvml.nvmlInit()
-        handle = pynvml.nvmlDeviceGetHandleByIndex(torch.cuda.current_device())
-        mj = pynvml.nvmlDeviceGetTotalEnergyConsumption(handle)
-        pynvml.nvmlShutdown()
-        return mj / 1000.0  # convert mJ to J
-
-    def validate(self):
-        import torch
-
-        device_name = torch.cuda.get_device_name()
-
-        if device_name != self.expected_device_name:
-            raise ContestDeviceValidationError(
-                f"Incompatible device {device_name} when {self.expected_device_name} is required.",
-            )
-
-    def clear_cache(self):
-        import torch
-
-        torch.cuda.empty_cache()
-
-
-class AppleSiliconContest(Contest):
-    def __init__(
-        self,
-        contest_id: ContestId,
-        baseline_repository: ModelRepositoryInfo,
-    ):
-        super().__init__(contest_id, partial(ImageOutputComparator, "mps"), baseline_repository)
-
-    def get_vram_used(self):
-        import torch
-
-        return torch.mps.current_allocated_memory()
-
-    def get_joules(self):
-        return 0  # TODO
-
-    def validate(self):
-        import torch
-
-        if not torch.backends.mps.is_available():
-            raise ContestDeviceValidationError("MPS is not available but is required.")
-
-    def clear_cache(self):
-        import torch
-
-        torch.mps.empty_cache()
-
-
-class ContestDeviceValidationError(Exception):
-    def __init__(self, message: str):
-        super().__init__(message)
-
-        self.message = message
+        return sum([
+            normalize(similarity, MetricType.SIMILARITY_SCORE),
+            normalize(baseline.generation_time - benchmark.model.generation_time, MetricType.GENERATION_TIME),
+            normalize(baseline.size - benchmark.model.size, MetricType.SIZE),
+            normalize(baseline.vram_used - benchmark.model.vram_used, MetricType.VRAM_USED),
+            normalize(baseline.watts_used - benchmark.model.watts_used, MetricType.WATTS_USED),
+            normalize(baseline.load_time - benchmark.model.load_time, MetricType.LOAD_TIME)
+        ])
 
 
 CONTESTS = [
-    CudaContest(
-        ContestId.SDXL_NEWDREAM_NVIDIA_4090,
-        ModelRepositoryInfo(url="https://github.com/womboai/sdxl-newdream-20-inference", revision="1b3f9ea"),
-        "NVIDIA GeForce RTX 4090",
+    Contest(
+        contest_id=ContestId.FLUX_NVIDIA_4090,
+        device=CudaDevice(gpu=Gpu.NVIDIA_RTX_4090),
+        output_comparator=partial(ImageOutputComparator, "cuda"),
+        baseline_repository=ModelRepositoryInfo(url="https://github.com/womboai/flux-schnell-edge-inference", revision="37bf398"),
+        metric_weights={
+            MetricType.SIMILARITY_SCORE: 3,
+            MetricType.VRAM_USED: 3,
+            MetricType.GENERATION_TIME: 1,
+        }
     ),
-    CudaContest(
-        ContestId.FLUX_NVIDIA_4090,
-        ModelRepositoryInfo(url="https://github.com/womboai/flux-schnell-edge-inference", revision="2ed5cf1b"),
-        "NVIDIA GeForce RTX 4090",
+    Contest(
+        contest_id=ContestId.SDXL_NEWDREAM_NVIDIA_4090,
+        device=CudaDevice(gpu=Gpu.NVIDIA_RTX_4090),
+        output_comparator=partial(ImageOutputComparator, "cuda"),
+        baseline_repository=ModelRepositoryInfo(url="https://github.com/womboai/sdxl-newdream-20-inference", revision="2ed5cf1b"),
+        metric_weights={
+            MetricType.SIMILARITY_SCORE: 1,
+            MetricType.GENERATION_TIME: 1,
+        }
     ),
 ]
 
 
 def find_contest(contest_id: ContestId):
-    for c in CONTESTS:
-        if c.id != contest_id:
+    for contest in CONTESTS:
+        if contest.id != contest_id:
             continue
 
-        return c
+        return contest
 
     raise RuntimeError(f"Unknown contest ID requested {contest_id}")
 
 
-CURRENT_CONTEST: CudaContest = find_contest(ContestId.FLUX_NVIDIA_4090)
+CURRENT_CONTEST: Contest = find_contest(ContestId.FLUX_NVIDIA_4090)

@@ -6,16 +6,19 @@ from statistics import mean
 from threading import Event
 from time import perf_counter
 
+from pydantic import BaseModel
+
 from pipelines import TextToImageRequest
 from . import InvalidSubmissionError
 from .inference_sandbox import InferenceSandbox
-from .metrics import CheckpointBenchmark, MetricData, BaselineBenchmark
 from .vram_monitor import VRamMonitor
 from .. import (
     GenerationOutput,
     ModelRepositoryInfo,
     CURRENT_CONTEST,
     OutputComparator,
+    CheckpointBenchmark,
+    MetricData,
 )
 
 SANDBOX_DIRECTORY = Path("/sandbox")
@@ -24,6 +27,11 @@ MIN_LOAD_TIMEOUT = 240
 
 debug = int(os.getenv("VALIDATOR_DEBUG") or 0) > 0
 logger = logging.getLogger(__name__)
+
+
+class BaselineBenchmark(BaseModel):
+    outputs: list[GenerationOutput]
+    metric_data: MetricData
 
 
 def generate(
@@ -191,7 +199,7 @@ def compare_checkpoints(
 
     logger.info(
         f"Tested {len(inputs)} Samples\n"
-        f"Score: {benchmark.calculate_score(baseline.metric_data)}\n"
+        f"Score: {CURRENT_CONTEST.calculate_score(baseline.metric_data, benchmark)}\n"
         f"Average Similarity: {average_similarity}\n"
         f"Min Similarity: {min_similarity}\n"
         f"Average Generation Time: {average_time}s\n"
