@@ -92,7 +92,7 @@ CONTESTS = [
         contest_id=ContestId.FLUX_NVIDIA_4090,
         device=CudaDevice(gpu=Gpu.NVIDIA_RTX_4090),
         output_comparator=partial(ImageOutputComparator, "cuda"),
-        baseline_repository=ModelRepositoryInfo(url="https://github.com/womboai/flux-schnell-edge-inference", revision="37bf398"),
+        baseline_repository=ModelRepositoryInfo(url="https://github.com/womboai/flux-schnell-edge-inference", revision="494f3ea"),
         metric_weights={
             MetricType.SIMILARITY_SCORE: 3,
             MetricType.VRAM_USED: 3,
@@ -103,7 +103,7 @@ CONTESTS = [
         contest_id=ContestId.SDXL_NEWDREAM_NVIDIA_4090,
         device=CudaDevice(gpu=Gpu.NVIDIA_RTX_4090),
         output_comparator=partial(ImageOutputComparator, "cuda"),
-        baseline_repository=ModelRepositoryInfo(url="https://github.com/womboai/sdxl-newdream-20-inference", revision="2ed5cf1b"),
+        baseline_repository=ModelRepositoryInfo(url="https://github.com/womboai/sdxl-newdream-20-inference", revision="1b3f9ea"),
         metric_weights={
             MetricType.SIMILARITY_SCORE: 1,
             MetricType.GENERATION_TIME: 1,
