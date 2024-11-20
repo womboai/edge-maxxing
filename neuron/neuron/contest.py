@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from enum import Enum
+from enum import IntEnum
 from functools import partial
 from math import sqrt
 from typing import Callable
@@ -12,7 +12,7 @@ from .output_comparator import OutputComparator, ImageOutputComparator
 SIMILARITY_SCORE_THRESHOLD = 0.8
 
 
-class MetricType(Enum):
+class MetricType(IntEnum):
     SIMILARITY_SCORE = 0
     GENERATION_TIME = 1
     SIZE = 2
@@ -40,7 +40,7 @@ class ModelRepositoryInfo(BaseModel):
     revision: str
 
 
-class ContestId(Enum):
+class ContestId(IntEnum):
     FLUX_NVIDIA_4090 = 0
     SDXL_NEWDREAM_NVIDIA_4090 = 1
 
