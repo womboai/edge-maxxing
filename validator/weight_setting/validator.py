@@ -597,7 +597,7 @@ class Validator:
     def current_time():
         return datetime.now(tz=TIMEZONE)
 
-    def non_tested_miners(self):
+    def non_tested_miners(self) -> list[Uid]:
         return list(
             {
                 uid
@@ -669,7 +669,7 @@ class Validator:
             if self.contest_state:
                 remaining = self.non_tested_miners()
 
-                if len(remaining):
+                if remaining:
                     nodes = self.metagraph_nodes()
 
                     submissions = {
@@ -786,7 +786,7 @@ class Validator:
 
             for hotkey, benchmark in result.results.items():
                 uid = get_uid(hotkey)
-                if not uid:
+                if uid is None:
                     continue
 
                 if benchmark and self.benchmarks[uid] != benchmark:
@@ -795,7 +795,7 @@ class Validator:
 
             for hotkey, error_message in result.invalid.items():
                 uid = get_uid(hotkey)
-                if not uid:
+                if uid is None:
                     continue
 
                 if error_message and error_message != self.invalid.get(uid):
