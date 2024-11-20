@@ -1,20 +1,22 @@
-import json
+import asyncio
 import sys
 import time
+from collections import defaultdict
 from collections.abc import Callable
 from concurrent.futures import Future, Executor, ThreadPoolExecutor, CancelledError
+from itertools import islice
+from math import ceil
+from operator import itemgetter
 
 from aiohttp import ClientSession
-from base_validator import API_VERSION, BenchmarkResults
 from fiber.logging_utils import get_logger
 from pydantic import RootModel
 from substrateinterface import Keypair
 from websockets.protocol import State
 from websockets.sync.client import connect
 
-from neuron import ModelRepositoryInfo, Key
-
-RETRY_TIME = 60
+from base_validator import API_VERSION, BenchmarkResults, ApiMetadata
+from neuron import ModelRepositoryInfo, Key, ContestId, MinerModelInfo
 
 logger = get_logger(__name__)
 
@@ -91,7 +93,7 @@ class BenchmarkingApi:
         async with request as state_response:
             state_response.raise_for_status()
 
-    async def state(self):
+    async def state(self) -> BenchmarkResults:
         self.check_log_stream()
 
         if not self._session:
@@ -101,6 +103,17 @@ class BenchmarkingApi:
             state_response.raise_for_status()
 
             return BenchmarkResults.model_validate(await state_response.json())
+
+    async def metadata(self) -> ApiMetadata:
+        self.check_log_stream()
+
+        if not self._session:
+            self._session = ClientSession()
+
+        async with self._session.get(f"{self._api}/metadata") as metadata_response:
+            metadata_response.raise_for_status()
+
+            return ApiMetadata.model_validate(await metadata_response.json())
 
     async def close(self):
         self._future.cancel()
@@ -116,6 +129,9 @@ class BenchmarkingApiContextManager:
 
     _executor: Executor
 
+    _version: int | None = None
+    _compatible_contests: list[ContestId] = []
+
     def __init__(self, keypair: Keypair, api: str, index: int):
         self._keypair = keypair
         self._api = api
@@ -124,28 +140,13 @@ class BenchmarkingApiContextManager:
 
     def _connect_to_api(self):
         name = f"API - {self._index + 1}"
-        while True:
-            logger.info(f"Connecting to {name}")
-            url = self._api.replace("http", "ws")
+        logger.info(f"Connecting to {name}")
+        url = self._api.replace("http", "ws")
 
-            websocket = connect(f"{url}/logs", additional_headers=_authentication_headers(self._keypair))
+        websocket = connect(f"{url}/logs", additional_headers=_authentication_headers(self._keypair))
 
-            try:
-                version = json.loads(websocket.recv())["version"]
-            except:
-                logger.error(f"Validator {name} out of date. Retrying in {RETRY_TIME} seconds")
-                websocket.close()
-                time.sleep(RETRY_TIME)
-                continue
-
-            if version != API_VERSION:
-                logger.error(f"Validator {name} has mismatched version, received {version} but expected {API_VERSION}. Retrying in {RETRY_TIME} seconds")
-                websocket.close()
-                time.sleep(RETRY_TIME)
-                continue
-
-            logger.info(f"Connected to {name} with version {version}")
-            return websocket
+        logger.info(f"Connected to {name}")
+        return websocket
 
     def _stream_logs(self):
         return self._executor.submit(self._api_logs)
@@ -181,6 +182,57 @@ class BenchmarkingApiContextManager:
             self._index,
 
             self._stream_logs,
+        )
+
+
+async def send_submissions_to_api(all_apis: list[BenchmarkingApi], submissions: dict[Key, MinerModelInfo]):
+    submissions_by_contest: dict[ContestId, dict[Key, ModelRepositoryInfo]] = defaultdict(lambda: {})
+
+    for key, info in submissions.items():
+        submissions_by_contest[info.contest_id][key] = info.repository
+
+    contest_api_assignment: dict[ContestId, list[BenchmarkingApi]] = defaultdict(lambda: [])
+
+    for api in all_apis:
+        metadata = await api.metadata()
+        if metadata.version != API_VERSION:
+            raise ValueError(f"API version mismatch, expected {API_VERSION}, got {metadata.version}")
+
+        if sum(len(contest_api_assignment[contest_id]) for contest_id in metadata.compatible_contests) == 0:
+            contest_id = next(filter(submissions_by_contest.__contains__, metadata.compatible_contests))
+
+            contest_api_assignment[contest_id].append(api)
+        else:
+            assignment_counts = [
+                (contest_id, len(contest_api_assignment[contest_id]))
+                for contest_id in metadata.compatible_contests
+                if contest_id in submissions_by_contest
+            ]
+
+            lowest_contest_id = min(assignment_counts, key=itemgetter(1))[0]
+
+            contest_api_assignment[lowest_contest_id].append(api)
+
+    for contest_id, apis in contest_api_assignment.items():
+        if contest_id not in submissions_by_contest:
+            raise RuntimeError(f"No API compatible with contest type {contest_id}")
+
+        contest_submissions = submissions_by_contest[contest_id]
+
+        iterator = iter(contest_submissions.items())
+
+        chunk_size = ceil(len(contest_submissions) / len(apis))
+
+        chunks = [
+            (api, list(islice(iterator, chunk_size)))
+            for api in apis
+        ]
+
+        await asyncio.gather(
+            *[
+                api.start_benchmarking(dict(chunk))
+                for api, chunk in chunks
+            ],
         )
 
 

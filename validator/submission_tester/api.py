@@ -14,13 +14,14 @@ from starlette import status
 from starlette.websockets import WebSocketDisconnect
 from substrateinterface import Keypair
 
-from neuron import CURRENT_CONTEST, Key, ModelRepositoryInfo
+from neuron import CURRENT_CONTEST, Key, ModelRepositoryInfo, find_compatible_contests, ContestId, find_contest
 from .benchmarker import Benchmarker
 from base_validator import (
     API_VERSION,
     BenchmarkState,
     BenchmarkResults,
     AutoUpdater,
+    ApiMetadata,
 )
 
 hotkey = os.getenv("VALIDATOR_HOTKEY_SS58_ADDRESS")
@@ -65,12 +66,15 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    auto_updater = AutoUpdater()
-    if not debug:
-        CURRENT_CONTEST.validate()
+    AutoUpdater()
+
+    compatible_contests = find_compatible_contests() if not debug else [CURRENT_CONTEST.id]
+    if not compatible_contests:
+        raise RuntimeError("Device is not compatible with any contests")
 
     yield {
         "benchmarker": Benchmarker(),
+        "compatible_contests": compatible_contests,
     }
 
 app = FastAPI(lifespan=lifespan)
@@ -101,6 +105,7 @@ def _authenticate_request(nonce: int, signature: str):
 
 @app.post("/start")
 def start_benchmarking(
+    contest_id: ContestId,
     submissions: dict[Key, ModelRepositoryInfo],
     x_nonce: Annotated[int, Header()],
     signature: Annotated[str, Header()],
@@ -113,6 +118,15 @@ def start_benchmarking(
     with benchmarker.lock:
         timestamp = time.time_ns()
 
+        try:
+            contest = find_contest(contest_id)
+            contest.validate()
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
+
         if timestamp - benchmarker.start_timestamp < 120_000_000_000:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -121,7 +135,7 @@ def start_benchmarking(
 
         benchmarker.start_timestamp = timestamp
 
-        benchmarker.start_benchmarking(submissions)
+        benchmarker.start_benchmarking(contest, submissions)
 
 
 @app.get("/state")
@@ -151,6 +165,13 @@ def state(request: Request) -> BenchmarkResults:
         average_benchmark_time=average_benchmark_time,
     )
 
+@app.get("/metadata")
+def metadata(request: Request) -> ApiMetadata:
+    return ApiMetadata(
+        version=API_VERSION,
+        compatible_contests=request.state.compatible_contests,
+    )
+
 
 @app.websocket("/logs")
 async def stream_logs(
@@ -162,8 +183,6 @@ async def stream_logs(
     _authenticate_request(nonce, signature)
 
     await websocket.accept()
-
-    await websocket.send_json({"version": API_VERSION})
 
     try:
         while True:

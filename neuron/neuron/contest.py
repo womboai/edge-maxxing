@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum
 from functools import partial
 from math import sqrt
@@ -44,6 +45,7 @@ class ContestId(Enum):
     SDXL_NEWDREAM_NVIDIA_4090 = 1
 
 
+@dataclass
 class Contest:
     id: ContestId
     device: Device
@@ -52,12 +54,12 @@ class Contest:
     metric_weights: dict[MetricType, int]
 
     def __init__(
-        self,
-        contest_id: ContestId,
-        device: Device,
-        output_comparator: Callable[[], OutputComparator],
-        baseline_repository: ModelRepositoryInfo,
-        metric_weights: dict[MetricType, int]
+            self,
+            contest_id: ContestId,
+            device: Device,
+            output_comparator: Callable[[], OutputComparator],
+            baseline_repository: ModelRepositoryInfo,
+            metric_weights: dict[MetricType, int]
     ):
         self.id = contest_id
         self.device = device
@@ -124,6 +126,10 @@ def find_contest(contest_id: ContestId):
         return contest
 
     raise RuntimeError(f"Unknown contest ID requested {contest_id}")
+
+
+def find_compatible_contests() -> list[ContestId]:
+    return [contest.id for contest in CONTESTS if contest.device.is_compatible()]
 
 
 CURRENT_CONTEST: Contest = find_contest(ContestId.FLUX_NVIDIA_4090)

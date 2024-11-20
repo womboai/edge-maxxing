@@ -4,7 +4,6 @@ from argparse import ArgumentParser
 from asyncio import sleep
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, time
-from itertools import islice
 from json import JSONDecodeError
 from math import ceil
 from operator import itemgetter, attrgetter
@@ -30,11 +29,8 @@ from wandb.sdk.wandb_run import Run
 
 from neuron import (
     get_config,
-    ContestId,
     CURRENT_CONTEST,
     INPUTS_ENDPOINT,
-    find_contest,
-    Contest,
     Key,
     Uid,
     MinerModelInfo,
@@ -45,9 +41,10 @@ from neuron import (
     BENCHMARKS_VERSION,
     CheckpointBenchmark,
     MetricData,
+    ContestId,
 )
 from neuron.device import ContestDeviceValidationError
-from .benchmarking_api import BenchmarkingApi, benchmarking_api
+from .benchmarking_api import BenchmarkingApi, benchmarking_api, send_submissions_to_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
@@ -67,17 +64,14 @@ logger = get_logger(__name__)
 
 @dataclass
 class ContestState:
-    id: ContestId
     miner_score_version: int
     submission_spec_version: int
     miner_info: list[MinerModelInfo | None]
 
     def __init__(
         self,
-        contest_id: ContestId,
         miner_info: list[MinerModelInfo | None],
     ):
-        self.id = contest_id
         self.miner_score_version = BENCHMARKS_VERSION
         self.submission_spec_version = COLLECTED_SUBMISSIONS_VERSION
         self.miner_info = miner_info
@@ -114,7 +108,6 @@ class Validator:
     average_benchmarking_time: float | None
     benchmarking_state: BenchmarkState
     invalid: dict[int, str]
-    contest: Contest
 
     def __init__(self):
         self.auto_updater = AutoUpdater()
@@ -169,8 +162,6 @@ class Validator:
         self.load_state()
         self.start_wandb_run()
 
-        self.contest = find_contest(self.contest_state.id) if self.contest_state else CURRENT_CONTEST
-
     def start_wandb_run(self):
         if self.config["wandb.off"]:
             return
@@ -183,7 +174,7 @@ class Validator:
         day = self.last_day or self.current_time().date()
         name = f"validator-{self.uid}-{day.year}-{day.month}-{day.day}"
 
-        contest_id = self.contest_state.id if self.contest_state else CURRENT_CONTEST.id
+        contest_id = CURRENT_CONTEST.id
 
         signing_message = f"{name}:{hotkey}:{contest_id.name}"
         signature = f"0x{self.keypair.sign(signing_message).hex()}"
@@ -254,7 +245,7 @@ class Validator:
         tiers: list[list[Uid]] = []
 
         if self.baseline_metrics:
-            contestants = get_contestant_scores(benchmarks, self.baseline_metrics)
+            contestants = get_contestant_scores(CURRENT_CONTEST, benchmarks, self.baseline_metrics)
             tiers = get_tiers(contestants)
 
         for uid, benchmark in enumerate(benchmarks):
@@ -573,25 +564,8 @@ class Validator:
             block=self.block,
         )
 
-    async def send_submissions_to_api(self, apis: list[BenchmarkingApi], submissions: dict[Key, ModelRepositoryInfo]):
-        iterator = iter(submissions.items())
-
-        chunk_size = ceil(len(submissions) / len(apis))
-
-        chunks = [
-            (api, list(islice(iterator, chunk_size)))
-            for api in apis
-        ]
-
-        await asyncio.gather(
-            *[
-                api.start_benchmarking(dict(chunk))
-                for api, chunk in chunks
-            ],
-        )
-
-    def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
-        return self.send_submissions_to_api(self.benchmarking_apis, submissions)
+    def start_benchmarking(self, submissions: dict[Key, MinerModelInfo]):
+        return send_submissions_to_api(self.benchmarking_apis, submissions)
 
     @staticmethod
     def current_time():
@@ -601,8 +575,8 @@ class Validator:
         return list(
             {
                 uid
-                for uid, benchmark in enumerate(self.benchmarks)
-                if self.contest_state.miner_info[uid] and not benchmark and uid not in self.invalid
+                for uid, miner_info in enumerate(self.contest_state.miner_info)
+                if miner_info and not self.benchmarks[uid] and uid not in self.invalid
             }
         )
 
@@ -613,12 +587,10 @@ class Validator:
 
         logger.info(f"Got {len([info for info in miner_info if info])} submissions")
 
-        logger.info(f"Working on contest {self.contest.id.name}")
+        logger.info(f"Working on contest {CURRENT_CONTEST.id.name}")
 
-        if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
-            # New contest, restart
-            self.contest = CURRENT_CONTEST
-            self.contest_state = ContestState(self.contest.id, miner_info)
+        if not self.contest_state:
+            self.contest_state = ContestState(miner_info)
         else:
             self.contest_state.miner_info = miner_info
 
@@ -673,7 +645,7 @@ class Validator:
                     nodes = self.metagraph_nodes()
 
                     submissions = {
-                        nodes[uid].hotkey: self.contest_state.miner_info[uid].repository
+                        nodes[uid].hotkey: self.contest_state.miner_info[uid]
                         for uid in remaining
                     }
 
@@ -746,7 +718,7 @@ class Validator:
             nodes = self.metagraph_nodes()
 
             submissions = {
-                nodes[uid].hotkey: self.contest_state.miner_info[uid].repository
+                nodes[uid].hotkey: self.contest_state.miner_info[uid]
                 for uid in self.non_tested_miners()
             }
 
@@ -755,7 +727,12 @@ class Validator:
                 for index in api_indices
             ]
 
-            await self.send_submissions_to_api(apis, submissions)
+            try:
+                await send_submissions_to_api(apis, submissions)
+            except Exception as e:
+                logger.error(f"Failed to restart benchmarking, retrying in 60 seconds", exc_info=e)
+                await sleep(60)
+                return
 
             if not with_results:
                 self.step += 1

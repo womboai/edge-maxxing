@@ -3,7 +3,7 @@ from typing import TypeAlias, Annotated
 
 from pydantic import BaseModel, Field
 
-from .contest import ContestId, CURRENT_CONTEST, ModelRepositoryInfo
+from .contest import ContestId, ModelRepositoryInfo
 from .network_commitments import Encoder, Decoder
 
 Uid: TypeAlias = int
@@ -26,7 +26,7 @@ class CheckpointSubmission(BaseModel):
     provider: str
     repository: str
     revision: Annotated[str, Field(min_length=REVISION_LENGTH, max_length=REVISION_LENGTH)]
-    contest: ContestId = CURRENT_CONTEST.id
+    contest: ContestId
 
     def encode(self, encoder: Encoder):
         encoder.write_str(self.provider)
@@ -52,13 +52,8 @@ class CheckpointSubmission(BaseModel):
         return f"https://{self.provider}/{self.repository}"
 
 
+@dataclass
 class MinerModelInfo:
     repository: ModelRepositoryInfo
+    contest_id: ContestId
     block: int
-
-    def __init__(self, repository: ModelRepositoryInfo, block: int):
-        self.repository = repository
-        self.block = block
-
-    def __repr__(self):
-        return f"MinerModelInfo(repository={repr(self.repository)}, block={self.block})"

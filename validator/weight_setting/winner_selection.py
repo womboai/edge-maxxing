@@ -1,17 +1,17 @@
 from operator import itemgetter
 
-from neuron import Uid, CURRENT_CONTEST
+from neuron import Uid, Contest
 from neuron.submission_tester import CheckpointBenchmark, MetricData
 
 TIER_SCORE_IMPROVEMENT_THRESHOLD = 1.05
 WINNER_PERCENTAGE = 0.80
 
 
-def get_contestant_scores(benchmarks: list[CheckpointBenchmark | None], baseline_metrics: MetricData) -> list[tuple[Uid, float]]:
+def get_contestant_scores(contest: Contest, benchmarks: list[CheckpointBenchmark | None], baseline_metrics: MetricData) -> list[tuple[Uid, float]]:
     contestants = [
-        (uid, CURRENT_CONTEST.calculate_score(baseline_metrics, metric_data))
-        for uid, metric_data in enumerate(benchmarks)
-        if metric_data
+        (uid, contest.calculate_score(baseline_metrics, benchmark))
+        for uid, benchmark in enumerate(benchmarks)
+        if benchmark
     ]
 
     sorted_contestants = sorted(contestants, key=itemgetter(1), reverse=True)

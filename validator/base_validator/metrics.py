@@ -1,9 +1,9 @@
 from enum import Enum
 
-from neuron import Key
-from neuron.contest import CheckpointBenchmark, MetricData
-
 from pydantic import BaseModel
+
+from neuron import Key
+from neuron.contest import CheckpointBenchmark, MetricData, ContestId
 
 
 class BenchmarkState(Enum):
@@ -18,3 +18,8 @@ class BenchmarkResults(BaseModel):
     invalid: dict[Key, str]
     baseline_metrics: MetricData | None
     average_benchmark_time: float | None
+
+
+class ApiMetadata(BaseModel):
+    version: int
+    compatible_contests: list[ContestId]

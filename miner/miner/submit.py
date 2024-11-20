@@ -136,7 +136,7 @@ def save_baseline_cache(baseline: BaselineBenchmark):
         json.dump(data, f, indent=4)
 
 
-def start_benchmarking(submission: CheckpointSubmission):
+def start_benchmarking(contest: Contest, submission: CheckpointSubmission):
     logger.info("Generating baseline samples to compare")
     if not MODEL_DIRECTORY.exists():
         MODEL_DIRECTORY.mkdir()
@@ -145,6 +145,7 @@ def start_benchmarking(submission: CheckpointSubmission):
     baseline = load_baseline_cache(inputs)
     if baseline is None:
         baseline = generate_baseline(
+            contest=contest,
             inputs=inputs,
             sandbox_directory=MODEL_DIRECTORY,
             switch_user=False,
@@ -155,6 +156,7 @@ def start_benchmarking(submission: CheckpointSubmission):
 
     logger.info("Comparing submission to baseline")
     compare_checkpoints(
+        contest=contest,
         submission=ModelRepositoryInfo(url=submission.get_repo_link(), revision=submission.revision),
         inputs=inputs,
         baseline=baseline,
@@ -275,7 +277,7 @@ def main():
 
     if enable_benchmarking or input("Benchmark submission before submitting? (y/N): ").strip().lower() in ("yes", "y"):
         try:
-            start_benchmarking(submission)
+            start_benchmarking(find_contest(submission.contest), submission)
         except Exception as e:
             exit(f"Benchmarking failed, submission cancelled: {e}")
 

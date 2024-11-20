@@ -16,6 +16,10 @@ class Device(ABC):
         ...
 
     @abstractmethod
+    def is_compatible(self):
+        ...
+
+    @abstractmethod
     def validate(self):
         ...
 
@@ -46,12 +50,19 @@ class CudaDevice(Device):
         pynvml.nvmlShutdown()
         return mj / 1000.0  # convert mJ to J
 
+    def is_compatible(self):
+        import torch
+
+        device_name = torch.cuda.get_device_name()
+
+        return device_name == self._gpu.value
+
     def validate(self):
         import torch
 
         device_name = torch.cuda.get_device_name()
 
-        if device_name != self._gpu.value:
+        if not self.is_compatible():
             raise ContestDeviceValidationError(f"Incompatible device {device_name} when {self._gpu.name} is required.")
 
 
@@ -64,10 +75,13 @@ class MpsDevice(Device):
     def get_joules(self):
         return 0  # TODO
 
-    def validate(self):
+    def is_compatible(self):
         import torch
 
-        if not torch.backends.mps.is_available():
+        return torch.backends.mps.is_available()
+
+    def validate(self):
+        if not self.is_compatible():
             raise ContestDeviceValidationError("MPS is not available but is required.")
 
 
