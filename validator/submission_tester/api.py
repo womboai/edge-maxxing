@@ -18,7 +18,8 @@ from base_validator import (
     API_VERSION,
     BenchmarkState,
     BenchmarkResults,
-    AutoUpdater, ContestResults,
+    AutoUpdater,
+    ContestResults,
 )
 from neuron import Key, ModelRepositoryInfo, ContestId, find_contest
 from neuron.device import ContestDeviceValidationError
@@ -172,7 +173,7 @@ def state(request: Request) -> BenchmarkResults:
         contest_results[contest_id] = ContestResults(
             results=contest_benchmarks.benchmarks,
             invalid=contest_benchmarks.invalid,
-            baseline_metrics=contest_benchmarks.baseline,
+            baseline_metrics=contest_benchmarks.baseline.metric_data,
         )
 
     return BenchmarkResults(
