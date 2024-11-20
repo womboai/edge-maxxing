@@ -21,5 +21,5 @@ class BenchmarkResults(BaseModel):
 
 
 class ApiMetadata(BaseModel):
-    version: int
+    version: str
     compatible_contests: list[ContestId]
