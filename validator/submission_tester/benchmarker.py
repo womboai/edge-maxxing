@@ -115,6 +115,7 @@ class Benchmarker:
 
                     logger.info(f"ETA: {eta_time} PST. Time remaining: {time_left}")
 
+        logger.info("Benchmarking complete")
         self.done = True
 
     def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):

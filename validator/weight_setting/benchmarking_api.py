@@ -77,7 +77,7 @@ class BenchmarkingApi:
         if not self._session:
             self._session = ClientSession()
 
-        logger.info(f"Sending {len(submissions)} for testing")
+        logger.info(f"Sending {len(submissions)} submissions for testing")
 
         request = self._session.post(
             f"{self._api}/start",
