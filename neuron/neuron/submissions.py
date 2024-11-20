@@ -3,9 +3,8 @@ from fiber.logging_utils import get_logger
 from substrateinterface import SubstrateInterface, Keypair
 from substrateinterface.storage import StorageKey
 
-from . import find_contest
 from .checkpoint import CheckpointSubmission, SPEC_VERSION, Key, MinerModelInfo
-from .contest import ModelRepositoryInfo
+from .contest import ModelRepositoryInfo, find_contest
 from .network_commitments import Encoder, Decoder
 
 
