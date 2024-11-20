@@ -1,6 +1,6 @@
 import logging
+import traceback
 from concurrent.futures import CancelledError
-from dataclasses import dataclass
 from datetime import timedelta, datetime
 from random import choice
 from threading import Lock, Event, Thread
@@ -12,9 +12,6 @@ from neuron import (
     ModelRepositoryInfo,
     TIMEZONE,
     random_inputs,
-    Contest,
-    ContestId,
-    find_contest,
 )
 from neuron.submission_tester import (
     CheckpointBenchmark,
@@ -29,16 +26,11 @@ from pipelines import TextToImageRequest
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class ContestBenchmarks:
+class Benchmarker:
     submissions: dict[Key, ModelRepositoryInfo]
     benchmarks: dict[Key, CheckpointBenchmark | None]
     invalid: dict[Key, str]
     baseline: BaselineBenchmark | None
-
-
-class Benchmarker:
-    contest_benchmarks: dict[ContestId, ContestBenchmarks]
     inputs: list[TextToImageRequest]
     started: bool
     done: bool
@@ -49,7 +41,10 @@ class Benchmarker:
     cancelled_event: Event
 
     def __init__(self):
-        self.contest_benchmarks = {}
+        self.submissions = {}
+        self.benchmarks = {}
+        self.invalid = {}
+        self.baseline = None
         self.inputs = []
         self.done = False
         self.start_timestamp = 0
@@ -58,12 +53,13 @@ class Benchmarker:
         self.submission_times = []
         self.cancelled_event = Event()
 
-    def _benchmark_submission(self, contest: Contest, hotkey: Key, submission: ModelRepositoryInfo):
+    def _benchmark_submission(self, hotkey: Key):
+        submission = self.submissions[hotkey]
+
         start_time = perf_counter()
 
         try:
-            self.contest_benchmarks[contest.id].benchmarks[hotkey] = compare_checkpoints(
-                contest=contest,
+            self.benchmarks[hotkey] = compare_checkpoints(
                 submission=submission,
                 inputs=self.inputs,
                 baseline=self.baseline,
@@ -72,26 +68,29 @@ class Benchmarker:
             )
         except InvalidSubmissionError as e:
             logger.error(f"Skipping invalid submission '{submission}': '{e}'")
-            self.contest_benchmarks[contest.id].benchmarks[hotkey] = None
-            self.contest_benchmarks[contest.id].invalid[hotkey] = str(e)
+            self.benchmarks[hotkey] = None
+            self.invalid[hotkey] = str(e)
         except CancelledError:
             logger.warning(f"Benchmarking was canceled while testing '{submission}'")
             raise
-        except Exception as e:
-            logger.error(f"Exception occurred while testing '{submission}'", exc_info=e)
+        except:
+            traceback.print_exc()
         finally:
             self.submission_times.append(perf_counter() - start_time)
 
-    def _benchmark_submissions(self, contest: Contest, submissions: dict[Key, ModelRepositoryInfo]):
-        baseline: BaselineBenchmark | None = None
-        while not baseline and not self.cancelled_event.is_set():
+    def _start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
+        self.submissions = submissions
+        self.benchmarks.clear()
+        self.invalid.clear()
+        self.submission_times.clear()
+        self.inputs = random_inputs()
+        self.done = False
+        self.baseline = None
+
+        while not self.baseline and not self.cancelled_event.is_set():
             try:
                 logger.info("Generating baseline samples to compare")
-                baseline = generate_baseline(
-                    contest=contest,
-                    inputs=self.inputs,
-                    cancelled_event=self.cancelled_event
-                )
+                self.baseline = generate_baseline(self.inputs, cancelled_event=self.cancelled_event)
             except CancelledError:
                 logger.warning("Benchmarking was canceled while testing the baseline")
                 return
@@ -99,24 +98,16 @@ class Benchmarker:
                 logger.error("Failed to generate baseline samples, retrying in 10 minutes", exc_info=e)
                 sleep(600)
 
-        self.contest_benchmarks[contest.id] = ContestBenchmarks(
-            submissions=submissions,
-            benchmarks={},
-            invalid={},
-            baseline=baseline,
-        )
+        while len(self.benchmarks) != len(self.submissions) and self.baseline and not self.cancelled_event.is_set():
+            hotkey = choice(list(self.submissions.keys() - self.benchmarks.keys()))
+            self._benchmark_submission(hotkey)
 
-        while len(self.contest_benchmarks[contest.id].benchmarks) != len(submissions) and self.baseline and not self.cancelled_event.is_set():
-            benchmarks = self.contest_benchmarks[contest.id].benchmarks
-            hotkey = choice(list(submissions.keys() - benchmarks.keys()))
-            self._benchmark_submission(contest, hotkey, submissions[hotkey])
-
-            valid_submissions = len([benchmark for benchmark in benchmarks.values() if benchmark])
-            logger.info(f"{len(benchmarks)}/{len(submissions)} submissions benchmarked. {valid_submissions} valid.")
+            valid_submissions = len([benchmark for benchmark in self.benchmarks.values() if benchmark])
+            logger.info(f"{len(self.benchmarks)}/{len(self.submissions)} submissions benchmarked. {valid_submissions} valid.")
 
             if self.submission_times:
                 average_time = sum(self.submission_times) / len(self.submission_times)
-                eta = int(average_time * (len(submissions) - len(benchmarks)))
+                eta = int(average_time * (len(self.submissions) - len(self.benchmarks)))
                 if eta > 0:
                     time_left = timedelta(seconds=eta)
                     eta_date = datetime.now(tz=TIMEZONE) + time_left
@@ -124,29 +115,14 @@ class Benchmarker:
 
                     logger.info(f"ETA: {eta_time} PST. Time remaining: {time_left}")
 
-    def _start_benchmarking(self, contest_submissions: dict[ContestId, dict[Key, ModelRepositoryInfo]]):
-        self.contest_benchmarks.clear()
-        self.inputs = random_inputs()
-        self.done = False
-        self.baseline = None
-
-        for contest_id, submissions in contest_submissions.items():
-            logger.info(f"Working on contest {contest_id.name}")
-            contest = find_contest(contest_id)
-            self._benchmark_submissions(contest, submissions)
-
         self.done = True
 
-    def start_benchmarking(self, contest_submissions: dict[ContestId, dict[Key, ModelRepositoryInfo]]):
-        all_submissions: dict[Key, ModelRepositoryInfo] = {}
-        for submissions in contest_submissions.values():
-            all_submissions.update(submissions)
-
-        if not all_submissions:
+    def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
+        if not submissions:
             logger.warning("No submissions to benchmark")
             return
 
-        logger.info(f"Starting benchmarking for {len(all_submissions)} submissions")
+        logger.info(f"Starting benchmarking for {len(submissions)} submissions")
 
         if self.thread and self.thread.is_alive():
             logger.info("Attempting to cancel previous benchmarking")
@@ -160,7 +136,7 @@ class Benchmarker:
         self.cancelled_event.clear()
         self.thread = Thread(
             target=self._start_benchmarking,
-            args=(contest_submissions,),
+            args=(submissions,),
             daemon=True,
         )
         self.thread.start()

@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from enum import Enum
 from functools import partial
 from math import sqrt
@@ -45,7 +44,6 @@ class ContestId(Enum):
     SDXL_NEWDREAM_NVIDIA_4090 = 1
 
 
-@dataclass
 class Contest:
     id: ContestId
     device: Device

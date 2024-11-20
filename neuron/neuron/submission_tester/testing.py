@@ -15,10 +15,10 @@ from .vram_monitor import VRamMonitor
 from .. import (
     GenerationOutput,
     ModelRepositoryInfo,
+    CURRENT_CONTEST,
     OutputComparator,
     CheckpointBenchmark,
     MetricData,
-    Contest,
 )
 
 SANDBOX_DIRECTORY = Path("/sandbox")
@@ -36,18 +36,17 @@ class BaselineBenchmark(BaseModel):
 
 
 def generate(
-    contest: Contest,
     container: InferenceSandbox,
     request: TextToImageRequest,
 ) -> GenerationOutput:
-    start_joules = contest.device.get_joules()
-    vram_monitor = VRamMonitor(contest)
+    start_joules = CURRENT_CONTEST.device.get_joules()
+    vram_monitor = VRamMonitor(CURRENT_CONTEST)
     start = perf_counter()
 
     output = container(request)
 
     generation_time = perf_counter() - start
-    joules_used = contest.device.get_joules() - start_joules
+    joules_used = CURRENT_CONTEST.device.get_joules() - start_joules
     watts_used = joules_used / generation_time
     vram_used = vram_monitor.complete()
 
@@ -60,7 +59,6 @@ def generate(
 
 
 def generate_baseline(
-    contest: Contest,
     inputs: list[TextToImageRequest],
     sandbox_directory: Path = SANDBOX_DIRECTORY,
     switch_user: bool = True,
@@ -68,9 +66,9 @@ def generate_baseline(
 ) -> BaselineBenchmark:
     outputs: list[GenerationOutput] = []
 
-    start_vram = contest.device.get_vram_used()
+    start_vram = CURRENT_CONTEST.device.get_vram_used()
     with InferenceSandbox(
-        repository_info=contest.baseline_repository,
+        repository_info=CURRENT_CONTEST.baseline_repository,
         baseline=True,
         sandbox_directory=sandbox_directory,
         switch_user=switch_user,
@@ -82,7 +80,7 @@ def generate_baseline(
             if cancelled_event and cancelled_event.is_set():
                 raise CancelledError()
 
-            output = generate(contest, sandbox, request)
+            output = generate(sandbox, request)
 
             logger.info(
                 f"Sample {index + 1} Generated\n"
@@ -111,7 +109,6 @@ def generate_baseline(
 
 
 def compare_checkpoints(
-    contest: Contest,
     submission: ModelRepositoryInfo,
     inputs: list[TextToImageRequest],
     baseline: BaselineBenchmark,
@@ -124,7 +121,7 @@ def compare_checkpoints(
 
     outputs: list[GenerationOutput] = []
 
-    start_vram = contest.device.get_vram_used()
+    start_vram = CURRENT_CONTEST.device.get_vram_used()
     with InferenceSandbox(
         repository_info=submission,
         baseline=False,
@@ -142,7 +139,7 @@ def compare_checkpoints(
                 if cancelled_event and cancelled_event.is_set():
                     raise CancelledError()
 
-                output = generate(contest, sandbox, request)
+                output = generate(sandbox, request)
 
                 logger.info(
                     f"Sample {index + 1} Generated\n"
@@ -161,7 +158,7 @@ def compare_checkpoints(
     vram_used = max(output.vram_used for output in outputs) - start_vram
     watts_used = max(output.watts_used for output in outputs)
 
-    with contest.output_comparator() as output_comparator:
+    with CURRENT_CONTEST.output_comparator() as output_comparator:
         def calculate_similarity(comparator: OutputComparator, baseline_output: GenerationOutput, optimized_output: GenerationOutput):
             try:
                 if cancelled_event and cancelled_event.is_set():
@@ -203,7 +200,7 @@ def compare_checkpoints(
 
     logger.info(
         f"Tested {len(inputs)} Samples\n"
-        f"Score: {contest.calculate_score(baseline.metric_data, benchmark)}\n"
+        f"Score: {CURRENT_CONTEST.calculate_score(baseline.metric_data, benchmark)}\n"
         f"Average Similarity: {average_similarity}\n"
         f"Min Similarity: {min_similarity}\n"
         f"Average Generation Time: {average_time}s\n"

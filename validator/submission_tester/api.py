@@ -14,15 +14,14 @@ from starlette import status
 from starlette.websockets import WebSocketDisconnect
 from substrateinterface import Keypair
 
+from neuron import CURRENT_CONTEST, Key, ModelRepositoryInfo
+from .benchmarker import Benchmarker
 from base_validator import (
     API_VERSION,
     BenchmarkState,
     BenchmarkResults,
-    AutoUpdater, ContestResults,
+    AutoUpdater,
 )
-from neuron import Key, ModelRepositoryInfo, ContestId, find_contest
-from neuron.device import ContestDeviceValidationError
-from .benchmarker import Benchmarker
 
 hotkey = os.getenv("VALIDATOR_HOTKEY_SS58_ADDRESS")
 debug = int(os.getenv("VALIDATOR_DEBUG") or 0) > 0
@@ -66,12 +65,13 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    AutoUpdater()
+    auto_updater = AutoUpdater()
+    if not debug:
+        CURRENT_CONTEST.validate()
 
     yield {
         "benchmarker": Benchmarker(),
     }
-
 
 app = FastAPI(lifespan=lifespan)
 
@@ -99,38 +99,14 @@ def _authenticate_request(nonce: int, signature: str):
         )
 
 
-def _filter_incompatible_contests(contest_submissions: dict[ContestId, dict[Key, ModelRepositoryInfo]]):
-    skipped_contests: list[ContestId] = []
-    for contest_id in contest_submissions.keys():
-        try:
-            contest = find_contest(contest_id)
-        except RuntimeError as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
-            )
-
-        if not debug:
-            try:
-                contest.validate()
-            except ContestDeviceValidationError as e:
-                logger.error(f"Skipping contest {contest_id} due to incompatible hardware: {e}")
-                skipped_contests.append(contest_id)
-
-    for contest_id in skipped_contests:
-        contest_submissions.pop(contest_id)
-
-
 @app.post("/start")
 def start_benchmarking(
-    contest_submissions: dict[ContestId, dict[Key, ModelRepositoryInfo]],
+    submissions: dict[Key, ModelRepositoryInfo],
     x_nonce: Annotated[int, Header()],
     signature: Annotated[str, Header()],
     request: Request,
 ):
     _authenticate_request(x_nonce, signature)
-
-    _filter_incompatible_contests(contest_submissions)
 
     benchmarker: Benchmarker = request.state.benchmarker
 
@@ -145,7 +121,7 @@ def start_benchmarking(
 
         benchmarker.start_timestamp = timestamp
 
-        benchmarker.start_benchmarking(contest_submissions)
+        benchmarker.start_benchmarking(submissions)
 
 
 @app.get("/state")
@@ -167,17 +143,11 @@ def state(request: Request) -> BenchmarkResults:
         else None
     )
 
-    contest_results: dict[ContestId, ContestResults] = {}
-    for contest_id, contest_benchmarks in benchmarker.contest_benchmarks.items():
-        contest_results[contest_id] = ContestResults(
-            results=contest_benchmarks.benchmarks,
-            invalid=contest_benchmarks.invalid,
-            baseline_metrics=contest_benchmarks.baseline,
-        )
-
     return BenchmarkResults(
         state=benchmark_state,
-        contest_results=contest_results,
+        results=benchmarker.benchmarks,
+        invalid=benchmarker.invalid,
+        baseline_metrics=benchmarker.get_baseline_metrics(),
         average_benchmark_time=average_benchmark_time,
     )
 

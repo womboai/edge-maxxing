@@ -585,7 +585,7 @@ class Validator:
 
         await asyncio.gather(
             *[
-                api.start_benchmarking({CURRENT_CONTEST.id: dict(chunk)})
+                api.start_benchmarking(dict(chunk))
                 for api, chunk in chunks
             ],
         )
@@ -720,11 +720,10 @@ class Validator:
                     in_progress.append((index, result))
                 case BenchmarkState.FINISHED:
                     finished.append((index, result))
-            
-            baseline_metrics = result.contest_results[CURRENT_CONTEST.id].baseline_metrics
-            if baseline_metrics and self.baseline_metrics != baseline_metrics:
-                self.baseline_metrics = baseline_metrics
-                logger.info(f"Updated baseline benchmarks to {baseline_metrics}")
+
+            if result.baseline_metrics and self.baseline_metrics != result.baseline_metrics:
+                self.baseline_metrics = result.baseline_metrics
+                logger.info(f"Updated baseline benchmarks to {result.baseline_metrics}")
 
         self.benchmarking_state = min((result.state for result in states), key=lambda state: state.value)
 
@@ -784,8 +783,8 @@ class Validator:
 
                 return uid
 
-            contest_results = result.contest_results[CURRENT_CONTEST.id]
-            for hotkey, benchmark in contest_results.results.items():
+
+            for hotkey, benchmark in result.results.items():
                 uid = get_uid(hotkey)
                 if not uid:
                     continue
@@ -794,7 +793,7 @@ class Validator:
                     logger.info(f"Updating {hotkey}'s benchmarks to {benchmark}")
                 self.benchmarks[uid] = benchmark
 
-            for hotkey, error_message in contest_results.invalid.items():
+            for hotkey, error_message in result.invalid.items():
                 uid = get_uid(hotkey)
                 if not uid:
                     continue

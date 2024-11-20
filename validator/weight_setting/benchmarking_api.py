@@ -12,7 +12,7 @@ from substrateinterface import Keypair
 from websockets.protocol import State
 from websockets.sync.client import connect
 
-from neuron import ModelRepositoryInfo, Key, ContestId
+from neuron import ModelRepositoryInfo, Key
 
 RETRY_TIME = 60
 
@@ -71,11 +71,13 @@ class BenchmarkingApi:
 
             self._future = self._stream_logs()
 
-    async def start_benchmarking(self, contest_submissions: dict[ContestId, dict[Key, ModelRepositoryInfo]]):
+    async def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         self.check_log_stream()
 
         if not self._session:
             self._session = ClientSession()
+
+        logger.info(f"Sending {len(submissions)} for testing")
 
         request = self._session.post(
             f"{self._api}/start",
@@ -83,7 +85,7 @@ class BenchmarkingApi:
                 "Content-Type": "application/json",
                 **_authentication_headers(self._keypair),
             },
-            data=RootModel(contest_submissions).model_dump_json(),
+            data=RootModel(submissions).model_dump_json(),
         )
 
         async with request as state_response:
