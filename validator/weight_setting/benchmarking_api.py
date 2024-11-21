@@ -15,7 +15,7 @@ from websockets.protocol import State
 from websockets.sync.client import connect
 
 from base_validator import API_VERSION, BenchmarkResults, ApiMetadata, BenchmarkingStartRequest
-from neuron import ModelRepositoryInfo, Key, ContestId, MinerModelInfo
+from neuron import ModelRepositoryInfo, Key, ContestId, MinerModelInfo, CURRENT_CONTEST
 
 logger = get_logger(__name__)
 
@@ -191,6 +191,8 @@ async def send_submissions_to_api(all_apis: list[BenchmarkingApi], submissions: 
     submissions_by_contest: dict[ContestId, dict[Key, ModelRepositoryInfo]] = defaultdict(lambda: {})
 
     for key, info in submissions.items():
+        if info.contest_id != CURRENT_CONTEST:
+            continue # TODO: Remove once multi-competition support is added
         submissions_by_contest[info.contest_id][key] = info.repository
 
     contest_api_assignment: dict[ContestId, list[BenchmarkingApi]] = defaultdict(lambda: [])

@@ -118,15 +118,15 @@ def start_benchmarking(
     with benchmarker.lock:
         timestamp = time.time_ns()
 
-        if not debug:
-            try:
-                contest = find_contest(benchmarking_start_request.contest_id)
+        try:
+            contest = find_contest(benchmarking_start_request.contest_id)
+            if not debug:
                 contest.device.validate()
-            except Exception as e:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=str(e),
-                )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
 
         if timestamp - benchmarker.start_timestamp < 120_000_000_000:
             raise HTTPException(
