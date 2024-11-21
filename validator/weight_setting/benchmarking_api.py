@@ -10,7 +10,6 @@ from operator import itemgetter
 
 from aiohttp import ClientSession
 from fiber.logging_utils import get_logger
-from pydantic import RootModel
 from substrateinterface import Keypair
 from websockets.protocol import State
 from websockets.sync.client import connect
@@ -87,7 +86,7 @@ class BenchmarkingApi:
                 "Content-Type": "application/json",
                 **_authentication_headers(self._keypair),
             },
-            data=BenchmarkingStartRequest(contest_id=contest_id, submissions=submissions).model_dump_json(),
+            data=data.model_dump_json(),
         )
 
         async with request as state_response:

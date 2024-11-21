@@ -119,7 +119,7 @@ def start_benchmarking(
 
         try:
             contest = find_contest(benchmarking_start_request.contest_id)
-            contest.validate()
+            contest.device.validate()
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
