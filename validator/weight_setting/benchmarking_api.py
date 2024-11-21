@@ -15,7 +15,7 @@ from substrateinterface import Keypair
 from websockets.protocol import State
 from websockets.sync.client import connect
 
-from base_validator import API_VERSION, BenchmarkResults, ApiMetadata
+from base_validator import API_VERSION, BenchmarkResults, ApiMetadata, BenchmarkingStartRequest
 from neuron import ModelRepositoryInfo, Key, ContestId, MinerModelInfo
 
 logger = get_logger(__name__)
@@ -73,7 +73,7 @@ class BenchmarkingApi:
 
             self._future = self._stream_logs()
 
-    async def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
+    async def start_benchmarking(self, contest_id: ContestId, submissions: dict[Key, ModelRepositoryInfo]):
         self.check_log_stream()
 
         if not self._session:
@@ -87,7 +87,7 @@ class BenchmarkingApi:
                 "Content-Type": "application/json",
                 **_authentication_headers(self._keypair),
             },
-            data=RootModel(submissions).model_dump_json(),
+            data=BenchmarkingStartRequest(contest_id=contest_id, submissions=submissions).model_dump_json(),
         )
 
         async with request as state_response:
@@ -230,7 +230,7 @@ async def send_submissions_to_api(all_apis: list[BenchmarkingApi], submissions: 
 
         await asyncio.gather(
             *[
-                api.start_benchmarking(dict(chunk))
+                api.start_benchmarking(contest_id, dict(chunk))
                 for api, chunk in chunks
             ],
         )

@@ -3,7 +3,7 @@ from enum import Enum
 from pydantic import BaseModel
 
 from neuron import Key
-from neuron.contest import CheckpointBenchmark, MetricData, ContestId
+from neuron.contest import CheckpointBenchmark, MetricData, ContestId, ModelRepositoryInfo
 
 
 class BenchmarkState(Enum):
@@ -23,3 +23,8 @@ class BenchmarkResults(BaseModel):
 class ApiMetadata(BaseModel):
     version: str
     compatible_contests: list[ContestId]
+
+
+class BenchmarkingStartRequest(BaseModel):
+    contest_id: ContestId
+    submissions: dict[Key, ModelRepositoryInfo]

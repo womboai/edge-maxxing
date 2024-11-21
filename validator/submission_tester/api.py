@@ -9,7 +9,7 @@ from io import TextIOWrapper
 from queue import Queue
 from typing import Annotated, TextIO
 
-from fastapi import FastAPI, WebSocket, Request, Header, HTTPException
+from fastapi import FastAPI, WebSocket, Request, Header, HTTPException, Body
 from starlette import status
 from starlette.websockets import WebSocketDisconnect
 from substrateinterface import Keypair
@@ -21,7 +21,7 @@ from base_validator import (
     BenchmarkState,
     BenchmarkResults,
     AutoUpdater,
-    ApiMetadata,
+    ApiMetadata, BenchmarkingStartRequest,
 )
 
 hotkey = os.getenv("VALIDATOR_HOTKEY_SS58_ADDRESS")
@@ -105,8 +105,7 @@ def _authenticate_request(nonce: int, signature: str):
 
 @app.post("/start")
 def start_benchmarking(
-    contest_id: ContestId,
-    submissions: dict[Key, ModelRepositoryInfo],
+    benchmarking_start_request: Annotated[BenchmarkingStartRequest, Body()],
     x_nonce: Annotated[int, Header()],
     signature: Annotated[str, Header()],
     request: Request,
@@ -119,7 +118,7 @@ def start_benchmarking(
         timestamp = time.time_ns()
 
         try:
-            contest = find_contest(contest_id)
+            contest = find_contest(benchmarking_start_request.contest_id)
             contest.validate()
         except Exception as e:
             raise HTTPException(
@@ -135,7 +134,7 @@ def start_benchmarking(
 
         benchmarker.start_timestamp = timestamp
 
-        benchmarker.start_benchmarking(contest, submissions)
+        benchmarker.start_benchmarking(contest, benchmarking_start_request.submissions)
 
 
 @app.get("/state")
