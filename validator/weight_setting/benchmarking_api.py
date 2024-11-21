@@ -80,6 +80,8 @@ class BenchmarkingApi:
 
         logger.info(f"Sending {len(submissions)} submissions for testing")
 
+        data = BenchmarkingStartRequest(contest_id=contest_id, submissions=submissions)
+
         request = self._session.post(
             f"{self._api}/start",
             headers={
@@ -90,6 +92,7 @@ class BenchmarkingApi:
         )
 
         async with request as state_response:
+            logger.info(await state_response.text())
             state_response.raise_for_status()
 
     async def state(self) -> BenchmarkResults:
@@ -198,9 +201,10 @@ async def send_submissions_to_api(all_apis: list[BenchmarkingApi], submissions: 
             raise ValueError(f"API version mismatch, expected {API_VERSION}, got {metadata.version}")
 
         if sum(len(contest_api_assignment[contest_id]) for contest_id in metadata.compatible_contests) == 0:
-            contest_id = next(filter(submissions_by_contest.__contains__, metadata.compatible_contests))
+            compatible_contests = list(filter(submissions_by_contest.__contains__, metadata.compatible_contests))
 
-            contest_api_assignment[contest_id].append(api)
+            if compatible_contests:
+                contest_api_assignment[compatible_contests[0]].append(api)
         else:
             assignment_counts = [
                 (contest_id, len(contest_api_assignment[contest_id]))

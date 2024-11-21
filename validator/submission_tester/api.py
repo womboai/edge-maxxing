@@ -14,7 +14,7 @@ from starlette import status
 from starlette.websockets import WebSocketDisconnect
 from substrateinterface import Keypair
 
-from neuron import CURRENT_CONTEST, Key, ModelRepositoryInfo, find_compatible_contests, ContestId, find_contest
+from neuron import CURRENT_CONTEST, find_compatible_contests, find_contest
 from .benchmarker import Benchmarker
 from base_validator import (
     API_VERSION,
@@ -77,6 +77,7 @@ async def lifespan(_: FastAPI):
         "compatible_contests": compatible_contests,
     }
 
+
 app = FastAPI(lifespan=lifespan)
 
 
@@ -117,14 +118,15 @@ def start_benchmarking(
     with benchmarker.lock:
         timestamp = time.time_ns()
 
-        try:
-            contest = find_contest(benchmarking_start_request.contest_id)
-            contest.device.validate()
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
-            )
+        if not debug:
+            try:
+                contest = find_contest(benchmarking_start_request.contest_id)
+                contest.device.validate()
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=str(e),
+                )
 
         if timestamp - benchmarker.start_timestamp < 120_000_000_000:
             raise HTTPException(
@@ -163,6 +165,7 @@ def state(request: Request) -> BenchmarkResults:
         baseline_metrics=benchmarker.get_baseline_metrics(),
         average_benchmark_time=average_benchmark_time,
     )
+
 
 @app.get("/metadata")
 def metadata(request: Request) -> ApiMetadata:
