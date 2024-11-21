@@ -35,13 +35,11 @@ from neuron import (
     Uid,
     MinerModelInfo,
     TIMEZONE,
-    ModelRepositoryInfo,
     SPEC_VERSION,
     get_submissions,
     BENCHMARKS_VERSION,
     CheckpointBenchmark,
     MetricData,
-    ContestId,
 )
 from neuron.device import ContestDeviceValidationError
 from .benchmarking_api import BenchmarkingApi, benchmarking_api, send_submissions_to_api
@@ -50,6 +48,7 @@ from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_
 
 VALIDATOR_VERSION: tuple[int, int, int] = (5, 3, 1)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
+VALIDATOR_STATE_VERSION = 1
 
 WEIGHTS_VERSION = (
     VALIDATOR_VERSION[0] * 10000 +
@@ -310,7 +309,7 @@ class Validator:
 
         makedirs(full_path, exist_ok=True)
 
-        return full_path / "state.bin"
+        return full_path / f"state_{VALIDATOR_STATE_VERSION}.bin"
 
     def save_state(self):
         """Saves the state of the validator to a file."""
