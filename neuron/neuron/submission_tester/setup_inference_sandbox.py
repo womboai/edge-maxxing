@@ -1,14 +1,14 @@
-import sys
+import shutil
 from logging import getLogger
 from os.path import abspath
 from pathlib import Path
 from subprocess import run, CalledProcessError
 from time import perf_counter
-from ..checkpoint import SPEC_VERSION
-import shutil
+
 import toml
-import os
 from huggingface_hub import HfApi
+
+from ..checkpoint import SPEC_VERSION
 
 DEPENDENCY_BLACKLIST = abspath(Path(__file__).parent / "dependency_blacklist.txt")
 
@@ -28,7 +28,6 @@ with open(DEPENDENCY_BLACKLIST, 'r') as blacklist_file:
 
 logger = getLogger(__name__)
 hf_api = HfApi()
-debug = int(os.getenv("VALIDATOR_DEBUG") or 0) > 0
 
 
 class InvalidSubmissionError(Exception):
@@ -44,9 +43,7 @@ def _run(script: str, sandbox_args: list[str], sandbox_directory: Path, args: li
                 script,
                 *args,
             ],
-            capture_output=not debug,
-            stdout=sys.stdout if debug else None,
-            stderr=sys.stderr if debug else None,
+            capture_output=True,
             encoding='utf-8',
             cwd=sandbox_directory.absolute(),
         )
@@ -54,11 +51,11 @@ def _run(script: str, sandbox_args: list[str], sandbox_directory: Path, args: li
     except CalledProcessError as e:
         raise InvalidSubmissionError(error_message) from e
     finally:
-        if process and not debug:
+        if process:
             if process.stdout.strip():
-                print(process.stdout)
+                logger.info(process.stdout)
             if process.stderr.strip():
-                print(process.stderr, file=sys.stderr)
+                logger.error(process.stderr)
 
 
 def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bool, url: str, revision: str) -> int:

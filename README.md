@@ -196,8 +196,7 @@ You can set which CUDA devices or ports to use along with that.
 In the another pod/container without a GPU, to run the scoring validator, clone the repository as per the common instructions, then do as follows
 ```bash
     cd validator
-    pm2 start uv --name edge-maxxing-validator --interpreter none -- \
-        run start_validator \
+    pm2 start ./weight_setting/start.sh --name edge-maxxing-validator --interpreter /bin/bash -- \
         --netuid {netuid} \
         --subtensor.network {network} \
         --wallet.name {wallet} \

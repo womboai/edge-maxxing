@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 from io import TextIOWrapper
 from multiprocessing.connection import Client, Connection
 from os.path import abspath
@@ -31,12 +30,12 @@ class InferenceSandbox(Generic[RequestT]):
     load_time: float
 
     def __init__(
-            self,
-            repository_info: ModelRepositoryInfo,
-            baseline: bool,
-            sandbox_directory: Path,
-            switch_user: bool,
-            load_timeout: int,
+        self,
+        repository_info: ModelRepositoryInfo,
+        baseline: bool,
+        sandbox_directory: Path,
+        switch_user: bool,
+        load_timeout: int,
     ):
         self._repository = repository_info
         self._baseline = baseline
@@ -68,8 +67,8 @@ class InferenceSandbox(Generic[RequestT]):
             text=True,
         )
 
-        Thread(target=self._stream_logs, args=(self._process.stdout, sys.stdout), daemon=True).start()
-        Thread(target=self._stream_logs, args=(self._process.stderr, sys.stderr), daemon=True).start()
+        Thread(target=self._stream_logs, args=self._process.stdout, daemon=True).start()
+        Thread(target=self._stream_logs, args=self._process.stderr, daemon=True).start()
 
         logger.info("Inference process starting")
 
@@ -137,6 +136,6 @@ class InferenceSandbox(Generic[RequestT]):
         ] if self._switch_user else []
 
     @staticmethod
-    def _stream_logs(stream: TextIOWrapper, output_stream: TextIOWrapper):
+    def _stream_logs(stream: TextIOWrapper):
         for line in iter(stream.readline, ""):
-            print(f"[INFERENCE] {line}", end="", file=output_stream)
+            logger.info(line.rstrip())
