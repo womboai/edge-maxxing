@@ -52,10 +52,8 @@ def _run(script: str, sandbox_args: list[str], sandbox_directory: Path, args: li
         raise InvalidSubmissionError(error_message) from e
     finally:
         if process:
-            if process.stdout.strip():
-                logger.info(process.stdout)
-            if process.stderr.strip():
-                logger.error(process.stderr)
+            logger.info(process.stdout)
+            logger.info(process.stderr)
 
 
 def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bool, url: str, revision: str) -> int:

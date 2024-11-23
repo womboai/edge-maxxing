@@ -67,8 +67,8 @@ class InferenceSandbox(Generic[RequestT]):
             text=True,
         )
 
-        Thread(target=self._stream_logs, args=self._process.stdout, daemon=True).start()
-        Thread(target=self._stream_logs, args=self._process.stderr, daemon=True).start()
+        Thread(target=self._stream_logs, args=(self._process.stdout,), daemon=True).start()
+        Thread(target=self._stream_logs, args=(self._process.stderr,), daemon=True).start()
 
         logger.info("Inference process starting")
 
