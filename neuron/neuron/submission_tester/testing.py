@@ -75,7 +75,7 @@ def generate_baseline(
             if cancelled_event and cancelled_event.is_set():
                 raise CancelledError()
 
-            with tracer.start_span(f"generate_sample_{index}") as sample_span:
+            with tracer.start_span(f"generate_sample_{index + 1}") as sample_span:
                 output = generate(sandbox, request)
                 outputs.append(output)
 
@@ -131,7 +131,7 @@ def compare_checkpoints(
                 if cancelled_event and cancelled_event.is_set():
                     raise CancelledError()
 
-                with tracer.start_span(f"generate_sample_{index}") as sample_span:
+                with tracer.start_span(f"generate_sample_{index + 1}") as sample_span:
                     output = generate(sandbox, request)
                     outputs.append(output)
 
