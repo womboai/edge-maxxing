@@ -1,10 +1,11 @@
-import logging
 import os
 from concurrent.futures import CancelledError
 from pathlib import Path
 from statistics import mean
 from threading import Event
 from time import perf_counter
+
+from fiber.logging_utils import get_logger
 
 from pipelines import TextToImageRequest
 from . import InvalidSubmissionError
@@ -23,7 +24,7 @@ DEFAULT_LOAD_TIMEOUT = 1000
 MIN_LOAD_TIMEOUT = 240
 
 debug = int(os.getenv("VALIDATOR_DEBUG") or 0) > 0
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def generate(

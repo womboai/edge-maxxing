@@ -1,4 +1,3 @@
-import logging
 import os
 from io import TextIOWrapper
 from multiprocessing.connection import Client, Connection
@@ -9,12 +8,13 @@ from threading import Thread
 from time import perf_counter, sleep
 from typing import Generic, TypeVar
 
+from fiber.logging_utils import get_logger
 from pydantic import BaseModel
 
 from .setup_inference_sandbox import setup_sandbox, InvalidSubmissionError, NETWORK_JAIL
 from ..contest import ModelRepositoryInfo
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 RequestT = TypeVar("RequestT", bound=BaseModel)
 

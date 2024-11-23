@@ -1,10 +1,10 @@
-import logging
 import os
 import time
 from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import FastAPI, Request, Header, HTTPException
+from fiber.logging_utils import get_logger
 from starlette import status
 from substrateinterface import Keypair
 
@@ -31,13 +31,7 @@ init_open_telemetry_logging({
     "api.version": API_VERSION,
 })
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(filename)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @asynccontextmanager

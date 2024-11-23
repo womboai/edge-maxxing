@@ -1,4 +1,3 @@
-import logging
 import traceback
 from concurrent.futures import CancelledError
 from datetime import timedelta, datetime
@@ -6,6 +5,8 @@ from random import choice
 from threading import Lock, Event, Thread
 from time import perf_counter, sleep
 from typing import cast
+
+from fiber.logging_utils import get_logger
 
 from neuron import (
     Key,
@@ -23,7 +24,7 @@ from neuron.submission_tester import (
 )
 from pipelines import TextToImageRequest
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class Benchmarker:
