@@ -2,11 +2,11 @@ import shutil
 from os.path import abspath
 from pathlib import Path
 from subprocess import run, CalledProcessError
-from time import perf_counter
 
 import toml
 from fiber.logging_utils import get_logger
 from huggingface_hub import HfApi
+from opentelemetry import trace
 
 from ..checkpoint import SPEC_VERSION
 
@@ -27,6 +27,7 @@ with open(DEPENDENCY_BLACKLIST, 'r') as blacklist_file:
     BLACKLISTED_DEPENDENCIES = " ".join(blacklist_file.read().splitlines())
 
 logger = get_logger(__name__)
+tracer = trace.get_tracer(__name__)
 hf_api = HfApi()
 
 
@@ -57,89 +58,98 @@ def _run(script: str, sandbox_args: list[str], sandbox_directory: Path, args: li
 
 
 def setup_sandbox(sandbox_args: list[str], sandbox_directory: Path, baseline: bool, url: str, revision: str) -> int:
-    free_space = shutil.disk_usage("/").free
-    if free_space < STORAGE_THRESHOLD_GB * 1024 ** 3:
-        logger.info(f"Running low on disk space: {free_space / 1024 ** 3:.2f} GB remaining. Clearing caches...")
-        _run(
-            CLEAR_CACHE_SCRIPT,
-            sandbox_args,
-            sandbox_directory,
-            [],
-            "Failed to clear caches"
-        )
-        new_free_space = shutil.disk_usage("/").free
-        logger.info(f"Cleared {(new_free_space - free_space) / 1024 ** 3:.2f} GB of caches")
+    with tracer.start_as_current_span("setup_sandbox") as span:
+        span.set_attributes({
+            "repo.url": url,
+            "repo.revision": revision
+        })
 
-    start = perf_counter()
-    logger.info(f"Cloning repository '{url}' with revision '{revision}'...")
-    _run(
-        CLONE_SCRIPT,
-        sandbox_args,
-        sandbox_directory,
-        [url, revision],
-        "Failed to clone repository"
-    )
-    logger.info(f"Cloned repository '{url}' in {perf_counter() - start:.2f} seconds")
+        with tracer.start_as_current_span("check_disk_space") as disk_span:
+            free_space = shutil.disk_usage("/").free
+            disk_span.set_attribute("disk.free_space_gb", free_space / 1024 ** 3)
+            if free_space < STORAGE_THRESHOLD_GB * 1024 ** 3:
+                disk_span.set_attribute("cache.cleared", True)
+                with tracer.start_span("clear_cache") as cache_span:
+                    _run(
+                        CLEAR_CACHE_SCRIPT,
+                        sandbox_args,
+                        sandbox_directory,
+                        [],
+                        "Failed to clear caches"
+                    )
+                    new_free_space = shutil.disk_usage("/").free
+                    cache_span.set_attribute("cache.freed_space_gb", (new_free_space - free_space) / 1024 ** 3)
 
-    repo_size = sum(file.stat().st_size for file in sandbox_directory.rglob("*") if ".git" not in file.parts and ".venv" not in file.parts)
-    if repo_size > MAX_REPO_SIZE_MB * 1024 ** 2:
-        raise InvalidSubmissionError(f"Size of repository exceeds {MAX_REPO_SIZE_MB} MB")
+        with tracer.start_span("clone_repository") as clone_span:
+            clone_span.set_attributes({
+                "repo.url": url,
+                "repo.revision": revision
+            })
 
-    try:
-        with open(sandbox_directory / "pyproject.toml", 'r') as file:
-            pyproject = toml.load(file)
-            version = int(pyproject["project"]["version"])
-            models = pyproject["tool"]["edge-maxxing"]["models"]
-    except Exception as e:
-        raise InvalidSubmissionError("Failed to read submission info") from e
+            _run(
+                CLONE_SCRIPT,
+                sandbox_args,
+                sandbox_directory,
+                [url, revision],
+                "Failed to clone repository"
+            )
 
-    if version != SPEC_VERSION:
-        raise InvalidSubmissionError(f"Submission is at version {version} while expected version is {SPEC_VERSION}")
+            repo_size = sum(file.stat().st_size for file in sandbox_directory.rglob("*") if ".git" not in file.parts and ".venv" not in file.parts)
+            clone_span.set_attribute("repo.size_mb", repo_size / 1024 ** 2)
+            if repo_size > MAX_REPO_SIZE_MB * 1024 ** 2:
+                raise InvalidSubmissionError(f"Size of repository exceeds {MAX_REPO_SIZE_MB} MB")
 
-    if not baseline:
-        start = perf_counter()
-        logger.info(f"Checking for blacklisted dependencies...")
-        _run(
-            BLACKLIST_SCRIPT,
-            sandbox_args,
-            sandbox_directory,
-            [BLACKLISTED_DEPENDENCIES],
-            "Detected a blacklisted dependency"
-        )
-        logger.info(f"Found no blacklisted dependencies after {perf_counter() - start:.2f} seconds")
+            try:
+                with open(sandbox_directory / "pyproject.toml", 'r') as file:
+                    pyproject = toml.load(file)
+                    version = int(pyproject["project"]["version"])
+                    models = pyproject["tool"]["edge-maxxing"]["models"]
+            except Exception as e:
+                raise InvalidSubmissionError("Failed to read submission info") from e
 
-    start = perf_counter()
-    logger.info(f"Syncing uv...")
-    _run(
-        SYNC_UV,
-        sandbox_args,
-        sandbox_directory,
-        [],
-        "Failed to sync uv"
-    )
-    logger.info(f"Synced uv in {perf_counter() - start:.2f} seconds")
+            clone_span.set_attribute("submission.version", version)
+            if version != SPEC_VERSION:
+                raise InvalidSubmissionError(f"Submission is at version {version} while expected version is {SPEC_VERSION}")
 
-    start = perf_counter()
-    logger.info(f"Downloading Hugging Face models...")
-    try:
-        total_model_size = 0
-        for model in models:
-            model_info = hf_api.model_info(repo_id=model, files_metadata=True)
-            for sibling in model_info.siblings:
-                total_model_size += sibling.size
-    except Exception as e:
-        raise InvalidSubmissionError("Failed to get model info") from e
+        if not baseline:
+            with tracer.start_span("check_blacklist"):
+                _run(
+                    BLACKLIST_SCRIPT,
+                    sandbox_args,
+                    sandbox_directory,
+                    [BLACKLISTED_DEPENDENCIES],
+                    "Detected a blacklisted dependency"
+                )
 
-    if total_model_size > MAX_HF_MODEL_SIZE_GB * 1024 ** 3:
-        raise InvalidSubmissionError(f"Size of all Hugging Face models exceeds {MAX_HF_MODEL_SIZE_GB} GB")
+        with tracer.start_span("sync_uv"):
+            _run(
+                SYNC_UV,
+                sandbox_args,
+                sandbox_directory,
+                [],
+                "Failed to sync uv"
+            )
 
-    _run(
-        DOWNLOAD_HUGGINGFACE_MODELS,
-        sandbox_args,
-        sandbox_directory,
-        [" ".join(models)],
-        "Failed to download Hugging Face models"
-    )
-    logger.info(f"Downloaded Hugging Face model in {perf_counter() - start:.2f} seconds")
+        with tracer.start_span("download_huggingface_models") as hf_span:
+            try:
+                total_model_size = 0
+                for model in models:
+                    model_info = hf_api.model_info(repo_id=model, files_metadata=True)
+                    for sibling in model_info.siblings:
+                        total_model_size += sibling.size
+            except Exception as e:
+                raise InvalidSubmissionError("Failed to get model info") from e
 
-    return repo_size + total_model_size
+            hf_span.set_attribute("models.total_size_gb", total_model_size / 1024 ** 3)
+            if total_model_size > MAX_HF_MODEL_SIZE_GB * 1024 ** 3:
+                raise InvalidSubmissionError(f"Size of all Hugging Face models exceeds {MAX_HF_MODEL_SIZE_GB} GB")
+
+            _run(
+                DOWNLOAD_HUGGINGFACE_MODELS,
+                sandbox_args,
+                sandbox_directory,
+                [" ".join(models)],
+                "Failed to download Hugging Face models"
+            )
+
+        return repo_size + total_model_size

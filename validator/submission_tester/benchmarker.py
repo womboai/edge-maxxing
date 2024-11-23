@@ -1,17 +1,15 @@
-import traceback
 from concurrent.futures import CancelledError
-from datetime import timedelta, datetime
 from random import choice
 from threading import Lock, Event, Thread
 from time import perf_counter, sleep
 from typing import cast
 
 from fiber.logging_utils import get_logger
+from opentelemetry import trace
 
 from neuron import (
     Key,
     ModelRepositoryInfo,
-    TIMEZONE,
     random_inputs,
 )
 from neuron.submission_tester import (
@@ -25,6 +23,7 @@ from neuron.submission_tester import (
 from pipelines import TextToImageRequest
 
 logger = get_logger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 class Benchmarker:
@@ -55,70 +54,78 @@ class Benchmarker:
         self.cancelled_event = Event()
 
     def _benchmark_submission(self, hotkey: Key):
-        submission = self.submissions[hotkey]
+        with tracer.start_as_current_span("benchmark_submission") as span:
+            submission = self.submissions[hotkey]
+            span.set_attributes({
+                "submission.hotkey": str(hotkey),
+                "submission.url": submission.url,
+                "submission.revision": submission.revision
+            })
 
-        start_time = perf_counter()
+            start_time = perf_counter()
 
-        try:
-            self.benchmarks[hotkey] = compare_checkpoints(
-                submission=submission,
-                inputs=self.inputs,
-                baseline=self.baseline,
-                load_timeout=int(cast(MetricData, self.get_baseline_metrics()).load_time * 2),
-                cancelled_event=self.cancelled_event,
-            )
-        except InvalidSubmissionError as e:
-            logger.error(f"Skipping invalid submission '{submission}': '{e}'")
-            self.benchmarks[hotkey] = None
-            self.invalid[hotkey] = str(e)
-        except CancelledError:
-            logger.warning(f"Benchmarking was canceled while testing '{submission}'")
-            raise
-        except:
-            traceback.print_exc()
-        finally:
-            self.submission_times.append(perf_counter() - start_time)
+            try:
+                self.benchmarks[hotkey] = compare_checkpoints(
+                    submission=submission,
+                    inputs=self.inputs,
+                    baseline=self.baseline,
+                    load_timeout=int(cast(MetricData, self.get_baseline_metrics()).load_time * 2),
+                    cancelled_event=self.cancelled_event,
+                )
+            except InvalidSubmissionError as e:
+                logger.error(f"Skipping invalid submission '{submission}': '{e}'")
+                self.benchmarks[hotkey] = None
+                self.invalid[hotkey] = str(e)
+            except CancelledError:
+                logger.warning(f"Benchmarking was canceled while testing '{submission}'")
+                raise
+            except Exception as e:
+                span.record_exception(e)
+            finally:
+                duration = perf_counter() - start_time
+                self.submission_times.append(duration)
+                span.set_attribute("benchmark.duration_seconds", duration)
 
     def _start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
-        self.submissions = submissions
-        self.benchmarks.clear()
-        self.invalid.clear()
-        self.submission_times.clear()
-        self.inputs = random_inputs()
-        self.done = False
-        self.baseline = None
+        with tracer.start_as_current_span("start_benchmarking") as span:
+            span.set_attribute("submissions.total", len(submissions))
 
-        while not self.baseline and not self.cancelled_event.is_set():
-            try:
-                logger.info("Generating baseline samples to compare")
-                self.baseline = generate_baseline(self.inputs, cancelled_event=self.cancelled_event)
-            except CancelledError:
-                logger.warning("Benchmarking was canceled while testing the baseline")
-                return
-            except Exception as e:
-                logger.error("Failed to generate baseline samples, retrying in 10 minutes", exc_info=e)
-                sleep(600)
+            self.submissions = submissions
+            self.benchmarks.clear()
+            self.invalid.clear()
+            self.submission_times.clear()
+            self.inputs = random_inputs()
+            self.done = False
+            self.baseline = None
 
-        while len(self.benchmarks) != len(self.submissions) and self.baseline and not self.cancelled_event.is_set():
-            hotkey = choice(list(self.submissions.keys() - self.benchmarks.keys()))
-            self._benchmark_submission(hotkey)
+            with tracer.start_span("generate_baseline"):
+                while not self.baseline and not self.cancelled_event.is_set():
+                    try:
+                        logger.info("Generating baseline samples to compare")
+                        self.baseline = generate_baseline(self.inputs, cancelled_event=self.cancelled_event)
+                    except CancelledError:
+                        logger.warning("Benchmarking was canceled while testing the baseline")
+                        return
+                    except Exception as e:
+                        logger.error("Failed to generate baseline samples, retrying in 10 minutes", exc_info=e)
+                        sleep(600)
 
-            valid_submissions = len([benchmark for benchmark in self.benchmarks.values() if benchmark])
-            logger.info(f"{len(self.benchmarks)}/{len(self.submissions)} submissions benchmarked. {valid_submissions} valid.")
+            with tracer.start_span("benchmark_submissions") as bench_span:
+                while len(self.benchmarks) != len(self.submissions) and self.baseline and not self.cancelled_event.is_set():
+                    hotkey = choice(list(self.submissions.keys() - self.benchmarks.keys()))
+                    self._benchmark_submission(hotkey)
 
-            if self.submission_times:
-                average_time = sum(self.submission_times) / len(self.submission_times)
-                eta = int(average_time * (len(self.submissions) - len(self.benchmarks)))
-                if eta > 0:
-                    time_left = timedelta(seconds=eta)
-                    eta_date = datetime.now(tz=TIMEZONE) + time_left
-                    eta_time = eta_date.strftime("%Y-%m-%d %I:%M:%S %p")
+                    valid_submissions = len([benchmark for benchmark in self.benchmarks.values() if benchmark])
+                    bench_span.set_attributes({
+                        "progress.total": len(self.benchmarks),
+                        "progress.valid": valid_submissions,
+                    })
+                    logger.info(f"{len(self.benchmarks)}/{len(self.submissions)} submissions benchmarked. {valid_submissions} valid.")
 
-                    logger.info(f"ETA: {eta_time} PST. Time remaining: {time_left}")
+            logger.info("Benchmarking complete")
+            self.done = True
 
-        logger.info("Benchmarking complete")
-        self.done = True
-
+    @tracer.start_as_current_span("start_benchmarking")
     def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         if not submissions:
             logger.warning("No submissions to benchmark")

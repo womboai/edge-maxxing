@@ -15,6 +15,7 @@ from typing import Any
 
 import requests
 import wandb
+from opentelemetry.instrumentation.aiohttp_server import tracer
 
 from base_validator import BenchmarkState, BenchmarkResults, AutoUpdater, init_open_telemetry_logging
 from fiber.chain.chain_utils import load_hotkey_keypair
@@ -472,6 +473,7 @@ class Validator:
         except Exception as e:
             logger.error(f"Failed to set weights", exc_info=e)
 
+    @tracer.start_as_current_span("set_weights")
     def set_weights(self):
         if self.attempted_set_weights:
             return
@@ -567,6 +569,7 @@ class Validator:
     def is_blacklisted(blacklisted_keys: dict, hotkey: str, coldkey: str):
         return hotkey in blacklisted_keys["hotkeys"] or coldkey in blacklisted_keys["coldkeys"]
 
+    @tracer.start_as_current_span("get_miner_submissions")
     def get_miner_submissions(self) -> list[MinerModelInfo | None]:
         blacklisted_keys = self.get_blacklisted_keys()
 
@@ -595,6 +598,7 @@ class Validator:
             }
         )
 
+    @tracer.start_as_current_span("initialize_contest")
     def initialize_contest(self, now: datetime):
         logger.info("Collecting all submissions")
 
@@ -628,6 +632,7 @@ class Validator:
 
         self.step += 1
 
+    @tracer.start_as_current_span("do_step")
     def do_step(self, block: int):
         now = self.current_time()
 
