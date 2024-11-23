@@ -6,7 +6,7 @@ from threading import Event
 from time import perf_counter
 
 from fiber.logging_utils import get_logger
-from opentelemetry.instrumentation.aiohttp_server import tracer
+from opentelemetry import trace
 
 from pipelines import TextToImageRequest
 from . import InvalidSubmissionError
@@ -26,6 +26,7 @@ MIN_LOAD_TIMEOUT = 240
 
 debug = int(os.getenv("VALIDATOR_DEBUG") or 0) > 0
 logger = get_logger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 @tracer.start_as_current_span("generate")

@@ -15,7 +15,7 @@ from typing import Any
 
 import requests
 import wandb
-from opentelemetry.instrumentation.aiohttp_server import tracer
+from opentelemetry import trace
 
 from base_validator import BenchmarkState, BenchmarkResults, AutoUpdater, init_open_telemetry_logging
 from fiber.chain.chain_utils import load_hotkey_keypair
@@ -64,6 +64,7 @@ WEIGHTS_VERSION = (
 COLLECTED_SUBMISSIONS_VERSION = SPEC_VERSION * 10 + 2
 
 logger = get_logger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 @dataclass
