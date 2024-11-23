@@ -690,7 +690,12 @@ class Validator:
 
             return
 
-        states: list[BenchmarkResults] = [api.state() for api in self.benchmarking_apis]
+        try:
+            states: list[BenchmarkResults] = [api.state() for api in self.benchmarking_apis]
+        except Exception as e:
+            logger.error(f"Failed to get benchmarking states, retrying in 60 seconds", exc_info=e)
+            sleep(60)
+            return
 
         not_started = []
         in_progress = []
