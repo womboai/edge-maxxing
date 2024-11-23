@@ -1,11 +1,11 @@
 import shutil
-from logging import getLogger
 from os.path import abspath
 from pathlib import Path
 from subprocess import run, CalledProcessError
 from time import perf_counter
 
 import toml
+from fiber.logging_utils import get_logger
 from huggingface_hub import HfApi
 
 from ..checkpoint import SPEC_VERSION
@@ -26,7 +26,7 @@ MAX_REPO_SIZE_MB = 16
 with open(DEPENDENCY_BLACKLIST, 'r') as blacklist_file:
     BLACKLISTED_DEPENDENCIES = " ".join(blacklist_file.read().splitlines())
 
-logger = getLogger(__name__)
+logger = get_logger(__name__)
 hf_api = HfApi()
 
 
