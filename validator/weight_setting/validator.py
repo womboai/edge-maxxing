@@ -815,6 +815,7 @@ class Validator:
 
         self.sleep_for_blocks(now, epoch_length / 4, "Benchmarking in progress")
 
+    @tracer.start_as_current_span("sleep_for_blocks")
     def sleep_for_blocks(self, now: datetime, blocks: int, reason: str):
         next_noon = datetime.combine(now.date() + timedelta(days=int(now.hour >= 12)), time(12), tzinfo=TIMEZONE)
         blocks_to_sleep = min(blocks, ceil((next_noon - now).total_seconds() / 12))

@@ -150,7 +150,7 @@ def compare_checkpoints(
     vram_used = max(output.vram_used for output in outputs) - start_vram
     watts_used = max(output.watts_used for output in outputs)
 
-    with tracer.start_span("compare_outputs") as compare_span:
+    with tracer.start_span("compare_outputs"):
         with CURRENT_CONTEST.output_comparator() as output_comparator:
             def calculate_similarity(comparator: OutputComparator, baseline_output: GenerationOutput, optimized_output: GenerationOutput):
                 try:
@@ -190,18 +190,6 @@ def compare_checkpoints(
         average_similarity=average_similarity,
         min_similarity=min_similarity,
     )
-
-    compare_span.set_attributes({
-        "benchmark.samples": len(inputs),
-        "benchmark.score": benchmark.calculate_score(baseline.metric_data),
-        "benchmark.average_similarity": average_similarity,
-        "benchmark.min_similarity": min_similarity,
-        "benchmark.average_generation_time": average_time,
-        "benchmark.model_size": size,
-        "benchmark.model_load_time": sandbox.load_time,
-        "benchmark.vram_usage": vram_used,
-        "benchmark.power_usage": watts_used,
-    })
 
     logger.info(
         f"Tested {len(inputs)} Samples\n"
