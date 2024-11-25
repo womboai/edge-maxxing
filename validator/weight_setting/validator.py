@@ -39,7 +39,7 @@ from neuron import (
     get_submissions,
     BENCHMARKS_VERSION,
     CheckpointBenchmark,
-    MetricData, ModelRepositoryInfo,
+    MetricData,
 )
 from neuron.device import ContestDeviceValidationError
 from .benchmarking_api import BenchmarkingApi, send_submissions_to_api
@@ -522,7 +522,7 @@ class Validator:
                     logger.warning(f"Not setting weights for hotkey {hotkey} as their submission was not found")
                     self.reset_miner(uid)
 
-        contestants = get_contestant_scores(benchmarks, self.baseline_metrics)
+        contestants = get_contestant_scores(CURRENT_CONTEST, benchmarks, self.baseline_metrics)
         tiers = get_tiers(contestants)
         blocks = [info.block if info else None for info in self.contest_state.miner_info]
         weights = get_scores(tiers, blocks, len(self.metagraph.nodes))
@@ -572,7 +572,7 @@ class Validator:
             block=self.block,
         )
 
-    def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
+    def start_benchmarking(self, submissions: dict[Key, MinerModelInfo]):
         return send_submissions_to_api(self.benchmarking_apis, submissions)
 
     @staticmethod
@@ -655,7 +655,7 @@ class Validator:
                     nodes = self.metagraph_nodes()
 
                     submissions = {
-                        nodes[uid].hotkey: self.contest_state.miner_info[uid].repository
+                        nodes[uid].hotkey: self.contest_state.miner_info[uid]
                         for uid in remaining
                     }
 
@@ -728,7 +728,7 @@ class Validator:
             nodes = self.metagraph_nodes()
 
             submissions = {
-                nodes[uid].hotkey: self.contest_state.miner_info[uid].repository
+                nodes[uid].hotkey: self.contest_state.miner_info[uid]
                 for uid in self.non_tested_miners()
             }
 
