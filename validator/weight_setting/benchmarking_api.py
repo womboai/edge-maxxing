@@ -1,8 +1,6 @@
 import time
-from collections import defaultdict
 from itertools import islice
 from math import ceil
-from operator import itemgetter
 
 import requests
 from fiber.logging_utils import get_logger
