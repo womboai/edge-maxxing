@@ -87,7 +87,7 @@ def get_submissions(
                 submissions[hotkeys.index(hotkey)] = MinerModelInfo(repository, info.contest, submitted_block)
         except Exception as e:
             logger.error(f"Failed to get submission from miner {hotkey}")
-            logger.debug(f"Submission parsing error", exc_info=e)
+            logger.error(f"Submission parsing error", exc_info=e)
             continue
 
     return submissions

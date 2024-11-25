@@ -58,51 +58,21 @@ class BenchmarkingApi:
         return ApiMetadata.model_validate(response.json())
 
 
-def send_submissions_to_api(all_apis: list[BenchmarkingApi], submissions: dict[Key, MinerModelInfo]):
-    submissions_by_contest: dict[ContestId, dict[Key, ModelRepositoryInfo]] = defaultdict(lambda: {})
+def send_submissions_to_api(apis: list[BenchmarkingApi], submissions: dict[Key, MinerModelInfo]):
+    submissions_info = {
+        key: info.repository
+        for key, info in submissions.items()
+        if info.contest_id == CURRENT_CONTEST.id
+    }
 
-    for key, info in submissions.items():
-        if info.contest_id != CURRENT_CONTEST.id:
-            continue  # TODO: Remove once multi-competition support is added
-        submissions_by_contest[info.contest_id][key] = info.repository
+    iterator = iter(submissions_info.items())
 
-    contest_api_assignment: dict[ContestId, list[BenchmarkingApi]] = defaultdict(lambda: [])
+    chunk_size = ceil(len(submissions_info) / len(apis))
 
-    for api in all_apis:
-        metadata = api.metadata()
-        if metadata.version != API_VERSION:
-            raise ValueError(f"API version mismatch, expected {API_VERSION}, got {metadata.version}")
+    chunks = [
+        (api, list(islice(iterator, chunk_size)))
+        for api in apis
+    ]
 
-        if sum(len(contest_api_assignment[contest_id]) for contest_id in metadata.compatible_contests) == 0:
-            compatible_contests = list(filter(submissions_by_contest.__contains__, metadata.compatible_contests))
-
-            if compatible_contests:
-                contest_api_assignment[compatible_contests[0]].append(api)
-        else:
-            assignment_counts = [
-                (contest_id, len(contest_api_assignment[contest_id]))
-                for contest_id in metadata.compatible_contests
-                if contest_id in submissions_by_contest
-            ]
-
-            lowest_contest_id = min(assignment_counts, key=itemgetter(1))[0]
-
-            contest_api_assignment[lowest_contest_id].append(api)
-
-    for contest_id, apis in contest_api_assignment.items():
-        if contest_id not in submissions_by_contest:
-            raise RuntimeError(f"No API compatible with contest type {contest_id}")
-
-        contest_submissions = submissions_by_contest[contest_id]
-
-        iterator = iter(contest_submissions.items())
-
-        chunk_size = ceil(len(contest_submissions) / len(apis))
-
-        chunks = [
-            (api, list(islice(iterator, chunk_size)))
-            for api in apis
-        ]
-
-        for api, chunk in chunks:
-            api.start_benchmarking(contest_id, dict(chunk))
+    for api, chunk in chunks:
+        api.start_benchmarking(CURRENT_CONTEST.id, dict(chunk))
