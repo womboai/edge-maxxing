@@ -62,7 +62,7 @@ def send_submissions_to_api(all_apis: list[BenchmarkingApi], submissions: dict[K
     submissions_by_contest: dict[ContestId, dict[Key, ModelRepositoryInfo]] = defaultdict(lambda: {})
 
     for key, info in submissions.items():
-        if info.contest_id != CURRENT_CONTEST:
+        if info.contest_id != CURRENT_CONTEST.id:
             continue  # TODO: Remove once multi-competition support is added
         submissions_by_contest[info.contest_id][key] = info.repository
 
