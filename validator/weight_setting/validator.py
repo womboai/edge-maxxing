@@ -1,7 +1,5 @@
-import asyncio
 import random
 from argparse import ArgumentParser
-from asyncio import sleep
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, time
 from json import JSONDecodeError
@@ -12,12 +10,14 @@ from os.path import isfile
 from pathlib import Path
 from pickle import dump, load
 from ssl import SSLEOFError
+from time import sleep
 from typing import Any
 
 import requests
 import wandb
+from opentelemetry import trace
 
-from base_validator import BenchmarkState, BenchmarkResults, AutoUpdater
+from base_validator import BenchmarkState, BenchmarkResults, AutoUpdater, init_open_telemetry_logging
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.chain.metagraph import Metagraph
@@ -39,14 +39,14 @@ from neuron import (
     get_submissions,
     BENCHMARKS_VERSION,
     CheckpointBenchmark,
-    MetricData,
+    MetricData, ModelRepositoryInfo,
 )
 from neuron.device import ContestDeviceValidationError
-from .benchmarking_api import BenchmarkingApi, benchmarking_api, send_submissions_to_api
+from .benchmarking_api import BenchmarkingApi, send_submissions_to_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
-VALIDATOR_VERSION: tuple[int, int, int] = (5, 3, 1)
+VALIDATOR_VERSION: tuple[int, int, int] = (5, 4, 0)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
 VALIDATOR_STATE_VERSION = 1
 
@@ -59,6 +59,7 @@ WEIGHTS_VERSION = (
 COLLECTED_SUBMISSIONS_VERSION = SPEC_VERSION * 10 + 2
 
 logger = get_logger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 @dataclass
@@ -112,9 +113,6 @@ class Validator:
         self.auto_updater = AutoUpdater()
         self.config = get_config(Validator.add_extra_args)
 
-        from .diagnostics import save_validator_diagnostics
-        save_validator_diagnostics(self.config)
-
         logger.info(f"Validator version {VALIDATOR_VERSION_STRING}! Loading...")
 
         self.substrate = get_substrate(
@@ -142,6 +140,15 @@ class Validator:
 
         self.uid = self.hotkeys.index(hotkey)
         self.step = 0
+
+        signing_message = f"{VALIDATOR_VERSION_STRING}:{hotkey}"
+        signature = f"0x{self.keypair.sign(signing_message).hex()}"
+        init_open_telemetry_logging({
+            "neuron.uid": self.uid,
+            "neuron.signature": signature,
+            "subtensor.chain_endpoint": self.substrate.url,
+            "validator.version": VALIDATOR_VERSION_STRING,
+        })
 
         self.last_day = None
         self.contest_state = None
@@ -456,6 +463,7 @@ class Validator:
         except Exception as e:
             logger.error(f"Failed to set weights", exc_info=e)
 
+    @tracer.start_as_current_span("set_weights")
     def set_weights(self):
         if self.attempted_set_weights:
             return
@@ -551,6 +559,7 @@ class Validator:
     def is_blacklisted(blacklisted_keys: dict, hotkey: str, coldkey: str):
         return hotkey in blacklisted_keys["hotkeys"] or coldkey in blacklisted_keys["coldkeys"]
 
+    @tracer.start_as_current_span("get_miner_submissions")
     def get_miner_submissions(self) -> list[MinerModelInfo | None]:
         blacklisted_keys = self.get_blacklisted_keys()
 
@@ -563,7 +572,7 @@ class Validator:
             block=self.block,
         )
 
-    def start_benchmarking(self, submissions: dict[Key, MinerModelInfo]):
+    def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
         return send_submissions_to_api(self.benchmarking_apis, submissions)
 
     @staticmethod
@@ -579,6 +588,7 @@ class Validator:
             }
         )
 
+    @tracer.start_as_current_span("initialize_contest")
     def initialize_contest(self, now: datetime):
         logger.info("Collecting all submissions")
 
@@ -610,7 +620,8 @@ class Validator:
 
         self.step += 1
 
-    async def do_step(self, block: int):
+    @tracer.start_as_current_span("do_step")
+    def do_step(self, block: int):
         now = self.current_time()
 
         if (not self.last_day or self.last_day < now.date()) and now.hour >= 12:
@@ -644,15 +655,15 @@ class Validator:
                     nodes = self.metagraph_nodes()
 
                     submissions = {
-                        nodes[uid].hotkey: self.contest_state.miner_info[uid]
+                        nodes[uid].hotkey: self.contest_state.miner_info[uid].repository
                         for uid in remaining
                     }
 
                     try:
-                        await self.start_benchmarking(submissions)
+                        self.start_benchmarking(submissions)
                     except Exception as e:
                         logger.error(f"Failed to start benchmarking, retrying in 60 seconds", exc_info=e)
-                        await sleep(60)
+                        sleep(60)
                         return
 
                     self.benchmarking = True
@@ -668,16 +679,16 @@ class Validator:
                 # to avoid multiple validators setting weights all in the same block
                 blocks_to_wait = random.randint(1, 10)
 
-            await self.sleep_for_blocks(now, blocks_to_wait, "Nothing to do in this step")
+            self.sleep_for_blocks(now, blocks_to_wait, "Nothing to do in this step")
 
             return
 
-        states: tuple[BenchmarkResults] = await asyncio.gather(
-            *[
-                api.state()
-                for api in self.benchmarking_apis
-            ],
-        )
+        try:
+            states: list[BenchmarkResults] = [api.state() for api in self.benchmarking_apis]
+        except Exception as e:
+            logger.error(f"Failed to get benchmarking states, retrying in 60 seconds", exc_info=e)
+            sleep(60)
+            return
 
         not_started = []
         in_progress = []
@@ -717,7 +728,7 @@ class Validator:
             nodes = self.metagraph_nodes()
 
             submissions = {
-                nodes[uid].hotkey: self.contest_state.miner_info[uid]
+                nodes[uid].hotkey: self.contest_state.miner_info[uid].repository
                 for uid in self.non_tested_miners()
             }
 
@@ -727,10 +738,10 @@ class Validator:
             ]
 
             try:
-                await send_submissions_to_api(apis, submissions)
+                send_submissions_to_api(apis, submissions)
             except Exception as e:
                 logger.error(f"Failed to restart benchmarking, retrying in 60 seconds", exc_info=e)
-                await sleep(60)
+                sleep(60)
                 return
 
             if not with_results:
@@ -794,13 +805,14 @@ class Validator:
 
         self.save_state()
 
-        await self.sleep_for_blocks(now, epoch_length / 4, "Benchmarking in progress")
+        self.sleep_for_blocks(now, epoch_length / 4, "Benchmarking in progress")
 
-    async def sleep_for_blocks(self, now: datetime, blocks: int, reason: str):
+    @tracer.start_as_current_span("sleep_for_blocks")
+    def sleep_for_blocks(self, now: datetime, blocks: int, reason: str):
         next_noon = datetime.combine(now.date() + timedelta(days=int(now.hour >= 12)), time(12), tzinfo=TIMEZONE)
         blocks_to_sleep = min(blocks, ceil((next_noon - now).total_seconds() / 12))
         logger.info(f"{reason}, sleeping for {blocks_to_sleep} blocks")
-        await sleep(blocks_to_sleep * 12)
+        sleep(blocks_to_sleep * 12)
 
     @property
     def block(self):
@@ -811,10 +823,10 @@ class Validator:
 
         return self.current_block
 
-    async def run(self):
+    def run(self):
         self.benchmarking_apis = [
-            benchmarking_api(self.keypair, api, index).build()
-            for index, api in enumerate(self.benchmarking_api_urls)
+            BenchmarkingApi(self.keypair, api)
+            for api in self.benchmarking_api_urls
         ]
 
         while True:
@@ -823,7 +835,10 @@ class Validator:
 
                 logger.info(f"Step {self.step}, block {current_block}")
 
-                await self.do_step(current_block)
+                self.do_step(current_block)
+            except KeyboardInterrupt:
+                logger.info("Shutting down validator")
+                break
             except Exception as e:
                 if not isinstance(e, ContestDeviceValidationError):
                     if isinstance(e, (SSLEOFError, JSONDecodeError)):
@@ -835,14 +850,11 @@ class Validator:
 
                     continue
 
-                for api in self.benchmarking_apis:
-                    await api.close()
-
                 raise
 
 
 def main():
-    asyncio.run(Validator().run())
+    Validator().run()
 
 
 if __name__ == '__main__':

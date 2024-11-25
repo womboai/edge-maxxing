@@ -1,7 +1,6 @@
 import base64
-import logging
-import re
 import json
+import re
 import shutil
 from argparse import ArgumentParser
 from pathlib import Path
@@ -27,7 +26,6 @@ from neuron import (
     GenerationOutput,
     BENCHMARKS_VERSION,
 )
-
 from neuron.submission_tester import (
     generate_baseline,
     compare_checkpoints,
@@ -42,11 +40,6 @@ VALID_REVISION_REGEX = r"^[a-f0-9]{7}$"
 MODEL_DIRECTORY = Path("model")
 BASELINE_CACHE_JSON = Path("baseline_cache.json")
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(filename)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
 logger = get_logger(__name__)
 
 

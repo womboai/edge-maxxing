@@ -1,28 +1,25 @@
-import asyncio
-import logging
 import os
-import sys
 import time
-from asyncio import CancelledError
 from contextlib import asynccontextmanager
-from io import TextIOWrapper
-from queue import Queue
-from typing import Annotated, TextIO
+from typing import Annotated
 
-from fastapi import FastAPI, WebSocket, Request, Header, HTTPException, Body
+from fastapi import Body
+from fastapi import FastAPI, Request, Header, HTTPException
+from fiber.logging_utils import get_logger
 from starlette import status
-from starlette.websockets import WebSocketDisconnect
 from substrateinterface import Keypair
 
-from neuron import CURRENT_CONTEST, find_compatible_contests, find_contest
-from .benchmarker import Benchmarker
 from base_validator import (
     API_VERSION,
     BenchmarkState,
     BenchmarkResults,
     AutoUpdater,
     ApiMetadata, BenchmarkingStartRequest,
+    init_open_telemetry_logging,
 )
+from neuron import CURRENT_CONTEST
+from neuron import find_compatible_contests, find_contest
+from .benchmarker import Benchmarker
 
 hotkey = os.getenv("VALIDATOR_HOTKEY_SS58_ADDRESS")
 debug = int(os.getenv("VALIDATOR_DEBUG") or 0) > 0
@@ -32,36 +29,12 @@ if not hotkey:
 
 keypair = Keypair(ss58_address=hotkey)
 
-logs = Queue()
+init_open_telemetry_logging({
+    "neuron.hotkey": hotkey,
+    "api.version": API_VERSION,
+})
 
-
-class LogsIO(TextIOWrapper):
-    old_stdout: TextIO
-    log_type: str
-
-    def __init__(self, old_stdout: TextIO, log_type: str):
-        super().__init__(old_stdout.buffer, encoding=old_stdout.encoding, errors=old_stdout.errors, newline=old_stdout.newlines)
-        self.old_stdout = old_stdout
-        self.log_type = log_type
-
-    def write(self, text):
-        if text.strip():
-            logs.put(f"{self.log_type}: {text.strip()}")
-        return self.old_stdout.write(text)
-
-    def flush(self):
-        self.old_stdout.flush()
-
-
-sys.stdout = LogsIO(sys.stdout, "out")
-sys.stderr = LogsIO(sys.stderr, "err")
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(filename)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    stream=sys.stdout
-)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
@@ -173,26 +146,3 @@ def metadata(request: Request) -> ApiMetadata:
         version=API_VERSION,
         compatible_contests=request.state.compatible_contests,
     )
-
-
-@app.websocket("/logs")
-async def stream_logs(
-    websocket: WebSocket,
-):
-    nonce = int(websocket.headers["x-nonce"])
-    signature = websocket.headers["signature"]
-
-    _authenticate_request(nonce, signature)
-
-    await websocket.accept()
-
-    try:
-        while True:
-            if not logs.empty():
-                message = logs.get()
-                await websocket.send_text(message)
-            await asyncio.sleep(0.1)
-    except (CancelledError, WebSocketDisconnect):
-        ...
-    except Exception as e:
-        logger.error(f"WebSocket error", exc_info=e)

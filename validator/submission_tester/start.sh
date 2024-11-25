@@ -3,4 +3,9 @@
 set -e
 
 ./submission_tester/update.sh
-sudo -u api /home/api/.local/bin/uv run uvicorn "$@"
+
+sudo -u api /home/api/.local/bin/uv run opentelemetry-instrument \
+  --service_name edge-maxxing-api \
+  --exporter_otlp_endpoint http://98.81.78.238:4317 \
+  --resource_attributes "neuron.type=validator" \
+  uvicorn "$@"

@@ -3,4 +3,4 @@
 chown -R validator:validator /home/validator/.bittensor
 chown -R validator:validator /home/validator/.netrc
 
-sudo -u validator /home/validator/.local/bin/uv run start_validator "$@"
+sudo -u validator ./weight_setting/start.sh "$@"
