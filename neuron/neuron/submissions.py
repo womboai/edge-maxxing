@@ -4,7 +4,7 @@ from substrateinterface import SubstrateInterface, Keypair
 from substrateinterface.storage import StorageKey
 
 from .checkpoint import CheckpointSubmission, SPEC_VERSION, Key, MinerModelInfo
-from .contest import CURRENT_CONTEST, ModelRepositoryInfo
+from .contest import ModelRepositoryInfo, find_contest, ACTIVE_CONTESTS
 from .network_commitments import Encoder, Decoder
 
 
@@ -79,17 +79,18 @@ def get_submissions(
                 info = CheckpointSubmission.decode(decoder)
                 repository_url = info.get_repo_link()
 
-                if (
-                    info.contest != CURRENT_CONTEST.id or
-                    repository_url == CURRENT_CONTEST.baseline_repository.url
-                ):
+                if info.contest not in ACTIVE_CONTESTS:
+                    continue
+
+                if repository_url == find_contest(info.contest).baseline_repository.url:
                     continue
 
                 repository = ModelRepositoryInfo(url=repository_url, revision=info.revision)
-                submissions[hotkeys.index(hotkey)] = MinerModelInfo(repository, int(commitment.value["block"]))
+                submitted_block = int(commitment.value["block"])
+                submissions[hotkeys.index(hotkey)] = MinerModelInfo(repository, info.contest, submitted_block)
         except Exception as e:
             logger.error(f"Failed to get submission from miner {hotkey}")
-            logger.debug(f"Submission parsing error", exc_info=e)
+            logger.error(f"Submission parsing error", exc_info=e)
             continue
 
     return submissions

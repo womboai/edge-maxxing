@@ -11,6 +11,7 @@ from neuron import (
     Key,
     ModelRepositoryInfo,
     random_inputs,
+    Contest,
 )
 from neuron.submission_tester import (
     CheckpointBenchmark,
@@ -27,6 +28,7 @@ tracer = trace.get_tracer(__name__)
 
 
 class Benchmarker:
+    contest: Contest | None
     submissions: dict[Key, ModelRepositoryInfo]
     benchmarks: dict[Key, CheckpointBenchmark | None]
     invalid: dict[Key, str]
@@ -41,6 +43,7 @@ class Benchmarker:
     cancelled_event: Event
 
     def __init__(self):
+        self.contest = None
         self.submissions = {}
         self.benchmarks = {}
         self.invalid = {}
@@ -66,6 +69,7 @@ class Benchmarker:
 
             try:
                 self.benchmarks[hotkey] = compare_checkpoints(
+                    contest=self.contest,
                     submission=submission,
                     inputs=self.inputs,
                     baseline=self.baseline,
@@ -86,10 +90,11 @@ class Benchmarker:
                 self.submission_times.append(duration)
                 span.set_attribute("benchmark.duration_seconds", duration)
 
-    def _start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
+    def _start_benchmarking(self, contest: Contest, submissions: dict[Key, ModelRepositoryInfo]):
         with tracer.start_as_current_span("start_benchmarking") as span:
             span.set_attribute("submissions.total", len(submissions))
 
+            self.contest = contest
             self.submissions = submissions
             self.benchmarks.clear()
             self.invalid.clear()
@@ -102,7 +107,11 @@ class Benchmarker:
                 while not self.baseline and not self.cancelled_event.is_set():
                     try:
                         logger.info("Generating baseline samples to compare")
-                        self.baseline = generate_baseline(self.inputs, cancelled_event=self.cancelled_event)
+                        self.baseline = generate_baseline(
+                            contest=contest,
+                            inputs=self.inputs,
+                            cancelled_event=self.cancelled_event
+                        )
                     except CancelledError:
                         logger.warning("Benchmarking was canceled while testing the baseline")
                         return
@@ -126,7 +135,7 @@ class Benchmarker:
             self.done = True
 
     @tracer.start_as_current_span("start_benchmarking")
-    def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
+    def start_benchmarking(self, contest: Contest, submissions: dict[Key, ModelRepositoryInfo]):
         if not submissions:
             logger.warning("No submissions to benchmark")
             return
@@ -145,7 +154,7 @@ class Benchmarker:
         self.cancelled_event.clear()
         self.thread = Thread(
             target=self._start_benchmarking,
-            args=(submissions,),
+            args=(contest, submissions,),
             daemon=True,
         )
         self.thread.start()

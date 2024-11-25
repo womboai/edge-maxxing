@@ -3,6 +3,7 @@ import time
 from contextlib import asynccontextmanager
 from typing import Annotated
 
+from fastapi import Body
 from fastapi import FastAPI, Request, Header, HTTPException
 from fiber.logging_utils import get_logger
 from starlette import status
@@ -13,9 +14,11 @@ from base_validator import (
     BenchmarkState,
     BenchmarkResults,
     AutoUpdater,
+    ApiMetadata, BenchmarkingStartRequest,
     init_open_telemetry_logging,
 )
-from neuron import CURRENT_CONTEST, Key, ModelRepositoryInfo
+from neuron import CURRENT_CONTEST
+from neuron import find_compatible_contests, find_contest
 from .benchmarker import Benchmarker
 
 hotkey = os.getenv("VALIDATOR_HOTKEY_SS58_ADDRESS")
@@ -37,11 +40,14 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     AutoUpdater()
-    if not debug:
-        CURRENT_CONTEST.validate()
+
+    compatible_contests = find_compatible_contests() if not debug else [CURRENT_CONTEST.id]
+    if not compatible_contests:
+        raise RuntimeError("Device is not compatible with any contests")
 
     yield {
         "benchmarker": Benchmarker(),
+        "compatible_contests": compatible_contests,
     }
 
 
@@ -73,7 +79,7 @@ def _authenticate_request(nonce: int, signature: str):
 
 @app.post("/start")
 def start_benchmarking(
-    submissions: dict[Key, ModelRepositoryInfo],
+    benchmarking_start_request: Annotated[BenchmarkingStartRequest, Body()],
     x_nonce: Annotated[int, Header()],
     signature: Annotated[str, Header()],
     request: Request,
@@ -85,6 +91,16 @@ def start_benchmarking(
     with benchmarker.lock:
         timestamp = time.time_ns()
 
+        try:
+            contest = find_contest(benchmarking_start_request.contest_id)
+            if not debug:
+                contest.device.validate()
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
+
         if timestamp - benchmarker.start_timestamp < 120_000_000_000:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -93,7 +109,7 @@ def start_benchmarking(
 
         benchmarker.start_timestamp = timestamp
 
-        benchmarker.start_benchmarking(submissions)
+        benchmarker.start_benchmarking(contest, benchmarking_start_request.submissions)
 
 
 @app.get("/state")
@@ -121,4 +137,12 @@ def state(request: Request) -> BenchmarkResults:
         invalid=benchmarker.invalid,
         baseline_metrics=benchmarker.get_baseline_metrics(),
         average_benchmark_time=average_benchmark_time,
+    )
+
+
+@app.get("/metadata")
+def metadata(request: Request) -> ApiMetadata:
+    return ApiMetadata(
+        version=API_VERSION,
+        compatible_contests=request.state.compatible_contests,
     )

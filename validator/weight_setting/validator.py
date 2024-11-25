@@ -29,31 +29,26 @@ from wandb.sdk.wandb_run import Run
 
 from neuron import (
     get_config,
-    ContestId,
     CURRENT_CONTEST,
     INPUTS_ENDPOINT,
-    find_contest,
-    ContestDeviceValidationError,
-    Contest,
     Key,
     Uid,
     MinerModelInfo,
     TIMEZONE,
-    ModelRepositoryInfo,
     SPEC_VERSION,
     get_submissions,
     BENCHMARKS_VERSION,
-)
-from neuron.submission_tester import (
     CheckpointBenchmark,
     MetricData,
 )
+from neuron.device import ContestDeviceValidationError
 from .benchmarking_api import BenchmarkingApi, send_submissions_to_api
 from .wandb_args import add_wandb_args
 from .winner_selection import get_scores, get_contestant_scores, get_tiers, get_contestant_tier
 
 VALIDATOR_VERSION: tuple[int, int, int] = (5, 4, 0)
 VALIDATOR_VERSION_STRING = ".".join(map(str, VALIDATOR_VERSION))
+VALIDATOR_STATE_VERSION = 1
 
 WEIGHTS_VERSION = (
     VALIDATOR_VERSION[0] * 10000 +
@@ -69,17 +64,14 @@ tracer = trace.get_tracer(__name__)
 
 @dataclass
 class ContestState:
-    id: ContestId
     miner_score_version: int
     submission_spec_version: int
     miner_info: list[MinerModelInfo | None]
 
     def __init__(
         self,
-        contest_id: ContestId,
         miner_info: list[MinerModelInfo | None],
     ):
-        self.id = contest_id
         self.miner_score_version = BENCHMARKS_VERSION
         self.submission_spec_version = COLLECTED_SUBMISSIONS_VERSION
         self.miner_info = miner_info
@@ -116,7 +108,6 @@ class Validator:
     average_benchmarking_time: float | None
     benchmarking_state: BenchmarkState
     invalid: dict[int, str]
-    contest: Contest
 
     def __init__(self):
         self.auto_updater = AutoUpdater()
@@ -177,8 +168,6 @@ class Validator:
         self.load_state()
         self.start_wandb_run()
 
-        self.contest = find_contest(self.contest_state.id) if self.contest_state else CURRENT_CONTEST
-
     def start_wandb_run(self):
         if self.config["wandb.off"]:
             return
@@ -191,7 +180,7 @@ class Validator:
         day = self.last_day or self.current_time().date()
         name = f"validator-{self.uid}-{day.year}-{day.month}-{day.day}"
 
-        contest_id = self.contest_state.id if self.contest_state else CURRENT_CONTEST.id
+        contest_id = CURRENT_CONTEST.id
 
         signing_message = f"{name}:{hotkey}:{contest_id.name}"
         signature = f"0x{self.keypair.sign(signing_message).hex()}"
@@ -262,7 +251,7 @@ class Validator:
         tiers: list[list[Uid]] = []
 
         if self.baseline_metrics:
-            contestants = get_contestant_scores(benchmarks, self.baseline_metrics)
+            contestants = get_contestant_scores(CURRENT_CONTEST, benchmarks, self.baseline_metrics)
             tiers = get_tiers(contestants)
 
         for uid, benchmark in enumerate(benchmarks):
@@ -279,7 +268,7 @@ class Validator:
             } | benchmark.model_dump()
 
             if self.baseline_metrics:
-                data["score"] = benchmark.calculate_score(self.baseline_metrics)
+                data["score"] = CURRENT_CONTEST.calculate_score(self.baseline_metrics, benchmark)
             if tiers:
                 data["tier"] = get_contestant_tier(tiers, uid)
 
@@ -327,7 +316,7 @@ class Validator:
 
         makedirs(full_path, exist_ok=True)
 
-        return full_path / "state.bin"
+        return full_path / f"state_{VALIDATOR_STATE_VERSION}.bin"
 
     def save_state(self):
         """Saves the state of the validator to a file."""
@@ -533,7 +522,7 @@ class Validator:
                     logger.warning(f"Not setting weights for hotkey {hotkey} as their submission was not found")
                     self.reset_miner(uid)
 
-        contestants = get_contestant_scores(benchmarks, self.baseline_metrics)
+        contestants = get_contestant_scores(CURRENT_CONTEST, benchmarks, self.baseline_metrics)
         tiers = get_tiers(contestants)
         blocks = [info.block if info else None for info in self.contest_state.miner_info]
         weights = get_scores(tiers, blocks, len(self.metagraph.nodes))
@@ -574,7 +563,11 @@ class Validator:
     def get_miner_submissions(self) -> list[MinerModelInfo | None]:
         blacklisted_keys = self.get_blacklisted_keys()
 
-        hotkeys = [hotkey for hotkey, node in self.metagraph.nodes.items() if not self.is_blacklisted(blacklisted_keys, hotkey, node.coldkey)]
+        hotkeys = [
+            hotkey
+            for hotkey, node in self.metagraph.nodes.items()
+            if not self.is_blacklisted(blacklisted_keys, hotkey, node.coldkey)
+        ]
 
         return get_submissions(
             substrate=self.substrate,
@@ -583,7 +576,7 @@ class Validator:
             block=self.block,
         )
 
-    def start_benchmarking(self, submissions: dict[Key, ModelRepositoryInfo]):
+    def start_benchmarking(self, submissions: dict[Key, MinerModelInfo]):
         return send_submissions_to_api(self.benchmarking_apis, submissions)
 
     @staticmethod
@@ -594,8 +587,8 @@ class Validator:
         return list(
             {
                 uid
-                for uid, benchmark in enumerate(self.benchmarks)
-                if self.contest_state.miner_info[uid] and not benchmark and uid not in self.invalid
+                for uid, miner_info in enumerate(self.contest_state.miner_info)
+                if miner_info and not self.benchmarks[uid] and uid not in self.invalid
             }
         )
 
@@ -607,12 +600,10 @@ class Validator:
 
         logger.info(f"Got {len([info for info in miner_info if info])} submissions")
 
-        logger.info(f"Working on contest {self.contest.id.name}")
+        logger.info(f"Working on contest {CURRENT_CONTEST.id.name}")
 
-        if not self.contest_state or self.contest_state.id != CURRENT_CONTEST.id:
-            # New contest, restart
-            self.contest = CURRENT_CONTEST
-            self.contest_state = ContestState(self.contest.id, miner_info)
+        if not self.contest_state:
+            self.contest_state = ContestState(miner_info)
         else:
             self.contest_state.miner_info = miner_info
 
@@ -668,7 +659,7 @@ class Validator:
                     nodes = self.metagraph_nodes()
 
                     submissions = {
-                        nodes[uid].hotkey: self.contest_state.miner_info[uid].repository
+                        nodes[uid].hotkey: self.contest_state.miner_info[uid]
                         for uid in remaining
                     }
 
@@ -741,7 +732,7 @@ class Validator:
             nodes = self.metagraph_nodes()
 
             submissions = {
-                nodes[uid].hotkey: self.contest_state.miner_info[uid].repository
+                nodes[uid].hotkey: self.contest_state.miner_info[uid]
                 for uid in self.non_tested_miners()
             }
 
@@ -750,7 +741,12 @@ class Validator:
                 for index in api_indices
             ]
 
-            send_submissions_to_api(apis, submissions)
+            try:
+                send_submissions_to_api(apis, submissions)
+            except Exception as e:
+                logger.error(f"Failed to restart benchmarking, retrying in 60 seconds", exc_info=e)
+                sleep(60)
+                return
 
             if not with_results:
                 self.step += 1
@@ -844,6 +840,9 @@ class Validator:
                 logger.info(f"Step {self.step}, block {current_block}")
 
                 self.do_step(current_block)
+            except KeyboardInterrupt:
+                logger.info("Shutting down validator")
+                break
             except Exception as e:
                 if not isinstance(e, ContestDeviceValidationError):
                     if isinstance(e, (SSLEOFError, JSONDecodeError)):
