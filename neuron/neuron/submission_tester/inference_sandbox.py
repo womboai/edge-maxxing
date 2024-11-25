@@ -1,6 +1,4 @@
-import logging
 import os
-import sys
 from io import TextIOWrapper
 from multiprocessing.connection import Client, Connection
 from os.path import abspath
@@ -10,12 +8,15 @@ from threading import Thread
 from time import perf_counter, sleep
 from typing import Generic, TypeVar
 
+from fiber.logging_utils import get_logger
+from opentelemetry import trace
 from pydantic import BaseModel
 
 from .setup_inference_sandbox import setup_sandbox, InvalidSubmissionError, NETWORK_JAIL
 from ..contest import ModelRepositoryInfo
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
+tracer = trace.get_tracer(__name__)
 
 RequestT = TypeVar("RequestT", bound=BaseModel)
 
@@ -30,13 +31,14 @@ class InferenceSandbox(Generic[RequestT]):
     _process: Popen
     load_time: float
 
+    @tracer.start_as_current_span("init_inference_sandbox")
     def __init__(
-            self,
-            repository_info: ModelRepositoryInfo,
-            baseline: bool,
-            sandbox_directory: Path,
-            switch_user: bool,
-            load_timeout: int,
+        self,
+        repository_info: ModelRepositoryInfo,
+        baseline: bool,
+        sandbox_directory: Path,
+        switch_user: bool,
+        load_timeout: int,
     ):
         self._repository = repository_info
         self._baseline = baseline
@@ -44,51 +46,51 @@ class InferenceSandbox(Generic[RequestT]):
         self._switch_user = switch_user
 
         try:
-            self._file_size = setup_sandbox(
-                sandbox_args=self.sandbox_args(SANDBOX),
-                sandbox_directory=self._sandbox_directory,
-                baseline=baseline,
-                url=repository_info.url,
-                revision=repository_info.revision,
-            )
+            with tracer.start_span("setup_sandbox"):
+                self._file_size = setup_sandbox(
+                    sandbox_args=self.sandbox_args(SANDBOX),
+                    sandbox_directory=self._sandbox_directory,
+                    baseline=baseline,
+                    url=repository_info.url,
+                    revision=repository_info.revision,
+                )
         except InvalidSubmissionError as e:
             self.fail(str(e))
 
-        logger.info(f"Repository {repository_info} had size {self._file_size / 1024 ** 3:.2f} GB")
+        with tracer.start_span("start_inference_process") as inference_span:
+            self._process = Popen(
+                [
+                    *self.sandbox_args(SANDBOX),
+                    START_INFERENCE_SCRIPT,
+                    NETWORK_JAIL
+                ],
+                cwd=self._sandbox_directory,
+                stdout=PIPE,
+                stderr=PIPE,
+                text=True,
+            )
 
-        self._process = Popen(
-            [
-                *self.sandbox_args(SANDBOX),
-                START_INFERENCE_SCRIPT,
-                NETWORK_JAIL
-            ],
-            cwd=self._sandbox_directory,
-            stdout=PIPE,
-            stderr=PIPE,
-            text=True,
-        )
+            Thread(target=self._stream_logs, args=(self._process.stdout,), daemon=True).start()
+            Thread(target=self._stream_logs, args=(self._process.stderr,), daemon=True).start()
 
-        Thread(target=self._stream_logs, args=(self._process.stdout, sys.stdout), daemon=True).start()
-        Thread(target=self._stream_logs, args=(self._process.stderr, sys.stderr), daemon=True).start()
+            logger.info("Inference process starting")
 
-        logger.info("Inference process starting")
+            socket_path = abspath(self._sandbox_directory / "inferences.sock")
+            start = perf_counter()
+            for _ in range(load_timeout):
+                if os.path.exists(socket_path): break
+                sleep(1)
+                self._check_exit()
+            else:
+                self.fail(f"Timed out after {load_timeout} seconds")
 
-        socket_path = abspath(self._sandbox_directory / "inferences.sock")
-        start = perf_counter()
-        for _ in range(load_timeout):
-            if os.path.exists(socket_path): break
-            sleep(1)
-            self._check_exit()
-        else:
-            self.fail(f"Timed out after {load_timeout} seconds")
-
-        logger.info("Connecting to socket")
-        try:
-            self._client = Client(socket_path)
-        except ConnectionRefusedError:
-            self.fail("Failed to connect to socket")
-        self.load_time = perf_counter() - start
-        logger.info(f"Connected to socket in {self.load_time:.2f} seconds")
+            logger.info("Connecting to socket")
+            try:
+                self._client = Client(socket_path)
+            except ConnectionRefusedError:
+                self.fail("Failed to connect to socket")
+            self.load_time = perf_counter() - start
+            inference_span.set_attribute("load_time_seconds", self.load_time)
 
     def _check_exit(self):
         if self._process.poll():
@@ -137,6 +139,6 @@ class InferenceSandbox(Generic[RequestT]):
         ] if self._switch_user else []
 
     @staticmethod
-    def _stream_logs(stream: TextIOWrapper, output_stream: TextIOWrapper):
+    def _stream_logs(stream: TextIOWrapper):
         for line in iter(stream.readline, ""):
-            print(f"[INFERENCE] {line}", end="", file=output_stream)
+            logger.info(line.rstrip())
