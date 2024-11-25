@@ -133,3 +133,4 @@ def find_compatible_contests() -> list[ContestId]:
 
 
 CURRENT_CONTEST: Contest = find_contest(ContestId.FLUX_NVIDIA_4090)
+ACTIVE_CONTESTS = { ContestId.FLUX_NVIDIA_4090 }

@@ -62,7 +62,6 @@ def send_submissions_to_api(apis: list[BenchmarkingApi], submissions: dict[Key, 
     submissions_info = {
         key: info.repository
         for key, info in submissions.items()
-        if info.contest_id == CURRENT_CONTEST.id
     }
 
     iterator = iter(submissions_info.items())

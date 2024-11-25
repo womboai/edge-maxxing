@@ -563,7 +563,11 @@ class Validator:
     def get_miner_submissions(self) -> list[MinerModelInfo | None]:
         blacklisted_keys = self.get_blacklisted_keys()
 
-        hotkeys = [hotkey for hotkey, node in self.metagraph.nodes.items() if not self.is_blacklisted(blacklisted_keys, hotkey, node.coldkey)]
+        hotkeys = [
+            hotkey
+            for hotkey, node in self.metagraph.nodes.items()
+            if not self.is_blacklisted(blacklisted_keys, hotkey, node.coldkey)
+        ]
 
         return get_submissions(
             substrate=self.substrate,

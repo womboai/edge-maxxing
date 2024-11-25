@@ -3,6 +3,7 @@ from fiber.logging_utils import get_logger
 from substrateinterface import SubstrateInterface, Keypair
 from substrateinterface.storage import StorageKey
 
+from . import ACTIVE_CONTESTS
 from .checkpoint import CheckpointSubmission, SPEC_VERSION, Key, MinerModelInfo
 from .contest import ModelRepositoryInfo, find_contest
 from .network_commitments import Encoder, Decoder
@@ -78,6 +79,9 @@ def get_submissions(
             while not decoder.eof:
                 info = CheckpointSubmission.decode(decoder)
                 repository_url = info.get_repo_link()
+
+                if info.contest not in ACTIVE_CONTESTS:
+                    continue
 
                 if repository_url == find_contest(info.contest).baseline_repository.url:
                     continue
