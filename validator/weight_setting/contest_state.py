@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from base.checkpoint import Key, current_time, Submissions, Benchmarks
 from base.contest import Metrics
-from weight_setting.winner_selection import get_contestant_scores, get_contestant_tiers
+from weight_setting.winner_selection import get_contestant_scores, get_contestant_ranks, calculate_rank_weights
 
 logger = get_logger(__name__)
 
@@ -63,13 +63,16 @@ class ContestState(BaseModel):
             baseline=self.baseline,
         )
 
-    def get_tiers(self, scores: dict[Key, float]) -> dict[Key, int]:
-        return get_contestant_tiers(
+    def get_ranks(self, scores: dict[Key, float]) -> dict[Key, int]:
+        return get_contestant_ranks(scores=scores)
+
+    def calculate_weights(self, ranks: dict[Key, int]):
+        return calculate_rank_weights(
             submitted_blocks={
                 key: submission.block
                 for key, submission in self.submissions.items()
             },
-            scores=scores,
+            ranks=ranks,
         )
 
     @classmethod
