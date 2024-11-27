@@ -1,8 +1,11 @@
+import gc
 from abc import ABC, abstractmethod
 from io import BytesIO
 from typing import ContextManager
 
 from transformers import CLIPProcessor, CLIPVisionModelWithProjection, PreTrainedModel
+
+from base.device import Device
 
 class OutputComparator(ContextManager, ABC):
     @abstractmethod
@@ -15,12 +18,13 @@ class OutputComparator(ContextManager, ABC):
     __call__ = __wrapped_compare
 
 class ImageOutputComparator(OutputComparator):
+    device: Device
     clip: PreTrainedModel
     processor: CLIPProcessor
 
-    def __init__(self, device: str):
+    def __init__(self, device: Device):
         self.device = device
-        self.clip = CLIPVisionModelWithProjection.from_pretrained("laion/CLIP-ViT-bigG-14-laion2B-39B-b160k").to(self.device)
+        self.clip = CLIPVisionModelWithProjection.from_pretrained("laion/CLIP-ViT-bigG-14-laion2B-39B-b160k").to(device.get_name())
         self.processor = CLIPProcessor.from_pretrained("laion/CLIP-ViT-bigG-14-laion2B-39B-b160k")
 
     def compare(self, baseline: bytes, optimized: bytes):
@@ -41,9 +45,9 @@ class ImageOutputComparator(OutputComparator):
                 return numpy.array(Image.open(fp).convert("RGB"))
 
         def clip_embeddings(image: numpy.ndarray):
-            processed_input = self.processor(images=image, return_tensors="pt").to(self.device)
+            processed_input = self.processor(images=image, return_tensors="pt").to(self.device.get_name())
 
-            return self.clip(**processed_input).image_embeds.to(self.device)
+            return self.clip(**processed_input).image_embeds.to(self.device.get_name())
 
         baseline_array = load_image(baseline)
         optimized_array = load_image(optimized)
@@ -70,16 +74,5 @@ class ImageOutputComparator(OutputComparator):
         del self.clip
         del self.processor
 
-class CudaImageOutputComparator(ImageOutputComparator):
-    def __init__(self):
-        super().__init__("cuda")
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        import torch
-        import gc
-
-        super().__exit__(exc_type, exc_value, traceback)
-
         gc.collect()
-        torch.cuda.synchronize()
-        torch.cuda.empty_cache()
+        self.device.empty_cache()

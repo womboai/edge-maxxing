@@ -7,7 +7,7 @@ from .contest_state import ContestState
 
 logger = get_logger(__name__)
 
-STATE_VERSION = 1
+STATE_VERSION = 2
 
 class StateManager:
     _state_file: Path

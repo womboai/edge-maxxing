@@ -71,9 +71,9 @@ class WandbManager:
 
         scores = contest_state.get_scores()
         data = {
-           "scores": scores,
-           "ranks": contest_state.get_ranks(scores),
-       } | contest_state.model_dump()
+            "scores": scores,
+            "ranks": contest_state.get_ranks(scores),
+        } | contest_state.model_dump()
 
         self._run.log(data=data)
 

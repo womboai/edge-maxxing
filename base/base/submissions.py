@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from substrateinterface import SubstrateInterface, Keypair
 from substrateinterface.storage import StorageKey
 
-from .checkpoint import SPEC_VERSION, Submissions
+from .checkpoint import SPEC_VERSION, Submissions, Key
 from .contest import RepositoryInfo, find_contest, Submission, ContestId, ACTIVE_CONTESTS
 from .inputs_api import is_blacklisted, blacklisted_keys
 from .network_commitments import Encoder, Decoder
@@ -130,4 +130,34 @@ def get_submissions(
             logger.error(f"Failed to get submission from miner {hotkey}: {e}")
             continue
 
+    return deduplicate_submissions(submissions)
+
+def deduplicate_submissions(submissions: Submissions) -> Submissions:
+    existing_repositories: dict[str, Submission] = {}
+    existing_revisions: dict[str, Submission] = {}
+    to_remove: set[Key] = set()
+
+    for key, submission in submissions.items():
+        url = submission.repository_info.url
+        revision = submission.repository_info.revision
+        block = submission.block
+
+        existing_repository = existing_repositories.get(url)
+        existing_revision = existing_revisions.get(revision)
+
+        if (existing_repository and existing_repository.block < block) or (existing_revision and existing_revision.block < block):
+            to_remove.add(key)
+            continue
+
+        if existing_repository:
+            to_remove.add(existing_repository)
+        if existing_revision:
+            to_remove.add(existing_revision)
+
+        existing_repositories[url] = submission
+        existing_revisions[revision] = submission
+
+    for key in to_remove:
+        submissions.pop(key)
+        logger.info(f"Skipping duplicate submission: {key}")
     return submissions

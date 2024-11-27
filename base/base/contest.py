@@ -7,7 +7,7 @@ from typing import Callable
 from pydantic import BaseModel
 
 from .device import Device, CudaDevice, Gpu
-from .output_comparator import OutputComparator, CudaImageOutputComparator
+from .output_comparator import OutputComparator, ImageOutputComparator
 
 SIMILARITY_SCORE_THRESHOLD = 0.7
 
@@ -94,11 +94,13 @@ class Contest:
 
         return score * similarity * self.metric_weights.get(MetricType.SIMILARITY_SCORE, 0) / total_weight
 
+CUDA_4090_DEVICE = CudaDevice(gpu=Gpu.NVIDIA_RTX_4090)
+
 CONTESTS = [
     Contest(
         contest_id=ContestId.FLUX_NVIDIA_4090,
-        device=CudaDevice(gpu=Gpu.NVIDIA_RTX_4090),
-        output_comparator=partial(CudaImageOutputComparator),
+        device=CUDA_4090_DEVICE,
+        output_comparator=partial(ImageOutputComparator, CUDA_4090_DEVICE),
         baseline_repository=RepositoryInfo(url="https://github.com/womboai/flux-schnell-edge-inference", revision="fbfb8f0"),
         metric_weights={
             MetricType.SIMILARITY_SCORE: 3,
@@ -108,8 +110,8 @@ CONTESTS = [
     ),
     Contest(
         contest_id=ContestId.SDXL_NEWDREAM_NVIDIA_4090,
-        device=CudaDevice(gpu=Gpu.NVIDIA_RTX_4090),
-        output_comparator=partial(CudaImageOutputComparator),
+        device=CUDA_4090_DEVICE,
+        output_comparator=partial(ImageOutputComparator, CUDA_4090_DEVICE),
         baseline_repository=RepositoryInfo(url="https://github.com/womboai/sdxl-newdream-20-inference", revision="1b3f9ea"),
         metric_weights={
             MetricType.SIMILARITY_SCORE: 1,

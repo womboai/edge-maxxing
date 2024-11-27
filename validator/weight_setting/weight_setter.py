@@ -10,7 +10,6 @@ from substrateinterface import SubstrateInterface, Keypair
 
 from base.inputs_api import blacklisted_keys, is_blacklisted
 from weight_setting.contest_state import ContestState
-from weight_setting.winner_selection import calculate_weights
 
 logger = get_logger(__name__)
 tracer = trace.get_tracer(__name__)

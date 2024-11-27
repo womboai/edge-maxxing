@@ -76,7 +76,7 @@ class ContestState(BaseModel):
         )
 
     @classmethod
-    def create(cls, benchmarks_version: int) -> "ContestState":
+    def create(cls, benchmarks_version: int):
         state = cls(
             step=0,
             benchmarks_version=benchmarks_version,
