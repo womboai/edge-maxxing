@@ -1,0 +1,88 @@
+from datetime import datetime, timedelta
+from threading import Event
+
+from fiber.logging_utils import get_logger
+from pydantic import BaseModel
+
+from base.checkpoint import Key, current_time, Submissions, Benchmarks
+from base.contest import Metrics
+from weight_setting.winner_selection import get_contestant_scores, get_contestant_tiers
+
+logger = get_logger(__name__)
+
+class ContestState(BaseModel):
+    step: int
+    benchmarks_version: int
+    submissions: Submissions
+    benchmarks: Benchmarks
+    baseline: Metrics | None
+    invalid_submissions: set[Key]
+    last_benchmarks: Benchmarks
+    average_benchmarking_time: float | None
+    contest_end: datetime
+
+    def start_new_contest(self, benchmarks_version: int, submissions: Submissions):
+        logger.info("Starting new contest")
+        self.benchmarks_version = benchmarks_version
+        self.submissions = submissions
+
+        self.last_benchmarks = self.benchmarks
+        self.benchmarks.clear()
+        self.baseline = None
+        self.average_benchmarking_time = None
+
+        now = current_time()
+        end_time = now.replace(hour=12, minute=0, second=0, microsecond=0)
+        if now.hour >= 12:
+            end_time += timedelta(days=1)
+        self.contest_end = end_time
+
+    def get_contest_start(self) -> datetime:
+        return self.contest_end - timedelta(days=1)
+
+    def is_ended(self) -> bool:
+        now = current_time()
+        return now >= self.contest_end or not self.submissions
+
+    def get_untested_submissions(self) -> Submissions:
+        return {
+            key: submission for key, submission in self.submissions.items()
+            if key not in self.benchmarks and key not in self.invalid_submissions
+        }
+
+    def sleep_to_next_contest(self, stop_flag: Event):
+        now = current_time()
+        next_contest_time = self.contest_end - now
+        logger.info(f"Sleeping until next contest: {next_contest_time}")
+        stop_flag.wait(next_contest_time.total_seconds())
+
+    def get_scores(self) -> dict[Key, float]:
+        return get_contestant_scores(
+            submissions=self.submissions,
+            benchmarks=self.benchmarks,
+            baseline=self.baseline,
+        )
+
+    def get_tiers(self, scores: dict[Key, float]) -> dict[Key, int]:
+        return get_contestant_tiers(
+            submitted_blocks={
+                key: submission.block
+                for key, submission in self.submissions.items()
+            },
+            scores=scores,
+        )
+
+    @classmethod
+    def create(cls, benchmarks_version: int) -> "ContestState":
+        state = cls(
+            step=0,
+            benchmarks_version=benchmarks_version,
+            submissions={},
+            benchmarks={},
+            baseline=None,
+            invalid_submissions=set(),
+            last_benchmarks={},
+            average_benchmarking_time=None,
+            contest_end=current_time()
+        )
+        return state

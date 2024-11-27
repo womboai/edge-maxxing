@@ -1,9 +1,10 @@
 import os
 import signal
-import time
 from threading import Event, Thread
-from fiber.logging_utils import get_logger
+from time import localtime, sleep
+
 import git
+from fiber.logging_utils import get_logger
 
 UPDATE_RATE_MINUTES = 10
 
@@ -15,20 +16,20 @@ class AutoUpdater:
 
     def __init__(self):
         self._stop_flag = Event()
-        self._thread = Thread(target=self._monitor, daemon=True)
+        self._thread = Thread(target=self._monitor)
         self._check_for_updates()
         self._thread.start()
 
     def _monitor(self):
         while not self._stop_flag.is_set():
             try:
-                current_time = time.localtime()
+                current_time = localtime()
                 if current_time.tm_min % UPDATE_RATE_MINUTES == 0:
                     self._check_for_updates()
-                    time.sleep(60)
+                    self._stop_flag.wait(60)
                 else:
                     sleep_minutes = UPDATE_RATE_MINUTES - current_time.tm_min % UPDATE_RATE_MINUTES
-                    time.sleep(sleep_minutes * 60 - current_time.tm_sec)
+                    self._stop_flag.wait(sleep_minutes * 60 - current_time.tm_sec)
             except Exception as e:
                 logger.error(f"Error occurred while checking for updates, attempting to fix the issue by restarting", exc_info=e)
                 self._restart()
@@ -48,15 +49,13 @@ class AutoUpdater:
         else:
             logger.info("Already up to date.")
 
-
     def _restart(self):
         self._stop_flag.set()
-        time.sleep(5)
         os.kill(os.getpid(), signal.SIGTERM)
 
         logger.info("Waiting for process to terminate...")
         for _ in range(60):
-            time.sleep(1)
+            sleep(1)
             try:
                 os.kill(os.getpid(), 0)
             except ProcessLookupError:

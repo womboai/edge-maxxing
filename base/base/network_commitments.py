@@ -1,9 +1,7 @@
 from struct import pack, unpack
 
-
 _UINT_16_SIZE = 2
 _UINT_32_SIZE = 4
-
 
 class Encoder:
     _data: bytearray
@@ -36,7 +34,6 @@ class Encoder:
             )
 
         return bytes(self._data)
-
 
 class Decoder:
     _position: int

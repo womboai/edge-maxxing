@@ -1,36 +1,18 @@
 FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
 
-RUN apt-get update && apt-get install -y curl
-
 WORKDIR /api
 
-COPY neuron/pyproject.toml neuron/
-COPY neuron/neuron/__init__.py neuron/neuron/
-COPY pipelines/pyproject.toml pipelines/
-COPY pipelines/pipelines/__init__.py pipelines/pipelines/
-
-COPY validator/pyproject.toml validator/
-COPY validator/uv.lock validator/
-
-COPY validator/base_validator/__init__.py validator/base_validator/
-COPY validator/submission_tester/__init__.py validator/submission_tester/
-COPY validator/weight_setting/__init__.py validator/weight_setting/
-
-COPY validator/submission_tester/update.sh validator/submission_tester/
-
+COPY validator/api/update.sh validator/api/
 RUN cd validator && ./submission_tester/update.sh
+USER api
 
-COPY README.md .
-COPY validator/submission_tester/start.sh validator/submission_tester/
+COPY pipelines .
+COPY base .
+COPY validator .
+COPY .git .git
 
-COPY --chown=api:api .git .git
-COPY validator/base_validator validator/base_validator
-COPY validator/submission_tester validator/submission_tester
-COPY neuron/neuron neuron/neuron
-COPY pipelines/pipelines pipelines/pipelines
+WORKDIR /api/validator/submission_tester
 
-WORKDIR /api/validator
-
+USER root
 EXPOSE 8000
-
-ENTRYPOINT ["submission_tester/entrypoint.sh"]
+ENTRYPOINT ["entrypoint.sh"]

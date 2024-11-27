@@ -15,6 +15,6 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: Test Types
-        working-directory: neuron
+        working-directory: main
         run: |
           uv run pytype

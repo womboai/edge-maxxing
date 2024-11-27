@@ -7,10 +7,9 @@ from typing import Callable
 from pydantic import BaseModel
 
 from .device import Device, CudaDevice, Gpu
-from .output_comparator import OutputComparator, ImageOutputComparator
+from .output_comparator import OutputComparator, CudaImageOutputComparator
 
 SIMILARITY_SCORE_THRESHOLD = 0.7
-
 
 class MetricType(IntEnum):
     SIMILARITY_SCORE = 0
@@ -20,46 +19,49 @@ class MetricType(IntEnum):
     WATTS_USED = 4
     LOAD_TIME = 5
 
+class ContestId(IntEnum):
+    FLUX_NVIDIA_4090 = 0
+    SDXL_NEWDREAM_NVIDIA_4090 = 1
 
-class MetricData(BaseModel):
+class RepositoryInfo(BaseModel):
+    url: str
+    revision: str
+
+class Submission(BaseModel):
+    repository_info: RepositoryInfo
+    contest_id: ContestId
+    block: int
+
+    def contest(self) -> "Contest":
+        return find_contest(self.contest_id)
+
+class Metrics(BaseModel):
     generation_time: float
     size: int
     vram_used: float
     watts_used: float
     load_time: float
 
-
-class CheckpointBenchmark(BaseModel):
-    model: MetricData
+class Benchmark(BaseModel):
+    metrics: Metrics
     average_similarity: float
     min_similarity: float
-
-
-class ModelRepositoryInfo(BaseModel):
-    url: str
-    revision: str
-
-
-class ContestId(IntEnum):
-    FLUX_NVIDIA_4090 = 0
-    SDXL_NEWDREAM_NVIDIA_4090 = 1
-
 
 @dataclass
 class Contest:
     id: ContestId
     device: Device
     output_comparator: Callable[[], OutputComparator]
-    baseline_repository: ModelRepositoryInfo
+    baseline_repository: RepositoryInfo
     metric_weights: dict[MetricType, int]
 
     def __init__(
-            self,
-            contest_id: ContestId,
-            device: Device,
-            output_comparator: Callable[[], OutputComparator],
-            baseline_repository: ModelRepositoryInfo,
-            metric_weights: dict[MetricType, int]
+        self,
+        contest_id: ContestId,
+        device: Device,
+        output_comparator: Callable[[], OutputComparator],
+        baseline_repository: RepositoryInfo,
+        metric_weights: dict[MetricType, int]
     ):
         self.id = contest_id
         self.device = device
@@ -67,7 +69,7 @@ class Contest:
         self.baseline_repository = baseline_repository
         self.metric_weights = metric_weights
 
-    def calculate_score(self, baseline: MetricData, benchmark: CheckpointBenchmark) -> float:
+    def calculate_score(self, baseline: Metrics, benchmark: Benchmark) -> float:
         if benchmark.min_similarity < SIMILARITY_SCORE_THRESHOLD:
             return 0.0
 
@@ -92,13 +94,12 @@ class Contest:
 
         return score * similarity * self.metric_weights.get(MetricType.SIMILARITY_SCORE, 0) / total_weight
 
-
 CONTESTS = [
     Contest(
         contest_id=ContestId.FLUX_NVIDIA_4090,
         device=CudaDevice(gpu=Gpu.NVIDIA_RTX_4090),
-        output_comparator=partial(ImageOutputComparator, "cuda"),
-        baseline_repository=ModelRepositoryInfo(url="https://github.com/womboai/flux-schnell-edge-inference", revision="fbfb8f0"),
+        output_comparator=partial(CudaImageOutputComparator),
+        baseline_repository=RepositoryInfo(url="https://github.com/womboai/flux-schnell-edge-inference", revision="fbfb8f0"),
         metric_weights={
             MetricType.SIMILARITY_SCORE: 3,
             MetricType.VRAM_USED: 3,
@@ -108,15 +109,14 @@ CONTESTS = [
     Contest(
         contest_id=ContestId.SDXL_NEWDREAM_NVIDIA_4090,
         device=CudaDevice(gpu=Gpu.NVIDIA_RTX_4090),
-        output_comparator=partial(ImageOutputComparator, "cuda"),
-        baseline_repository=ModelRepositoryInfo(url="https://github.com/womboai/sdxl-newdream-20-inference", revision="1b3f9ea"),
+        output_comparator=partial(CudaImageOutputComparator),
+        baseline_repository=RepositoryInfo(url="https://github.com/womboai/sdxl-newdream-20-inference", revision="1b3f9ea"),
         metric_weights={
             MetricType.SIMILARITY_SCORE: 1,
             MetricType.GENERATION_TIME: 1,
         }
     ),
 ]
-
 
 def find_contest(contest_id: ContestId):
     for contest in CONTESTS:
@@ -127,10 +127,9 @@ def find_contest(contest_id: ContestId):
 
     raise RuntimeError(f"Unknown contest ID requested {contest_id}")
 
-
 def find_compatible_contests() -> list[ContestId]:
     return [contest.id for contest in CONTESTS if contest.device.is_compatible()]
 
-
-CURRENT_CONTEST: Contest = find_contest(ContestId.FLUX_NVIDIA_4090)
-ACTIVE_CONTESTS = { ContestId.FLUX_NVIDIA_4090 }
+ACTIVE_CONTESTS = [
+    ContestId.FLUX_NVIDIA_4090
+]

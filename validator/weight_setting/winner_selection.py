@@ -1,83 +1,27 @@
-from operator import itemgetter
-
-from neuron import Uid, Contest
-from neuron.submission_tester import CheckpointBenchmark, MetricData
+from base.checkpoint import Key, Submissions, Benchmarks
+from base.contest import Metrics
 
 TIER_SCORE_IMPROVEMENT_THRESHOLD = 1.05
 WINNER_PERCENTAGE = 0.80
 
+def get_contestant_scores(
+    submissions: Submissions,
+    benchmarks: Benchmarks,
+    baseline: Metrics,
+) -> dict[Key, float]:
+    return {
+        key: submissions[key].contest().calculate_score(baseline, benchmark)
+        for key, benchmark in benchmarks.items()
+    }
 
-def get_contestant_scores(contest: Contest, benchmarks: list[CheckpointBenchmark | None], baseline_metrics: MetricData) -> list[tuple[Uid, float]]:
-    contestants = [
-        (uid, contest.calculate_score(baseline_metrics, benchmark))
-        for uid, benchmark in enumerate(benchmarks)
-        if benchmark
-    ]
+def get_contestant_tiers(
+    submitted_blocks: dict[Key, int],
+    scores: dict[Key, float],
+) -> dict[Key, int]:
+    return {}  # TODO
 
-    sorted_contestants = sorted(contestants, key=itemgetter(1), reverse=True)
-
-    return sorted_contestants
-
-
-def get_tiers(contestants: list[tuple[Uid, float]]) -> list[list[Uid]]:
-    if not contestants:
-        return []
-
-    _, last_tier_score = contestants[0]
-
-    tiers = [[]]
-
-    for contestant in contestants:
-        uid, score = contestant
-
-        if last_tier_score > score * TIER_SCORE_IMPROVEMENT_THRESHOLD:
-            # New tier
-            last_tier_score = score
-            tiers.append([])
-
-        tiers[-1].append(uid)
-
-    return list(reversed(tiers))
-
-
-def get_contestant_tier(tiers: list[list[Uid]], uid: Uid) -> int:
-    for index, tier in enumerate(tiers):
-        if uid in tier:
-            return index
-
-    return -1
-
-
-def get_scores(tiers: list[list[Uid]], blocks: list[int | None], node_count: int) -> list[float]:
-    if not tiers:
-        return [1.0] * node_count
-
-    ordered_tiers = [
-        sorted(tier, key=blocks.__getitem__) for tier in tiers
-    ]
-
-    modified_tiers = []
-
-    last_tier = None
-
-    for tier in reversed(ordered_tiers):
-        if last_tier:
-            modified_tiers.append([tier[0], *last_tier[1:]])
-        else:
-            modified_tiers.append([tier[0]])
-
-        last_tier = tier
-
-    if len(last_tier) > 1:
-        modified_tiers.append(last_tier[1:])
-
-    scores = [0.0] * node_count
-
-    for index, tier in enumerate(modified_tiers):
-        incentive_pool = WINNER_PERCENTAGE * ((1 - WINNER_PERCENTAGE) ** index)
-        score = incentive_pool / len(tier)
-
-        for uid in tier:
-            scores[uid] = score
-
-    return scores
+def calculate_weights(
+    node_count: int,
+    tiers: dict[Key, int],
+) -> dict[Key, float]:
+    return {}  # TODO

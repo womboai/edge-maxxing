@@ -2,8 +2,7 @@ from abc import ABC, abstractmethod
 from io import BytesIO
 from typing import ContextManager
 
-from transformers import CLIPProcessor, CLIPVisionModelWithProjection
-
+from transformers import CLIPProcessor, CLIPVisionModelWithProjection, PreTrainedModel
 
 class OutputComparator(ContextManager, ABC):
     @abstractmethod
@@ -15,8 +14,10 @@ class OutputComparator(ContextManager, ABC):
 
     __call__ = __wrapped_compare
 
-
 class ImageOutputComparator(OutputComparator):
+    clip: PreTrainedModel
+    processor: CLIPProcessor
+
     def __init__(self, device: str):
         self.device = device
         self.clip = CLIPVisionModelWithProjection.from_pretrained("laion/CLIP-ViT-bigG-14-laion2B-39B-b160k").to(self.device)
@@ -66,8 +67,19 @@ class ImageOutputComparator(OutputComparator):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        import torch
-
         del self.clip
         del self.processor
-        getattr(torch, self.device).empty_cache()
+
+class CudaImageOutputComparator(ImageOutputComparator):
+    def __init__(self):
+        super().__init__("cuda")
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        import torch
+        import gc
+
+        super().__exit__(exc_type, exc_value, traceback)
+
+        gc.collect()
+        torch.cuda.synchronize()
+        torch.cuda.empty_cache()

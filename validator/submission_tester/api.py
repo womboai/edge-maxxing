@@ -1,25 +1,22 @@
 import os
-import time
 from contextlib import asynccontextmanager
+from importlib.metadata import version
+from pathlib import Path
+from time import time_ns
 from typing import Annotated
 
-from fastapi import Body
-from fastapi import FastAPI, Request, Header, HTTPException
+from fastapi import FastAPI, HTTPException
+from fastapi.params import Header, Body
 from fiber.logging_utils import get_logger
-from starlette import status
+from starlette.requests import Request
+from starlette.status import HTTP_403_FORBIDDEN, HTTP_400_BAD_REQUEST, HTTP_429_TOO_MANY_REQUESTS
 from substrateinterface import Keypair
 
-from base_validator import (
-    API_VERSION,
-    BenchmarkState,
-    BenchmarkResults,
-    AutoUpdater,
-    ApiMetadata, BenchmarkingStartRequest,
-    init_open_telemetry_logging,
-)
-from neuron import CURRENT_CONTEST
-from neuron import find_compatible_contests, find_contest
-from .benchmarker import Benchmarker
+from base.contest import find_compatible_contests, find_contest, CONTESTS
+from base_validator.api_data import BenchmarkingStartRequest, BenchmarkingResults, ApiMetadata, BenchmarkingInitializeRequest
+from base_validator.auto_updater import AutoUpdater
+from base_validator.telemetry import init_open_telemetry_logging
+from testing.benchmarker import Benchmarker
 
 hotkey = os.getenv("VALIDATOR_HOTKEY_SS58_ADDRESS")
 debug = int(os.getenv("VALIDATOR_DEBUG") or 0) > 0
@@ -29,42 +26,39 @@ if not hotkey:
 
 keypair = Keypair(ss58_address=hotkey)
 
-init_open_telemetry_logging({
-    "neuron.hotkey": hotkey,
-    "api.version": API_VERSION,
-})
+api_version = version("edge-maxxing-validator")
 
 logger = get_logger(__name__)
-
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     AutoUpdater()
 
-    compatible_contests = find_compatible_contests() if not debug else [CURRENT_CONTEST.id]
+    compatible_contests = find_compatible_contests() if not debug else [contest.id for contest in CONTESTS]
     if not compatible_contests:
         raise RuntimeError("Device is not compatible with any contests")
 
     yield {
-        "benchmarker": Benchmarker(),
+        "benchmarker": Benchmarker(
+            sandbox_directory=Path("/sandbox"),
+            sandbox_args=["/bin/sudo", "-u", "sandbox"]
+        ),
         "compatible_contests": compatible_contests,
     }
 
-
 app = FastAPI(lifespan=lifespan)
-
 
 def _authenticate_request(nonce: int, signature: str):
     if debug:
         return
 
-    current_timestamp = time.time_ns()
+    current_timestamp = time_ns()
 
     if current_timestamp - nonce > 2_000_000_000:
         logger.info(f"Got request with nonce {nonce}, which is {current_timestamp - nonce} nanoseconds old.")
 
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=HTTP_403_FORBIDDEN,
             detail="Invalid nonce",
         )
 
@@ -72,14 +66,13 @@ def _authenticate_request(nonce: int, signature: str):
         logger.info(f"Got invalid signature for nonce {nonce}: {signature}")
 
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=HTTP_403_FORBIDDEN,
             detail="Invalid signature",
         )
 
-
 @app.post("/start")
-def start_benchmarking(
-    benchmarking_start_request: Annotated[BenchmarkingStartRequest, Body()],
+def start(
+    start_request: Annotated[BenchmarkingStartRequest, Body()],
     x_nonce: Annotated[int, Header()],
     signature: Annotated[str, Header()],
     request: Request,
@@ -88,42 +81,26 @@ def start_benchmarking(
 
     benchmarker: Benchmarker = request.state.benchmarker
 
-    with benchmarker.lock:
-        timestamp = time.time_ns()
+    contest = find_contest(start_request.contest_id)
+    if not debug and not contest.device.is_compatible():
+        raise HTTPException(
+            status_code=HTTP_400_BAD_REQUEST,
+            detail=str("API is not compatible with contest"),
+        )
 
-        try:
-            contest = find_contest(benchmarking_start_request.contest_id)
-            if not debug:
-                contest.device.validate()
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
-            )
+    timestamp = time_ns()
+    if timestamp - benchmarker.start_timestamp < 10_000_000_000:
+        raise HTTPException(
+            status_code=HTTP_429_TOO_MANY_REQUESTS,
+            detail="Started recently",
+        )
 
-        if timestamp - benchmarker.start_timestamp < 120_000_000_000:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Started recently",
-            )
-
-        benchmarker.start_timestamp = timestamp
-
-        benchmarker.start_benchmarking(contest, benchmarking_start_request.submissions)
-
+    benchmarker.start_timestamp = timestamp
+    benchmarker.start_benchmarking(contest, start_request.submissions)
 
 @app.get("/state")
-def state(request: Request) -> BenchmarkResults:
+def state(request: Request) -> BenchmarkingResults:
     benchmarker: Benchmarker = request.state.benchmarker
-
-    benchmark_state: BenchmarkState
-
-    if not benchmarker.thread:
-        benchmark_state = BenchmarkState.NOT_STARTED
-    elif benchmarker.done:
-        benchmark_state = BenchmarkState.FINISHED
-    else:
-        benchmark_state = BenchmarkState.IN_PROGRESS
 
     average_benchmark_time = (
         sum(benchmarker.submission_times) / len(benchmarker.submission_times)
@@ -131,18 +108,31 @@ def state(request: Request) -> BenchmarkResults:
         else None
     )
 
-    return BenchmarkResults(
-        state=benchmark_state,
-        results=benchmarker.benchmarks,
-        invalid=benchmarker.invalid,
-        baseline_metrics=benchmarker.get_baseline_metrics(),
+    return BenchmarkingResults(
+        state=benchmarker.state,
+        benchmarks=benchmarker.benchmarks,
+        invalid_submissions=benchmarker.invalid_submissions,
         average_benchmark_time=average_benchmark_time,
     )
-
 
 @app.get("/metadata")
 def metadata(request: Request) -> ApiMetadata:
     return ApiMetadata(
-        version=API_VERSION,
+        version=api_version,
         compatible_contests=request.state.compatible_contests,
     )
+
+@app.post("/initialize")
+def initialize(
+    init_request: Annotated[BenchmarkingInitializeRequest, Body()],
+    x_nonce: Annotated[int, Header()],
+    signature: Annotated[str, Header()],
+):
+    _authenticate_request(x_nonce, signature)
+
+    init_open_telemetry_logging({
+        "neuron.uid": init_request.uid,
+        "neuron.signature": init_request.signature,
+        "subtensor.chain_endpoint": init_request.substrate_url,
+        "api.version": api_version,
+    })

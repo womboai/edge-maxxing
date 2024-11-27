@@ -3,26 +3,21 @@ requires = ["setuptools >= 75.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "edge-maxxing-neuron"
+name = "edge-maxxing-base"
 description = "The base neuron which validators & miners inherent from"
 requires-python = ">=3.10,<3.13"
 version = "1.0.0"
 dependencies = [
-    "fiber @ git+https://github.com/womboai/fiber@weights",
-    "GitPython==3.1.43",
-    "torch==2.5.1",
-    "pynvml==11.5.3",
-    "diffusers==0.31.0",
-    "transformers==4.46.2",
-    "accelerate==1.1.0",
-    "omegaconf==2.3.0",
-    "torchvision==0.20.1",
-    "scikit-image==0.24.0",
-    "opencv-python==4.10.0.84",
-    "ImageHash==4.3.1",
-    "toml==0.10.2",
-    "opentelemetry-instrumentation>=0.49b2",
     "edge-maxxing-pipelines==1.0.0",
+    "fiber @ git+https://github.com/rayonlabs/fiber.git@1.0.0#egg=fiber[chain]",
+    "opentelemetry-instrumentation>=0.49b2",
+    "transformers>=4.46.3",
+    "diffusers>=0.31.0",
+    "accelerate>=1.1.1",
+    "pynvml>=11.5.3",
+    "scikit-image>=0.24.0",
+    "opencv-python>=4.10.0.84",
+    "gitpython>=3.1.43",
 ]
 
 [tool.uv.sources]
@@ -34,9 +29,13 @@ dev = [
 ]
 
 [tool.pytype]
-inputs = ["neuron"]
+inputs = [
+    "base",
+    "tester",
+]
 
 [tool.setuptools]
 packages = [
-    "neuron",
+    "base",
+    "tester",
 ]
