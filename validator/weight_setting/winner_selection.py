@@ -1,9 +1,9 @@
 from operator import itemgetter
+from statistics import median
 
 from base.checkpoint import Key, Submissions, Benchmarks
 from base.contest import Metrics
 
-RANK_SCORE_IMPROVEMENT_THRESHOLD = 1.05
 WINNER_PERCENTAGE = 0.80
 
 
@@ -22,19 +22,30 @@ def get_contestant_ranks(scores: dict[Key, float]) -> dict[Key, int]:
     if not scores:
         return {}
 
-    scores = iter(sorted(scores.items(), key=itemgetter(1), reverse=True))
+    i = 0
+    rank = 0
+
+    scores = list(sorted(scores.items(), key=itemgetter(1), reverse=True))
+    score_values = list(map(itemgetter(1), scores))
+
+    deviation = median(score_values[i] - score_values[i + 1] for i in range(len(score_values) - 1))
+
+    scores = iter(scores)
 
     hotkey, last_score = next(scores)
 
-    rank = 0
     ranks = {hotkey: rank}
 
     for hotkey, score in scores:
-        if last_score > score * RANK_SCORE_IMPROVEMENT_THRESHOLD:
-            last_score = score
+        difference = last_score - score
+        i += 1
+
+        if difference > deviation:
+            deviation = (deviation * i + difference) / i
             rank += 1
 
         ranks[hotkey] = rank
+        last_score = score
 
     return ranks
 
