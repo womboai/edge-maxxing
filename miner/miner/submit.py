@@ -92,7 +92,7 @@ def get_submission(config) -> CheckpointSubmission:
     repository = config["repository"]
     revision = config["revision"]
     contest_name = config["contest"]
-    contest: Contest | None = find_contest(contest_name) if contest_name else None
+    contest: Contest | None = find_contest(ContestId[contest_name]) if contest_name else None
 
     if not repository:
         while True:
@@ -121,7 +121,7 @@ def get_submission(config) -> CheckpointSubmission:
                 print(f"\t- {c.id.name}")
             contest_id = input(f"Enter the contest (default: {default_contest.id.name}): ") or default_contest.id.name
             try:
-                contest = find_contest(ContestId(contest_id))
+                contest = find_contest(ContestId[contest_id])
                 break
             except ValueError:
                 print(f"Unknown contest: {contest_id}")
@@ -158,9 +158,10 @@ def submit():
 
     if enable_benchmarking or input("Benchmark submission before submitting? (y/N): ").strip().lower() in ("yes", "y"):
         try:
-            start_benchmarking(find_contest(submission.contest), keypair, submission)
+            start_benchmarking(find_contest(submission.contest_id), keypair, submission)
         except Exception as e:
-            exit(f"Benchmarking failed, submission cancelled: {e}")
+            logger.critical(f"Benchmarking failed, submission cancelled", exc_info=e)
+            exit(1)
 
     print(
         "\nSubmission info:\n"
