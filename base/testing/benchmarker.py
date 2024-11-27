@@ -9,9 +9,8 @@ from fiber.logging_utils import get_logger
 from opentelemetry import trace
 
 from base.checkpoint import Key, Benchmarks
-from base.contest import Contest, RepositoryInfo, Benchmark
+from base.contest import Contest, RepositoryInfo, Benchmark, BenchmarkState
 from base.inputs_api import random_inputs
-from base_validator.api_data import BenchmarkState
 from pipelines import TextToImageRequest
 from .inference_sandbox import BenchmarkOutput, InferenceSandbox
 
@@ -29,7 +28,7 @@ class Benchmarker:
     start_timestamp: float = 0
     state: BenchmarkState = BenchmarkState.NOT_STARTED
     benchmarks: Benchmarks = {}
-    invalid_submissions: set[Key] = {}
+    invalid_submissions: set[Key] = set()
     baseline: BenchmarkOutput | None = None
     submission_times: list[float] = []
 
@@ -128,11 +127,12 @@ class Benchmarker:
 
         logger.info(f"Started benchmarking for {len(submissions)} submissions")
 
-        if self._thread and self._thread.is_alive():
+        thread = self._thread
+        if thread and thread.is_alive():
             logger.info("Attempting to cancel previous benchmarking")
             self._stop_flag.set()
-            self._thread.join(timeout=60)
-            if self._thread.is_alive():
+            thread.join(timeout=60)
+            if thread.is_alive():
                 logger.warning("Benchmarking was not stopped gracefully.")
             else:
                 logger.info("Benchmarking was stopped gracefully.")

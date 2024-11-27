@@ -12,6 +12,12 @@ from .output_comparator import OutputComparator, ImageOutputComparator
 SIMILARITY_SCORE_THRESHOLD = 0.7
 
 
+class BenchmarkState(IntEnum):
+    NOT_STARTED = 0
+    IN_PROGRESS = 1
+    FINISHED = 2
+
+
 class MetricType(IntEnum):
     SIMILARITY_SCORE = 0
     GENERATION_TIME = 1

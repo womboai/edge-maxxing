@@ -13,8 +13,9 @@ from substrateinterface import SubstrateInterface, Keypair
 
 from base.checkpoint import Uid
 from base.config import get_config
+from base.contest import BenchmarkState
 from base.submissions import get_submissions
-from base_validator.api_data import BenchmarkState, BenchmarkingResults
+from base_validator.api_data import BenchmarkingResults
 from base_validator.auto_updater import AutoUpdater
 from base_validator.telemetry import init_open_telemetry_logging
 from weight_setting.wandb_manager import WandbManager
@@ -160,6 +161,9 @@ class Validator:
         self._stop_flag.wait(BENCHMARK_UPDATE_RATE_BLOCKS * 12)
 
     def update_benchmarks(self, benchmarking_results: list[BenchmarkingResults]):
+        if not self.contest_state:
+            return
+
         self.contest_state.baseline = benchmarking_results[0].baseline
         self.contest_state.average_benchmarking_time = benchmarking_results[0].average_benchmarking_time
 
@@ -185,9 +189,10 @@ class Validator:
             try:
                 logger.info(f"Step {self.step()}")
                 self.do_step()
-                self.contest_state.step += 1
-                self.state_manager.save_state(self.contest_state)
-                self.wandb_manager.send_metrics(self.contest_state)
+                if self.contest_state:
+                    self.contest_state.step += 1
+                    self.state_manager.save_state(self.contest_state)
+                    self.wandb_manager.send_metrics(self.contest_state)
             except (ConnectionError, HTTPError) as e:
                 logger.error(f"Error connecting to API, retrying in 10 blocks: {e}")
                 self._stop_flag.wait(BENCHMARK_UPDATE_RATE_BLOCKS * 12)
