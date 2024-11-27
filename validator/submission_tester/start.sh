@@ -2,7 +2,7 @@
 
 set -e
 
-./update.sh
+./submission_tester/update.sh
 
 sudo -u api /home/api/.local/bin/uv run opentelemetry-instrument \
   --service_name edge-maxxing-api \

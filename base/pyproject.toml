@@ -31,11 +31,11 @@ dev = [
 [tool.pytype]
 inputs = [
     "base",
-    "tester",
+    "testing",
 ]
 
 [tool.setuptools]
 packages = [
     "base",
-    "tester",
+    "testing",
 ]
