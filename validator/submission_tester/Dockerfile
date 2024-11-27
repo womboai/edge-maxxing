@@ -11,8 +11,8 @@ COPY base .
 COPY validator .
 COPY .git .git
 
-WORKDIR /api/validator/submission_tester
+WORKDIR /api/validator
 
 USER root
 EXPOSE 8000
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["submission_tester/entrypoint.sh"]

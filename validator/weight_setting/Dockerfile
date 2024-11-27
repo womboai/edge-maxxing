@@ -18,7 +18,5 @@ COPY base .
 COPY validator .
 COPY .git .git
 
-WORKDIR /api/validator/weight_setting
-
 USER root
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["weight_setting/entrypoint.sh"]
