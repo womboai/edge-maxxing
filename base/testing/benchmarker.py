@@ -19,7 +19,7 @@ tracer = trace.get_tracer(__name__)
 
 
 class Benchmarker:
-    _thread: Thread | None
+    _thread: Thread | None = None
     _stop_flag: Event = Event()
 
     _sandbox_directory: Path
@@ -127,12 +127,11 @@ class Benchmarker:
 
         logger.info(f"Started benchmarking for {len(submissions)} submissions")
 
-        thread = self._thread
-        if thread and thread.is_alive():
+        if self._thread and self._thread.is_alive():
             logger.info("Attempting to cancel previous benchmarking")
             self._stop_flag.set()
-            thread.join(timeout=60)
-            if thread.is_alive():
+            self._thread.join(timeout=60)
+            if self._thread.is_alive():
                 logger.warning("Benchmarking was not stopped gracefully.")
             else:
                 logger.info("Benchmarking was stopped gracefully.")

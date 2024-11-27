@@ -78,8 +78,8 @@ def _authentication_headers(keypair: Keypair):
 def send_submissions_to_api(version: str, all_apis: list[BenchmarkingApi], submissions: Submissions):
     submissions_by_contest: dict[ContestId, dict[Key, RepositoryInfo]] = defaultdict(lambda: {})
 
-    for key, info in submissions.items():
-        submissions_by_contest[info.contest_id][key] = info.repository
+    for key, submission in submissions.items():
+        submissions_by_contest[submission.contest_id][key] = submission.repository_info
 
     contest_api_assignment: dict[ContestId, list[BenchmarkingApi]] = defaultdict(lambda: [])
 

@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 from base.checkpoint import Key, Uid, Benchmarks
-from base.contest import ContestId, RepositoryInfo, BenchmarkState
+from base.contest import ContestId, RepositoryInfo, BenchmarkState, Metrics
 
 
 class ApiMetadata(BaseModel):
@@ -13,6 +13,7 @@ class BenchmarkingResults(BaseModel):
     state: BenchmarkState
     benchmarks: Benchmarks
     invalid_submissions: set[Key]
+    baseline: Metrics | None
     average_benchmark_time: float | None
 
 
