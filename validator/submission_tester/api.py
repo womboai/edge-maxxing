@@ -30,6 +30,7 @@ api_version = version("edge-maxxing-validator")
 
 logger = get_logger(__name__)
 
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     AutoUpdater()
@@ -46,7 +47,9 @@ async def lifespan(_: FastAPI):
         "compatible_contests": compatible_contests,
     }
 
+
 app = FastAPI(lifespan=lifespan)
+
 
 def _authenticate_request(nonce: int, signature: str):
     if debug:
@@ -69,6 +72,7 @@ def _authenticate_request(nonce: int, signature: str):
             status_code=HTTP_403_FORBIDDEN,
             detail="Invalid signature",
         )
+
 
 @app.post("/start")
 def start(
@@ -98,6 +102,7 @@ def start(
     benchmarker.start_timestamp = timestamp
     benchmarker.start_benchmarking(contest, start_request.submissions)
 
+
 @app.get("/state")
 def state(request: Request) -> BenchmarkingResults:
     benchmarker: Benchmarker = request.state.benchmarker
@@ -115,12 +120,14 @@ def state(request: Request) -> BenchmarkingResults:
         average_benchmark_time=average_benchmark_time,
     )
 
+
 @app.get("/metadata")
 def metadata(request: Request) -> ApiMetadata:
     return ApiMetadata(
         version=api_version,
         compatible_contests=request.state.compatible_contests,
     )
+
 
 @app.post("/initialize")
 def initialize(

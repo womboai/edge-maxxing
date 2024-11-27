@@ -11,6 +11,7 @@ from .output_comparator import OutputComparator, ImageOutputComparator
 
 SIMILARITY_SCORE_THRESHOLD = 0.7
 
+
 class MetricType(IntEnum):
     SIMILARITY_SCORE = 0
     GENERATION_TIME = 1
@@ -19,13 +20,16 @@ class MetricType(IntEnum):
     WATTS_USED = 4
     LOAD_TIME = 5
 
+
 class ContestId(IntEnum):
     FLUX_NVIDIA_4090 = 0
     SDXL_NEWDREAM_NVIDIA_4090 = 1
 
+
 class RepositoryInfo(BaseModel):
     url: str
     revision: str
+
 
 class Submission(BaseModel):
     repository_info: RepositoryInfo
@@ -35,6 +39,7 @@ class Submission(BaseModel):
     def contest(self) -> "Contest":
         return find_contest(self.contest_id)
 
+
 class Metrics(BaseModel):
     generation_time: float
     size: int
@@ -42,10 +47,12 @@ class Metrics(BaseModel):
     watts_used: float
     load_time: float
 
+
 class Benchmark(BaseModel):
     metrics: Metrics
     average_similarity: float
     min_similarity: float
+
 
 @dataclass
 class Contest:
@@ -94,6 +101,7 @@ class Contest:
 
         return score * similarity * self.metric_weights.get(MetricType.SIMILARITY_SCORE, 0) / total_weight
 
+
 CUDA_4090_DEVICE = CudaDevice(gpu=Gpu.NVIDIA_RTX_4090)
 
 CONTESTS = [
@@ -120,6 +128,7 @@ CONTESTS = [
     ),
 ]
 
+
 def find_contest(contest_id: ContestId):
     for contest in CONTESTS:
         if contest.id != contest_id:
@@ -129,8 +138,10 @@ def find_contest(contest_id: ContestId):
 
     raise RuntimeError(f"Unknown contest ID requested {contest_id}")
 
+
 def find_compatible_contests() -> list[ContestId]:
     return [contest.id for contest in CONTESTS if contest.device.is_compatible()]
+
 
 ACTIVE_CONTESTS = [
     ContestId.FLUX_NVIDIA_4090

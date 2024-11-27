@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class TextToImageRequest(BaseModel):
     prompt: str
     negative_prompt: str | None = None

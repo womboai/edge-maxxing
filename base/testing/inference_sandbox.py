@@ -41,12 +41,15 @@ logger = get_logger(__name__)
 tracer = trace.get_tracer(__name__)
 hf_api = HfApi()
 
+
 class InvalidSubmissionError(Exception):
     ...
+
 
 class BenchmarkOutput(BaseModel):
     metrics: Metrics
     outputs: list[bytes]
+
 
 class InferenceSandbox:
     _sandbox_args: list[str]

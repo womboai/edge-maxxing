@@ -5,14 +5,17 @@ from pydantic import BaseModel
 from base.checkpoint import Key, Uid, Benchmarks
 from base.contest import ContestId, RepositoryInfo
 
+
 class ApiMetadata(BaseModel):
     version: str
     compatible_contests: set[ContestId]
+
 
 class BenchmarkState(Enum):
     NOT_STARTED = 0
     IN_PROGRESS = 1
     FINISHED = 2
+
 
 class BenchmarkingResults(BaseModel):
     state: BenchmarkState
@@ -20,9 +23,11 @@ class BenchmarkingResults(BaseModel):
     invalid_submissions: set[Key]
     average_benchmark_time: float | None
 
+
 class BenchmarkingStartRequest(BaseModel):
     contest_id: ContestId
     submissions: dict[Key, RepositoryInfo]
+
 
 class BenchmarkingInitializeRequest(BaseModel):
     uid: Uid

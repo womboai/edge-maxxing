@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 
 from .wandb_manager import add_wandb_args
 
+
 def add_args(argument_parser: ArgumentParser):
     argument_parser.add_argument(
         "--epoch_length",

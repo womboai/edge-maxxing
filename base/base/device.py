@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 
+
 class Gpu(Enum):
     NVIDIA_RTX_4090 = "NVIDIA GeForce RTX 4090"
+
 
 class Device(ABC):
     @abstractmethod
@@ -24,6 +26,7 @@ class Device(ABC):
     @abstractmethod
     def is_compatible(self):
         ...
+
 
 class CudaDevice(Device):
     _gpu: Gpu
@@ -67,6 +70,7 @@ class CudaDevice(Device):
 
         return device_name == self._gpu.value
 
+
 class MpsDevice(Device):
     def get_name(self):
         return "mps"
@@ -89,6 +93,7 @@ class MpsDevice(Device):
         import torch
 
         return torch.backends.mps.is_available()
+
 
 class ContestDeviceValidationError(Exception):
     def __init__(self, message: str):

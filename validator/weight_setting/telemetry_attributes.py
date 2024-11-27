@@ -7,6 +7,7 @@ from weight_setting.validator_args import add_args
 
 from fiber.chain.chain_utils import load_hotkey_keypair
 
+
 def log_extra_attributes():
     config = get_config(add_args)
 
@@ -16,6 +17,7 @@ def log_extra_attributes():
     )
 
     print(f"netuid={config['netuid']},neuron.hotkey={keypair.ss58_address}")
+
 
 if __name__ == "__main__":
     log_extra_attributes()

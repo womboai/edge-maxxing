@@ -16,6 +16,7 @@ logger = get_logger(__name__)
 
 REVISION_LENGTH = 7
 
+
 class CheckpointSubmission(BaseModel):
     repository: str
     revision: Annotated[str, Field(min_length=REVISION_LENGTH, max_length=REVISION_LENGTH)]
@@ -46,6 +47,7 @@ class CheckpointSubmission(BaseModel):
             contest_id=contest_id,
         )
 
+
 def make_submission(
     substrate: SubstrateInterface,
     netuid: int,
@@ -68,6 +70,7 @@ def make_submission(
         data,
         wait_for_finalization=False,
     )
+
 
 def get_submissions(
     substrate: SubstrateInterface,
@@ -131,6 +134,7 @@ def get_submissions(
             continue
 
     return deduplicate_submissions(submissions)
+
 
 def deduplicate_submissions(submissions: Submissions) -> Submissions:
     existing_repositories: dict[str, Submission] = {}

@@ -14,6 +14,7 @@ from weight_setting.contest_state import ContestState
 logger = get_logger(__name__)
 tracer = trace.get_tracer(__name__)
 
+
 class WeightSetter:
     _thread: Thread
     _stop_flag: Event = Event()

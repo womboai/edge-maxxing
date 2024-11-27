@@ -7,6 +7,7 @@ from transformers import CLIPProcessor, CLIPVisionModelWithProjection, PreTraine
 
 from base.device import Device
 
+
 class OutputComparator(ContextManager, ABC):
     @abstractmethod
     def compare(self, baseline: bytes, optimized: bytes) -> float:
@@ -16,6 +17,7 @@ class OutputComparator(ContextManager, ABC):
         return self.compare(baseline, optimized)
 
     __call__ = __wrapped_compare
+
 
 class ImageOutputComparator(OutputComparator):
     device: Device

@@ -10,6 +10,7 @@ ENDPOINT = "http://98.81.78.238:4317"
 
 initialized = False
 
+
 def init_open_telemetry_logging(attributes: Attributes):
     global initialized
     if initialized:

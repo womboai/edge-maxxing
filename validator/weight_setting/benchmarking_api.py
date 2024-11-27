@@ -14,6 +14,7 @@ from base_validator.api_data import BenchmarkingStartRequest, ApiMetadata, Bench
 
 logger = get_logger(__name__)
 
+
 class BenchmarkingApi:
     _api: str
     _keypair: Keypair
@@ -62,6 +63,7 @@ class BenchmarkingApi:
         response.raise_for_status()
         return BenchmarkingResults.model_validate(response.json())
 
+
 def _authentication_headers(keypair: Keypair):
     nonce = str(time_ns())
 
@@ -71,6 +73,7 @@ def _authentication_headers(keypair: Keypair):
         "X-Nonce": nonce,
         "Signature": signature,
     }
+
 
 def send_submissions_to_api(version: str, all_apis: list[BenchmarkingApi], submissions: Submissions):
     submissions_by_contest: dict[ContestId, dict[Key, RepositoryInfo]] = defaultdict(lambda: {})

@@ -19,6 +19,7 @@ VALID_REVISION_REGEX = r"^[a-f0-9]{7}$"
 
 logger = get_logger(__name__)
 
+
 def start_benchmarking(contest: Contest, keypair: Keypair, submission: CheckpointSubmission):
     if not contest.device.is_compatible():
         logger.warning("Benchmarking on an incompatible device. Results will not be accurate.")
@@ -33,6 +34,7 @@ def start_benchmarking(contest: Contest, keypair: Keypair, submission: Checkpoin
             contest=contest,
             submissions={keypair.ss58_address: submission},
         )
+
 
 def add_extra_args(argument_parser: ArgumentParser):
     argument_parser.add_argument(
@@ -60,6 +62,7 @@ def add_extra_args(argument_parser: ArgumentParser):
         default=False,
     )
 
+
 def validate(repository: str, revision: str, contest: Contest):
     if not re.match(VALID_REPO_REGEX, repository):
         raise ValueError(f"Invalid repository URL: {repository}")
@@ -79,9 +82,11 @@ def validate(repository: str, revision: str, contest: Contest):
     except GitCommandError as e:
         raise ValueError(f"Invalid repository or revision: {e}")
 
+
 def get_latest_revision(repository: str):
     git = cmd.Git()
     return git.ls_remote(repository).split()[0]
+
 
 def get_submission(config) -> CheckpointSubmission:
     repository = config["repository"]
@@ -134,6 +139,7 @@ def get_submission(config) -> CheckpointSubmission:
         contest_id=contest.id,
     )
 
+
 def submit():
     config = get_config(add_extra_args)
 
@@ -175,8 +181,10 @@ def submit():
 
     logger.info(f"Submitted {submission} as the info for this miner")
 
+
 def main():
     submit()
+
 
 if __name__ == '__main__':
     main()

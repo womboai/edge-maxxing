@@ -10,6 +10,7 @@ UPDATE_RATE_MINUTES = 10
 
 logger = get_logger(__name__)
 
+
 class AutoUpdater:
     _thread: Thread
     _stop_flag: Event

@@ -31,6 +31,7 @@ BENCHMARKS_VERSION = 1
 logger = get_logger(__name__)
 tracer = trace.get_tracer(__name__)
 
+
 class Validator:
     _stop_flag: Event = Event()
     contest_state: ContestState | None = None
@@ -185,9 +186,11 @@ class Validator:
                 logger.error(f"Error during step {self.step()}", exc_info=e)
                 self.substrate = get_substrate(subtensor_address=self.substrate.url)
 
+
 def main():
     AutoUpdater()
     Validator()
+
 
 if __name__ == '__main__':
     main()

@@ -13,5 +13,6 @@ Key: TypeAlias = str
 Submissions: TypeAlias = dict[Key, Submission]
 Benchmarks: TypeAlias = dict[Key, Benchmark]
 
+
 def current_time() -> datetime:
     return datetime.now(tz=TIMEZONE)

@@ -3,6 +3,7 @@ from typing import Callable
 
 from fiber.constants import FINNEY_NETWORK
 
+
 def get_config(add_args: Callable[[ArgumentParser], None] | None = None):
     argument_parser = ArgumentParser()
 

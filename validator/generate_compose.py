@@ -49,6 +49,7 @@ VALIDATOR_SERVICE_TEMPLATE = """
       network_mode: host
 """
 
+
 def main():
     with open("compose-gpu-layout.json") as f:
         layout: list[int] = json.load(f)
@@ -69,6 +70,7 @@ def main():
                 )
             )
         )
+
 
 if __name__ == '__main__':
     main()

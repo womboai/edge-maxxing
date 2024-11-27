@@ -10,6 +10,7 @@ from weight_setting.winner_selection import get_contestant_scores, get_contestan
 
 logger = get_logger(__name__)
 
+
 class ContestState(BaseModel):
     step: int
     benchmarks_version: int

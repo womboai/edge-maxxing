@@ -6,6 +6,7 @@ from base.contest import Metrics
 RANK_SCORE_IMPROVEMENT_THRESHOLD = 1.05
 WINNER_PERCENTAGE = 0.80
 
+
 def get_contestant_scores(
     submissions: Submissions,
     benchmarks: Benchmarks,
@@ -15,6 +16,7 @@ def get_contestant_scores(
         key: submissions[key].contest().calculate_score(baseline, benchmark)
         for key, benchmark in benchmarks.items()
     }
+
 
 def get_contestant_ranks(scores: dict[Key, float]) -> dict[Key, int]:
     if not scores:
@@ -35,6 +37,7 @@ def get_contestant_ranks(scores: dict[Key, float]) -> dict[Key, int]:
         ranks[hotkey] = rank
 
     return ranks
+
 
 def calculate_rank_weights(
     submitted_blocks: dict[Key, int],

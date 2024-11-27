@@ -7,6 +7,7 @@ from wandb.apis.public import Run
 from base.checkpoint import Uid
 from .contest_state import ContestState
 
+
 class WandbManager:
     _run: Run | None = None
 
@@ -76,6 +77,7 @@ class WandbManager:
         } | contest_state.model_dump()
 
         self._run.log(data=data)
+
 
 def add_wandb_args(parser: ArgumentParser):
     parser.add_argument(

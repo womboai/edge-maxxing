@@ -4,6 +4,7 @@ from base.contest import Contest
 
 SAMPLE_RATE_MS = 10
 
+
 class VRamMonitor:
     _contest: Contest
     _thread: Thread

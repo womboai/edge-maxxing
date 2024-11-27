@@ -18,6 +18,7 @@ from .inference_sandbox import BenchmarkOutput, InferenceSandbox
 logger = get_logger(__name__)
 tracer = trace.get_tracer(__name__)
 
+
 class Benchmarker:
     _thread: Thread | None
     _stop_flag: Event = Event()
