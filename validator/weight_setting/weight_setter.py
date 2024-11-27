@@ -50,7 +50,7 @@ class WeightSetter:
         self._thread = Thread(target=self._run)
         self._thread.start()
 
-    def stop(self):
+    def shutdown(self):
         self._stop_flag.set()
 
     def _run(self):

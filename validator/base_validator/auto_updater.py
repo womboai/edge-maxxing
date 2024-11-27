@@ -50,8 +50,11 @@ class AutoUpdater:
         else:
             logger.info("Already up to date.")
 
-    def _restart(self):
+    def shutdown(self):
         self._stop_flag.set()
+
+    def _restart(self):
+        self.shutdown()
         os.kill(os.getpid(), signal.SIGTERM)
 
         logger.info("Waiting for process to terminate...")

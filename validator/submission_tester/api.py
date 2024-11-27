@@ -33,7 +33,7 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    AutoUpdater()
+    auto_updater = AutoUpdater()
 
     compatible_contests = find_compatible_contests() if not debug else [contest.id for contest in CONTESTS]
     if not compatible_contests:
@@ -46,6 +46,8 @@ async def lifespan(_: FastAPI):
         ),
         "compatible_contests": compatible_contests,
     }
+
+    auto_updater.shutdown()
 
 
 app = FastAPI(lifespan=lifespan)

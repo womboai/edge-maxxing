@@ -1,7 +1,6 @@
 from importlib.metadata import version
 from signal import signal, SIGINT, SIGHUP, SIGTERM
 from threading import Event
-from time import sleep
 from typing import Any
 
 from fiber.chain.chain_utils import load_hotkey_keypair
@@ -34,6 +33,7 @@ tracer = trace.get_tracer(__name__)
 
 class Validator:
     _stop_flag: Event = Event()
+    auto_updater: AutoUpdater = AutoUpdater()
     contest_state: ContestState | None = None
     validator_version: str = version("edge-maxxing-validator")
     uid: Uid
@@ -121,7 +121,15 @@ class Validator:
                 block=self.substrate.get_block_number(None),  # type: ignore
             )
         )
+
+        if not self.contest_state.submissions:
+            sleep_blocks = self.config["epoch_length"]
+            logger.warning(f"No submissions found, sleeping for {sleep_blocks} blocks")
+            self._stop_flag.wait(sleep_blocks * 12)
+            return
+
         self.wandb_manager.init_wandb(self.contest_state)
+        logger.info(f"Starting a new contest with {len(self.contest_state.submissions)} submissions")
 
     @tracer.start_as_current_span("do_step")
     def do_step(self):
@@ -149,7 +157,7 @@ class Validator:
             return
 
         self.update_benchmarks(benchmarking_results)
-        sleep(BENCHMARK_UPDATE_RATE_BLOCKS * 12)
+        self._stop_flag.wait(BENCHMARK_UPDATE_RATE_BLOCKS * 12)
 
     def update_benchmarks(self, benchmarking_results: list[BenchmarkingResults]):
         self.contest_state.baseline = benchmarking_results[0].baseline
@@ -164,7 +172,8 @@ class Validator:
 
     def _shutdown(self, _signalnum, _handler):
         logger.info("Shutting down validator")
-        self.weight_setter.stop()
+        self.weight_setter.shutdown()
+        self.auto_updater.shutdown()
         self._stop_flag.set()
 
     def run(self):
@@ -188,7 +197,6 @@ class Validator:
 
 
 def main():
-    AutoUpdater()
     Validator()
 
 
