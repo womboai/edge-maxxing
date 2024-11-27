@@ -165,10 +165,9 @@ def submit():
 
     print(
         "\nSubmission info:\n"
-        f"Git Provider: {submission.provider}\n"
         f"Repository:   {submission.repository}\n"
         f"Revision:     {submission.revision}\n"
-        f"Contest:      {submission.contest.name}\n"
+        f"Contest:      {submission.contest_id.name}\n"
     )
     if input("Confirm submission? (Y/n): ").strip().lower() not in ("yes", "y", ""):
         exit("Submission cancelled.")
