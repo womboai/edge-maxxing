@@ -98,11 +98,11 @@ class Contest:
             return (relative_improvement * self.metric_weights.get(metric_type, 0)) / total_weight
 
         score = sum([
-            normalize(baseline.generation_time, benchmark.model.generation_time, MetricType.GENERATION_TIME),
-            normalize(baseline.size, benchmark.model.size, MetricType.SIZE),
-            normalize(baseline.vram_used, benchmark.model.vram_used, MetricType.VRAM_USED),
-            normalize(baseline.watts_used, benchmark.model.watts_used, MetricType.WATTS_USED),
-            normalize(baseline.load_time, benchmark.model.load_time, MetricType.LOAD_TIME)
+            normalize(baseline.generation_time, benchmark.metrics.generation_time, MetricType.GENERATION_TIME),
+            normalize(baseline.size, benchmark.metrics.size, MetricType.SIZE),
+            normalize(baseline.vram_used, benchmark.metrics.vram_used, MetricType.VRAM_USED),
+            normalize(baseline.watts_used, benchmark.metrics.watts_used, MetricType.WATTS_USED),
+            normalize(baseline.load_time, benchmark.metrics.load_time, MetricType.LOAD_TIME)
         ])
 
         return score * similarity * self.metric_weights.get(MetricType.SIMILARITY_SCORE, 0) / total_weight

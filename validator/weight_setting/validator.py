@@ -185,7 +185,7 @@ class Validator:
 
         if average_benchmarking_time:
             eta = (len(self.contest_state.submissions) - len(self.contest_state.benchmarks)) * average_benchmarking_time
-            logger.info(f"Average benchmark time: {average_benchmarking_time}, ETA: {timedelta(seconds=eta)}")
+            logger.info(f"Average benchmark time: {average_benchmarking_time:.2f}s, ETA: {timedelta(seconds=eta)}")
 
     def step(self):
         return self.contest_state.step if self.contest_state else 0
