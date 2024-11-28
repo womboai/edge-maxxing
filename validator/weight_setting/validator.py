@@ -66,14 +66,7 @@ class Validator:
         netuid=metagraph.netuid,
     )
 
-    wandb_manager: WandbManager = WandbManager(
-        config=config,
-        validator_version=validator_version,
-        uid=metagraph.netuid,
-        netuid=metagraph.netuid,
-        hotkey=keypair.ss58_address,
-        signature=signature,
-    )
+    wandb_manager: WandbManager
 
     weight_setter: WeightSetter
     benchmarking_apis: list[BenchmarkingApi]
@@ -81,6 +74,22 @@ class Validator:
     def __init__(self):
         self.metagraph.sync_nodes()
         self.uid = list(self.metagraph.nodes.keys()).index(self.keypair.ss58_address)
+
+        init_open_telemetry_logging({
+            "neuron.uid": self.uid,
+            "neuron.signature": self.signature,
+            "subtensor.chain_endpoint": self.substrate.url,
+            "validator.version": self.validator_version,
+        })
+
+        self.wandb_manager = WandbManager(
+            config=self.config,
+            validator_version=self.validator_version,
+            uid=self.uid,
+            netuid=self.metagraph.netuid,
+            hotkey=self.keypair.ss58_address,
+            signature=self.signature,
+        )
 
         self.weight_setter: WeightSetter = WeightSetter(
             version=self.validator_version,
@@ -92,16 +101,12 @@ class Validator:
             contest_state=lambda: self.contest_state,
         )
 
-        self.contest_state = self.state_manager.load_state()
+        contest_state = self.state_manager.load_state()
+        if contest_state:
+            self.contest_state = contest_state
+            self.wandb_manager.init_wandb(self.contest_state)
 
         self.benchmarking_apis = [BenchmarkingApi(api=api, keypair=self.keypair) for api in self.config["benchmarker_api"]]
-
-        init_open_telemetry_logging({
-            "neuron.uid": self.uid,
-            "neuron.signature": self.signature,
-            "subtensor.chain_endpoint": self.substrate.url,
-            "validator.version": self.validator_version,
-        })
 
         self.run()
 
@@ -168,11 +173,10 @@ class Validator:
         baseline = benchmarking_results[0].baseline
         average_benchmarking_time = benchmarking_results[0].average_benchmarking_time
 
-        if self.contest_state.baseline != baseline:
+        if baseline and baseline != self.contest_state.baseline:
             logger.info(f"Updating baseline to {baseline}")
 
         self.contest_state.baseline = baseline
-        self.contest_state.average_benchmarking_time = average_benchmarking_time
 
         for result in benchmarking_results:
             for key in result.benchmarks.keys() - self.contest_state.benchmarks.keys():
@@ -183,9 +187,12 @@ class Validator:
             self.contest_state.benchmarks.update(result.benchmarks)
             self.contest_state.invalid_submissions.update(result.invalid_submissions)
 
-        if average_benchmarking_time:
-            eta = (len(self.contest_state.submissions) - len(self.contest_state.benchmarks)) * average_benchmarking_time
-            logger.info(f"Average benchmark time: {average_benchmarking_time:.2f}s, ETA: {timedelta(seconds=eta)}")
+        if average_benchmarking_time and average_benchmarking_time != self.contest_state.average_benchmarking_time:
+            submissions_left = len(self.contest_state.submissions) - len(self.contest_state.benchmarks)
+            eta = submissions_left * average_benchmarking_time
+            logger.info(f"{submissions_left}/{len(self.contest_state.submissions)} benchmarked. Average benchmark time: {average_benchmarking_time:.2f}s, ETA: {timedelta(seconds=eta)}")
+
+        self.contest_state.average_benchmarking_time = average_benchmarking_time
 
     def step(self):
         return self.contest_state.step if self.contest_state else 0
