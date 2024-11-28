@@ -188,9 +188,8 @@ class Validator:
             self.contest_state.invalid_submissions.update(result.invalid_submissions)
 
         if average_benchmarking_time and average_benchmarking_time != self.contest_state.average_benchmarking_time:
-            submissions_left = len(self.contest_state.submissions) - len(self.contest_state.benchmarks)
-            eta = submissions_left * average_benchmarking_time
-            logger.info(f"{submissions_left}/{len(self.contest_state.submissions)} benchmarked. Average benchmark time: {average_benchmarking_time:.2f}s, ETA: {timedelta(seconds=eta)}")
+            eta = (len(self.contest_state.submissions) - len(self.contest_state.benchmarks)) * average_benchmarking_time
+            logger.info(f"{len(self.contest_state.benchmarks)}/{len(self.contest_state.submissions)} benchmarked. Average benchmark time: {average_benchmarking_time:.2f}s, ETA: {timedelta(seconds=eta)}")
 
         self.contest_state.average_benchmarking_time = average_benchmarking_time
 
