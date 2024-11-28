@@ -41,7 +41,7 @@ class StateManager:
             return None
 
     def save_state(self, state: ContestState):
-        logger.info(f"Saving state")
+        logger.debug(f"Saving state")
 
         with self._state_file.open("wb") as file:
             file.write(state.model_dump_json(indent=4).encode())

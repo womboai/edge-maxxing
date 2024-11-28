@@ -14,7 +14,7 @@ class BenchmarkingResults(BaseModel):
     benchmarks: Benchmarks
     invalid_submissions: set[Key]
     baseline: Metrics | None
-    average_benchmark_time: float | None
+    average_benchmarking_time: float | None
 
 
 class BenchmarkingStartRequest(BaseModel):

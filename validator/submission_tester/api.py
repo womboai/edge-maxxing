@@ -117,7 +117,7 @@ def state(request: Request) -> BenchmarkingResults:
         benchmarks=benchmarker.benchmarks,
         invalid_submissions=benchmarker.invalid_submissions,
         baseline=benchmarker.baseline.metrics if benchmarker.baseline else None,
-        average_benchmark_time=benchmarker.get_average_benchmark_time(),
+        average_benchmarking_time=benchmarker.get_average_benchmarking_time(),
     )
 
 

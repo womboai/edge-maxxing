@@ -137,8 +137,8 @@ def get_submissions(
 
 
 def deduplicate_submissions(submissions: Submissions) -> Submissions:
-    existing_repositories: dict[str, Submission] = {}
-    existing_revisions: dict[str, Submission] = {}
+    existing_repositories: dict[str, tuple[Key, Submission]] = {}
+    existing_revisions: dict[str, tuple[Key, Submission]] = {}
     to_remove: set[Key] = set()
 
     for key, submission in submissions.items():
@@ -146,20 +146,20 @@ def deduplicate_submissions(submissions: Submissions) -> Submissions:
         revision = submission.repository_info.revision
         block = submission.block
 
-        existing_repository = existing_repositories.get(url)
-        existing_revision = existing_revisions.get(revision)
+        existing_repository_key, existing_repository = existing_repositories.get(url, (None, None))
+        existing_revision_key, existing_revision = existing_revisions.get(revision, (None, None))
 
         if (existing_repository and existing_repository.block < block) or (existing_revision and existing_revision.block < block):
             to_remove.add(key)
             continue
 
         if existing_repository:
-            to_remove.add(existing_repository)
+            to_remove.add(existing_repository_key)
         if existing_revision:
-            to_remove.add(existing_revision)
+            to_remove.add(existing_revision_key)
 
-        existing_repositories[url] = submission
-        existing_revisions[revision] = submission
+        existing_repositories[url] = key, submission
+        existing_revisions[revision] = key, submission
 
     for key in to_remove:
         submissions.pop(key)

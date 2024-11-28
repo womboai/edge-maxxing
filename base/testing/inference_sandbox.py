@@ -91,8 +91,10 @@ class InferenceSandbox:
             encoding='utf-8',
             cwd=self._sandbox_directory.absolute(),
         )
-        logger.info(process.stdout)
-        logger.info(process.stderr)
+        if process.stdout.strip():
+            logger.info(process.stdout)
+        if process.stderr.strip():
+            logger.info(process.stderr)
         if process.returncode:
             raise InvalidSubmissionError(f"Failed to run {script}")
 
@@ -200,34 +202,38 @@ class InferenceSandbox:
             text=True,
             bufsize=1,
         ) as process:
-            load_time = self.wait_for_socket(process)
-            with Client(abspath(self._socket_path)) as client:
-                logger.info(f"Benchmarking {len(self._inputs)} samples")
-                for i, request in enumerate(self._inputs):
-                    logger.info(f"Sample {i + 1}/{len(self._inputs)}")
-                    start_joules = self._contest.device.get_joules()
-                    vram_monitor = VRamMonitor(self._contest)
+            try:
+                load_time = self.wait_for_socket(process)
+                with Client(abspath(self._socket_path)) as client:
+                    logger.info(f"Benchmarking {len(self._inputs)} samples")
+                    for i, request in enumerate(self._inputs):
+                        logger.info(f"Sample {i + 1}/{len(self._inputs)}")
+                        start_joules = self._contest.device.get_joules()
+                        vram_monitor = VRamMonitor(self._contest)
 
-                    client.send(request.model_dump_json().encode("utf-8"))
+                        data = request.model_dump_json().encode("utf-8")
+                        logger.debug(data)
+                        client.send_bytes(data)
 
-                    start = perf_counter()
+                        start = perf_counter()
+                        output = client.recv_bytes()
 
-                    output = client.recv_bytes()
+                        generation_time = perf_counter() - start
+                        joules_used = self._contest.device.get_joules() - start_joules
+                        watts_used = joules_used / generation_time
+                        vram_used = vram_monitor.complete()
 
-                    generation_time = perf_counter() - start
-                    joules_used = self._contest.device.get_joules() - start_joules
-                    watts_used = joules_used / generation_time
-                    vram_used = vram_monitor.complete()
-
-                    metrics.append(Metrics(
-                        generation_time=generation_time,
-                        size=size,
-                        vram_used=vram_used,
-                        watts_used=watts_used,
-                        load_time=load_time,
-                    ))
-                    outputs.append(output)
-                check_process(process)
+                        metrics.append(Metrics(
+                            generation_time=generation_time,
+                            size=size,
+                            vram_used=vram_used,
+                            watts_used=watts_used,
+                            load_time=load_time,
+                        ))
+                        outputs.append(output)
+                        check_process(process)
+            finally:
+                log_process(process)
 
         average_generation_time = sum(metric.generation_time for metric in metrics) / len(metrics)
         vram_used = max(metric.vram_used for metric in metrics) - start_vram

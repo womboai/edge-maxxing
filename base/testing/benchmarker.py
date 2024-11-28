@@ -85,7 +85,7 @@ class Benchmarker:
         logger.info("Benchmarking baseline")
         while not self.baseline and not self._stop_flag.is_set():
             try:
-                self._benchmark_submission(contest, inputs, contest.baseline_repository)
+                self.baseline = self._benchmark_submission(contest, inputs, contest.baseline_repository)
             except CancelledError:
                 logger.warning("Benchmarking was canceled while testing the baseline")
                 return
@@ -121,10 +121,10 @@ class Benchmarker:
             finally:
                 self.submission_times.append(perf_counter() - start_time)
 
-            average_benchmark_time = self.get_average_benchmark_time()
-            if average_benchmark_time:
-                eta = (len(submissions) - len(self.benchmarks)) * average_benchmark_time
-                logger.info(f"Average benchmark time: {average_benchmark_time}, ETA: {timedelta(seconds=eta)}")
+            average_benchmarking_time = self.get_average_benchmarking_time()
+            if average_benchmarking_time:
+                eta = (len(submissions) - len(self.benchmarks)) * average_benchmarking_time
+                logger.info(f"Average benchmark time: {average_benchmarking_time}, ETA: {timedelta(seconds=eta)}")
 
         if self._is_done(submissions):
             logger.info("Benchmarking complete")
@@ -133,7 +133,7 @@ class Benchmarker:
             logger.warning("Benchmarking canceled")
             self.state = BenchmarkState.NOT_STARTED
 
-    def get_average_benchmark_time(self) -> float | None:
+    def get_average_benchmarking_time(self) -> float | None:
         return (
             sum(self.submission_times) / len(self.submission_times)
             if self.submission_times

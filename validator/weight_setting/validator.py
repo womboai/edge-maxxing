@@ -1,3 +1,4 @@
+from datetime import timedelta
 from importlib.metadata import version
 from signal import signal, SIGINT, SIGHUP, SIGTERM
 from threading import Event
@@ -164,12 +165,27 @@ class Validator:
         if not self.contest_state:
             return
 
-        self.contest_state.baseline = benchmarking_results[0].baseline
-        self.contest_state.average_benchmarking_time = benchmarking_results[0].average_benchmark_time
+        baseline = benchmarking_results[0].baseline
+        average_benchmarking_time = benchmarking_results[0].average_benchmarking_time
+
+        if self.contest_state.baseline != baseline:
+            logger.info(f"Updating baseline to {baseline}")
+
+        self.contest_state.baseline = baseline
+        self.contest_state.average_benchmarking_time = average_benchmarking_time
 
         for result in benchmarking_results:
+            for key in result.benchmarks.keys() - self.contest_state.benchmarks.keys():
+                logger.info(f"Updating benchmarks for {key}")
+            for key in result.invalid_submissions - self.contest_state.invalid_submissions:
+                logger.info(f"Marking submission from {key} as invalid")
+
             self.contest_state.benchmarks.update(result.benchmarks)
             self.contest_state.invalid_submissions.update(result.invalid_submissions)
+
+        if average_benchmarking_time:
+            eta = (len(self.contest_state.submissions) - len(self.contest_state.benchmarks)) * average_benchmarking_time
+            logger.info(f"Average benchmark time: {average_benchmarking_time}, ETA: {timedelta(seconds=eta)}")
 
     def step(self):
         return self.contest_state.step if self.contest_state else 0

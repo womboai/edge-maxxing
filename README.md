@@ -129,9 +129,7 @@ uv run submit_model \
     --netuid {netuid} \
     --subtensor.network finney \
     --wallet.name {wallet} \
-    --wallet.hotkey {hotkey} \
-    --logging.trace \
-    --logging.debug
+    --wallet.hotkey {hotkey}
 ```
 5. Follow the interactive prompts to submit the repository link, revision, and contest to participate in
 6. Optionally, benchmark your submission locally before submitting (make sure you have the right hardware e.g. NVIDIA GeForce RTX 4090). uv and huggingface are required for benchmarking:
@@ -150,7 +148,7 @@ If your hardware is not accessed within a container(as in, can use Docker), then
 
 To get started, go to the `validator`, and create a `.env` file with the following contents:
 ```
-VALIDATOR_ARGS=--netuid {netuid} --subtensor.network {network} --wallet.name {wallet} --wallet.hotkey {hotkey} --logging.trace --logging.debug
+VALIDATOR_ARGS=--netuid {netuid} --subtensor.network {network} --wallet.name {wallet} --wallet.hotkey {hotkey}
 VALIDATOR_HOTKEY_SS58_ADDRESS={ss58-address}
 ```
 
@@ -201,8 +199,6 @@ In the another pod/container without a GPU, to run the scoring validator, clone 
         --subtensor.network {network} \
         --wallet.name {wallet} \
         --wallet.hotkey {hotkey} \
-        --logging.trace \
-        --logging.debug \
         --benchmarker_api {API component routes, space separated if multiple}
 ```
 
