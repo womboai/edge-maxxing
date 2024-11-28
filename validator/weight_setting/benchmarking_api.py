@@ -106,7 +106,7 @@ def send_submissions_to_api(version: str, all_apis: list[BenchmarkingApi], submi
 
     for contest_id, apis in contest_api_assignment.items():
         if contest_id not in submissions_by_contest:
-            raise RuntimeError(f"No API compatible with contest type {contest_id}")
+            raise RuntimeError(f"No API compatible with contest type {contest_id.name}")
 
         contest_submissions = submissions_by_contest[contest_id]
 

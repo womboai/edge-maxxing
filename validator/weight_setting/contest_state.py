@@ -23,7 +23,6 @@ class ContestState(BaseModel):
     contest_end: datetime
 
     def start_new_contest(self, benchmarks_version: int, submissions: Submissions):
-        logger.info("Starting new contest")
         self.benchmarks_version = benchmarks_version
         self.submissions = submissions
 

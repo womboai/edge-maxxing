@@ -165,7 +165,7 @@ class Validator:
             return
 
         self.contest_state.baseline = benchmarking_results[0].baseline
-        self.contest_state.average_benchmarking_time = benchmarking_results[0].average_benchmarking_time
+        self.contest_state.average_benchmarking_time = benchmarking_results[0].average_benchmark_time
 
         for result in benchmarking_results:
             self.contest_state.benchmarks.update(result.benchmarks)
