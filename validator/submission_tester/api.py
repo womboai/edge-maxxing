@@ -39,14 +39,17 @@ async def lifespan(_: FastAPI):
     if not compatible_contests:
         raise RuntimeError("Device is not compatible with any contests")
 
+    benchmarker = Benchmarker(
+        sandbox_directory=Path("/sandbox"),
+        sandbox_args=["/bin/sudo", "-u", "sandbox"]
+    )
+
     yield {
-        "benchmarker": Benchmarker(
-            sandbox_directory=Path("/sandbox"),
-            sandbox_args=["/bin/sudo", "-u", "sandbox"]
-        ),
+        "benchmarker": benchmarker,
         "compatible_contests": compatible_contests,
     }
 
+    benchmarker.shutdown()
     auto_updater.shutdown()
 
 
@@ -109,18 +112,12 @@ def start(
 def state(request: Request) -> BenchmarkingResults:
     benchmarker: Benchmarker = request.state.benchmarker
 
-    average_benchmark_time = (
-        sum(benchmarker.submission_times) / len(benchmarker.submission_times)
-        if benchmarker.submission_times
-        else None
-    )
-
     return BenchmarkingResults(
         state=benchmarker.state,
         benchmarks=benchmarker.benchmarks,
         invalid_submissions=benchmarker.invalid_submissions,
         baseline=benchmarker.baseline.metrics if benchmarker.baseline else None,
-        average_benchmark_time=average_benchmark_time,
+        average_benchmark_time=benchmarker.get_average_benchmark_time(),
     )
 
 

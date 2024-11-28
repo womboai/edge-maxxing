@@ -186,6 +186,7 @@ class InferenceSandbox:
         metrics: list[Metrics] = []
         outputs: list[bytes] = []
 
+        logger.info("Loading pipeline")
         with Popen(
             [
                 *self._sandbox_args,
@@ -199,7 +200,9 @@ class InferenceSandbox:
         ):
             load_time = self.wait_for_socket()
             with Client(abspath(self._socket_path)) as client:
-                for request in self._inputs:
+                logger.info(f"Benchmarking {len(self._inputs)} samples")
+                for i, request in enumerate(self._inputs):
+                    logger.info(f"Sample {i + 1}/{len(self._inputs)}")
                     start_joules = self._contest.device.get_joules()
                     vram_monitor = VRamMonitor(self._contest)
 
