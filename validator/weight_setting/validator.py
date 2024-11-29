@@ -189,7 +189,7 @@ class Validator:
 
         if average_benchmarking_time and average_benchmarking_time != self.contest_state.average_benchmarking_time:
             eta = (len(self.contest_state.submissions) - len(self.contest_state.benchmarks)) * average_benchmarking_time
-            logger.info(f"{len(self.contest_state.benchmarks)}/{len(self.contest_state.submissions)} benchmarked. Average benchmark time: {average_benchmarking_time:.2f}s, ETA: {timedelta(seconds=eta)}")
+            logger.info(f"{len(self.contest_state.benchmarks)}/{len(self.contest_state.submissions)} benchmarked. Average benchmark time: {average_benchmarking_time:.2f}s, ETA: {timedelta(seconds=int(eta))}")
 
         self.contest_state.average_benchmarking_time = average_benchmarking_time
 
