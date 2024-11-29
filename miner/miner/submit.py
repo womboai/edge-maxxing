@@ -1,55 +1,42 @@
-import base64
-import json
 import re
-import shutil
 from argparse import ArgumentParser
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.logging_utils import get_logger
 from git import GitCommandError, cmd
+from substrateinterface import Keypair
 
-from neuron import (
-    CheckpointSubmission,
-    get_config,
-    find_contest,
-    Contest,
-    CURRENT_CONTEST,
-    CONTESTS,
-    ContestId,
-    REVISION_LENGTH,
-    make_submission,
-    random_inputs,
-    ModelRepositoryInfo,
-    TextToImageRequest,
-    GenerationOutput,
-    BENCHMARKS_VERSION,
-)
-from neuron.submission_tester import (
-    generate_baseline,
-    compare_checkpoints,
-    BaselineBenchmark,
-    MetricData,
-)
+from base.config import get_config
+from base.contest import Contest, find_contest, CONTESTS, ContestId, ACTIVE_CONTESTS
+from base.submissions import CheckpointSubmission, make_submission
+from testing.benchmarker import Benchmarker
 
-VALID_PROVIDER_REGEX = r'^[a-zA-Z0-9-.]+$'
-VALID_REPO_REGEX = r'^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$'
+VALID_REPO_REGEX = r"^https:\/\/[a-zA-Z0-9.-]+\/[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$"
 VALID_REVISION_REGEX = r"^[a-f0-9]{7}$"
-
-MODEL_DIRECTORY = Path("model")
-BASELINE_CACHE_JSON = Path("baseline_cache.json")
 
 logger = get_logger(__name__)
 
 
-def add_extra_args(argument_parser: ArgumentParser):
-    argument_parser.add_argument(
-        "--provider",
-        type=str,
-        help="The git provider containing the repository",
-    )
+def start_benchmarking(contest: Contest, keypair: Keypair, submission: CheckpointSubmission):
+    if not contest.device.is_compatible():
+        logger.warning("Benchmarking on an incompatible device. Results will not be accurate.")
 
+    with TemporaryDirectory() as temp_dir:
+        benchmarker = Benchmarker(
+            sandbox_directory=Path(temp_dir),
+            sandbox_args=[]
+        )
+
+        benchmarker.benchmark_submissions(
+            contest=contest,
+            submissions={keypair.ss58_address: submission},
+        )
+
+
+def add_extra_args(argument_parser: ArgumentParser):
     argument_parser.add_argument(
         "--repository",
         type=str,
@@ -76,91 +63,7 @@ def add_extra_args(argument_parser: ArgumentParser):
     )
 
 
-def load_baseline_cache(inputs: list[TextToImageRequest]) -> BaselineBenchmark | None:
-    try:
-        if not BASELINE_CACHE_JSON.exists():
-            return None
-
-        with open(BASELINE_CACHE_JSON, "r") as f:
-            data = json.load(f)
-
-            benchmarks_version = data["benchmarks_version"]
-            if BENCHMARKS_VERSION != benchmarks_version:
-                logger.info(f"Baseline cache is outdated, regenerating baseline")
-                return None
-
-            cached_inputs = [TextToImageRequest(**input_data) for input_data in data["inputs"]]
-            if cached_inputs != inputs:
-                logger.info("Contest inputs have changed, regenerating baseline")
-                return None
-
-            metrics = MetricData(**data["metrics"])
-            outputs = [
-                GenerationOutput(
-                    output=base64.b64decode(output_data["output"]),
-                    generation_time=output_data["generation_time"],
-                    vram_used=output_data["vram_used"],
-                    watts_used=output_data["watts_used"]
-                )
-                for output_data in data["outputs"]
-            ]
-            return BaselineBenchmark(inputs=inputs, outputs=outputs, metric_data=metrics)
-    except Exception as e:
-        logger.error(f"Failed to load baseline cache: {e}. Clearing.")
-        return None
-
-
-def save_baseline_cache(baseline: BaselineBenchmark):
-    with open(BASELINE_CACHE_JSON, "w") as f:
-        data = {
-            "benchmarks_version": BENCHMARKS_VERSION,
-            "inputs": [request.model_dump(exclude_none=True) for request in baseline.inputs],
-            "outputs": [
-                {
-                    "output": base64.b64encode(output.output).decode('utf-8'),
-                    "generation_time": output.generation_time,
-                    "vram_used": output.vram_used,
-                    "watts_used": output.watts_used
-                }
-                for output in baseline.outputs
-            ],
-            "metrics": baseline.metric_data.model_dump(exclude_none=True),
-        }
-        json.dump(data, f, indent=4)
-
-
-def start_benchmarking(contest: Contest, submission: CheckpointSubmission):
-    logger.info("Generating baseline samples to compare")
-    if not MODEL_DIRECTORY.exists():
-        MODEL_DIRECTORY.mkdir()
-    inputs = random_inputs()
-
-    baseline = load_baseline_cache(inputs)
-    if baseline is None:
-        baseline = generate_baseline(
-            contest=contest,
-            inputs=inputs,
-            sandbox_directory=MODEL_DIRECTORY,
-            switch_user=False,
-        )
-        save_baseline_cache(baseline)
-    else:
-        logger.info("Using cached baseline")
-
-    logger.info("Comparing submission to baseline")
-    compare_checkpoints(
-        contest=contest,
-        submission=ModelRepositoryInfo(url=submission.get_repo_link(), revision=submission.revision),
-        inputs=inputs,
-        baseline=baseline,
-        sandbox_directory=MODEL_DIRECTORY,
-        switch_user=False,
-    )
-
-    shutil.rmtree(MODEL_DIRECTORY)
-
-
-def validate(provider: str, repository: str, revision: str, contest: Contest):
+def validate(repository: str, revision: str, contest: Contest):
     if not re.match(VALID_REPO_REGEX, repository):
         raise ValueError(f"Invalid repository URL: {repository}")
 
@@ -173,45 +76,27 @@ def validate(provider: str, repository: str, revision: str, contest: Contest):
     if repository in contest.baseline_repository.url:
         raise ValueError(f"Cannot submit baseline repository: {repository}")
 
-    if revision == contest.baseline_repository.revision:
-        raise ValueError(f"Cannot submit baseline revision: {revision}")
-
     git = cmd.Git()
     try:
-        git.ls_remote(f"https://{provider}/{repository}", revision)
+        git.ls_remote(repository, revision)
     except GitCommandError as e:
         raise ValueError(f"Invalid repository or revision: {e}")
 
 
-def get_latest_revision(provider: str, repository: str):
+def get_latest_revision(repository: str):
     git = cmd.Git()
-    return git.ls_remote(f"https://{provider}/{repository}").split()[0][:REVISION_LENGTH]
+    return git.ls_remote(repository).split()[0]
 
 
 def get_submission(config) -> CheckpointSubmission:
-    provider = config["provider"]
     repository = config["repository"]
     revision = config["revision"]
     contest_name = config["contest"]
-    contest: Contest | None = None
-
-    if contest_name:
-        try:
-            contest = find_contest(ContestId[contest_name])
-        except ValueError:
-            exit(f"Unknown contest: {contest_name}")
-
-    if not provider:
-        while True:
-            provider = input("Enter git provider (such as github.com or huggingface.co): ")
-            if re.match(VALID_PROVIDER_REGEX, provider):
-                break
-            else:
-                print("Invalid git provider.")
+    contest: Contest | None = find_contest(ContestId[contest_name]) if contest_name else None
 
     if not repository:
         while True:
-            repository = input("Enter repository URL (format: <username>/<repo>): ")
+            repository = input("Enter repository URL (format: https://<git-provider>/<username>/<repo>): ")
             if re.match(VALID_REPO_REGEX, repository):
                 break
             else:
@@ -220,7 +105,7 @@ def get_submission(config) -> CheckpointSubmission:
     if not revision:
         while True:
             try:
-                revision = input("Enter short revision hash (leave blank to fetch latest): ") or get_latest_revision(provider, repository)
+                revision = input("Enter short revision hash (leave blank to fetch latest): ") or get_latest_revision(repository)
             except GitCommandError as e:
                 exit(f"Failed to get latest revision: {e}")
             if re.match(VALID_REVISION_REGEX, revision):
@@ -229,11 +114,12 @@ def get_submission(config) -> CheckpointSubmission:
                 print("Invalid revision hash. Should be 7 characters long.")
 
     if not contest:
+        default_contest = ACTIVE_CONTESTS[0]
         while True:
             print("\nAvailable contests:")
             for c in CONTESTS:
                 print(f"\t- {c.id.name}")
-            contest_id = input(f"Enter the contest (default: {CURRENT_CONTEST.id.name}): ") or CURRENT_CONTEST.id.name
+            contest_id = input(f"Enter the contest (default: {default_contest.id.name}): ") or default_contest.id.name
             try:
                 contest = find_contest(ContestId[contest_id])
                 break
@@ -243,43 +129,45 @@ def get_submission(config) -> CheckpointSubmission:
                 print(f"Invalid contest: {contest_id}")
 
     try:
-        validate(provider, repository, revision, contest)
+        validate(repository, revision, contest)
     except ValueError as e:
         exit(f"Validation failed: {e}")
 
     return CheckpointSubmission(
-        provider=provider,
         repository=repository,
         revision=revision,
-        contest=contest.id,
+        contest_id=contest.id,
     )
 
 
-def main():
+def submit():
     config = get_config(add_extra_args)
 
     substrate = get_substrate(
         subtensor_network=config["subtensor.network"],
-        subtensor_address=config["subtensor.chain_endpoint"]
+        subtensor_address=config["subtensor.chain_endpoint"],
     )
 
-    keypair = load_hotkey_keypair(wallet_name=config["wallet.name"], hotkey_name=config["wallet.hotkey"])
+    keypair = load_hotkey_keypair(
+        wallet_name=config["wallet.name"],
+        hotkey_name=config["wallet.hotkey"],
+    )
 
     submission = get_submission(config)
     enable_benchmarking = config["benchmarking.on"]
 
     if enable_benchmarking or input("Benchmark submission before submitting? (y/N): ").strip().lower() in ("yes", "y"):
         try:
-            start_benchmarking(find_contest(submission.contest), submission)
+            start_benchmarking(find_contest(submission.contest_id), keypair, submission)
         except Exception as e:
-            exit(f"Benchmarking failed, submission cancelled: {e}")
+            logger.critical(f"Benchmarking failed, submission cancelled", exc_info=e)
+            exit(1)
 
     print(
         "\nSubmission info:\n"
-        f"Git Provider: {submission.provider}\n"
         f"Repository:   {submission.repository}\n"
         f"Revision:     {submission.revision}\n"
-        f"Contest:      {submission.contest.name}\n"
+        f"Contest:      {submission.contest_id.name}\n"
     )
     if input("Confirm submission? (Y/n): ").strip().lower() not in ("yes", "y", ""):
         exit("Submission cancelled.")
@@ -292,6 +180,10 @@ def main():
     )
 
     logger.info(f"Submitted {submission} as the info for this miner")
+
+
+def main():
+    submit()
 
 
 if __name__ == '__main__':

@@ -1,6 +1,5 @@
 from struct import pack, unpack
 
-
 _UINT_16_SIZE = 2
 _UINT_32_SIZE = 4
 

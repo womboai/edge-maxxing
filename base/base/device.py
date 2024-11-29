@@ -8,6 +8,10 @@ class Gpu(Enum):
 
 class Device(ABC):
     @abstractmethod
+    def get_name(self):
+        ...
+
+    @abstractmethod
     def get_vram_used(self):
         ...
 
@@ -16,11 +20,11 @@ class Device(ABC):
         ...
 
     @abstractmethod
-    def is_compatible(self):
+    def empty_cache(self):
         ...
 
     @abstractmethod
-    def validate(self):
+    def is_compatible(self):
         ...
 
 
@@ -29,6 +33,9 @@ class CudaDevice(Device):
 
     def __init__(self, gpu: Gpu):
         self._gpu = gpu
+
+    def get_name(self):
+        return "cuda"
 
     def get_vram_used(self):
         import pynvml
@@ -50,6 +57,12 @@ class CudaDevice(Device):
         pynvml.nvmlShutdown()
         return mj / 1000.0  # convert mJ to J
 
+    def empty_cache(self):
+        import torch
+
+        torch.cuda.synchronize()
+        torch.cuda.empty_cache()
+
     def is_compatible(self):
         import torch
 
@@ -57,16 +70,11 @@ class CudaDevice(Device):
 
         return device_name == self._gpu.value
 
-    def validate(self):
-        import torch
-
-        device_name = torch.cuda.get_device_name()
-
-        if not self.is_compatible():
-            raise ContestDeviceValidationError(f"Incompatible device {device_name} when {self._gpu.name} is required.")
-
 
 class MpsDevice(Device):
+    def get_name(self):
+        return "mps"
+
     def get_vram_used(self):
         import torch
 
@@ -75,14 +83,16 @@ class MpsDevice(Device):
     def get_joules(self):
         return 0  # TODO
 
+    def empty_cache(self):
+        import torch
+
+        torch.mps.synchronize()
+        torch.mps.empty_cache()
+
     def is_compatible(self):
         import torch
 
         return torch.backends.mps.is_available()
-
-    def validate(self):
-        if not self.is_compatible():
-            raise ContestDeviceValidationError("MPS is not available but is required.")
 
 
 class ContestDeviceValidationError(Exception):

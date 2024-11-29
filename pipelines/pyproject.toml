@@ -8,12 +8,7 @@ description = "Holder for models & constants to be accessed by multiple reposito
 requires-python = ">=3.10,<3.13"
 version = "1.0.0"
 dependencies = [
-    "pydantic>=2"
-]
-
-[tool.uv]
-dev-dependencies = [
-    "pytype==2024.10.11",
+    "pydantic>=2.9.2"
 ]
 
 [tool.pytype]
@@ -21,5 +16,5 @@ inputs = ["pipelines"]
 
 [tool.setuptools]
 packages = [
-    "pipelines",
+    "pipelines"
 ]

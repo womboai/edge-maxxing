@@ -1,9 +1,9 @@
 from threading import Thread, Event
-from time import sleep
 
-from .. import Contest
+from base.contest import Contest
 
 SAMPLE_RATE_MS = 10
+
 
 class VRamMonitor:
     _contest: Contest
@@ -21,7 +21,7 @@ class VRamMonitor:
     def _monitor(self):
         while not self._stop_flag.is_set():
             self._vram_usage = max(self._vram_usage, self._contest.device.get_vram_used())
-            sleep(SAMPLE_RATE_MS / 1000)
+            self._stop_flag.wait(SAMPLE_RATE_MS / 1000)
 
     def complete(self) -> int:
         self._stop_flag.set()

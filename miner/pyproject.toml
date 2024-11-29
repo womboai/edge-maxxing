@@ -8,11 +8,11 @@ description = "The miner which provides optimized models and checkpoints"
 requires-python = ">=3.10,<3.13"
 version = "1.0.0"
 dependencies = [
-    "edge-maxxing-neuron==1.0.0"
+    "edge-maxxing-base==1.0.0"
 ]
 
 [tool.uv.sources]
-edge-maxxing-neuron = { path = "../neuron", editable = true }
+edge-maxxing-base = { path = "../base", editable = true }
 
 [dependency-groups]
 dev = [
@@ -23,7 +23,7 @@ dev = [
 inputs = ["miner"]
 
 [project.scripts]
-submit_model = 'miner.submit:main'
+submit_model = "miner.submit:main"
 
 [tool.setuptools]
 packages = [
