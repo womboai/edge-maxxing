@@ -76,6 +76,7 @@ class Validator:
         self.uid = list(self.metagraph.nodes.keys()).index(self.keypair.ss58_address)
 
         init_open_telemetry_logging({
+            "service.name": "edge-maxxing-validator",
             "neuron.hotkey": self.keypair.ss58_address,
             "neuron.uid": self.uid,
             "neuron.signature": self.signature,
