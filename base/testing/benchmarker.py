@@ -123,8 +123,9 @@ class Benchmarker:
 
             average_benchmarking_time = self.get_average_benchmarking_time()
             if average_benchmarking_time:
-                eta = (len(submissions) - len(self.benchmarks)) * average_benchmarking_time
-                logger.info(f"{len(self.benchmarks)}/{len(submissions)} benchmarked. Average benchmark time: {average_benchmarking_time:.2f}s, ETA: {timedelta(seconds=int(eta))}")
+                benchmarked = len(self.benchmarks) + len(self.invalid_submissions)
+                eta = (len(submissions) - benchmarked) * average_benchmarking_time
+                logger.info(f"{benchmarked}/{len(submissions)} benchmarked. Average benchmark time: {average_benchmarking_time:.2f}s, ETA: {timedelta(seconds=int(eta))}")
 
         if self._is_done(submissions):
             logger.info("Benchmarking complete")
