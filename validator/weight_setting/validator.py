@@ -112,6 +112,7 @@ class Validator:
 
     @tracer.start_as_current_span("initialize_contest")
     def initialize_contest(self):
+        self.contest_state.benchmarking_state = BenchmarkState.NOT_STARTED
         for api in self.benchmarking_apis:
             api.initialize(
                 uid=self.uid,
@@ -150,6 +151,8 @@ class Validator:
         untested_submissions = self.contest_state.get_untested_submissions()
 
         if not untested_submissions:
+            self.contest_state.benchmarking_state = BenchmarkState.FINISHED
+            self.wandb_manager.send_metrics(self.contest_state)
             self.contest_state.sleep_to_next_contest(self._stop_flag)
             return
 
@@ -164,6 +167,7 @@ class Validator:
             return
 
         self.update_benchmarks(benchmarking_results)
+        self.contest_state.benchmarking_state = BenchmarkState.IN_PROGRESS
         self._stop_flag.wait(BENCHMARK_UPDATE_RATE_BLOCKS * 12)
 
     def update_benchmarks(self, benchmarking_results: list[BenchmarkingResults]):

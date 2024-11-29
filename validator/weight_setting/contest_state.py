@@ -2,16 +2,17 @@ from datetime import datetime, timedelta
 from threading import Event
 
 from fiber.logging_utils import get_logger
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from base.checkpoint import Key, current_time, Submissions, Benchmarks
-from base.contest import Metrics
+from base.contest import Metrics, BenchmarkState
 from weight_setting.winner_selection import get_contestant_scores, get_contestant_ranks, calculate_rank_weights
 
 logger = get_logger(__name__)
 
 
 class ContestState(BaseModel):
+    model_config = ConfigDict(extra="ignore")
     step: int
     benchmarks_version: int
     submissions: Submissions
@@ -20,6 +21,7 @@ class ContestState(BaseModel):
     invalid_submissions: set[Key]
     last_benchmarks: Benchmarks
     average_benchmarking_time: float | None
+    benchmarking_state: BenchmarkState
     contest_end: datetime
 
     def start_new_contest(self, benchmarks_version: int, submissions: Submissions):
@@ -89,6 +91,7 @@ class ContestState(BaseModel):
             invalid_submissions=set(),
             last_benchmarks={},
             average_benchmarking_time=None,
+            benchmarking_state=BenchmarkState.NOT_STARTED,
             contest_end=current_time()
         )
         return state
