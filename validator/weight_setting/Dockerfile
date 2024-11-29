@@ -22,15 +22,13 @@ WORKDIR /app/validator
 RUN ~/.local/bin/uv sync --compile-bytecode --no-dev --frozen --no-install-project --no-install-workspace
 WORKDIR /app
 
-COPY pipelines pipelines
-COPY base base
-COPY validator validator
+COPY --chown=validator:validator pipelines pipelines
+COPY --chown=validator:validator base base
+COPY --chown=validator:validator validator validator
 COPY --chown=validator:validator .git .git
 
 WORKDIR /app/validator
 
 USER root
-
-RUN chown validator:validator uv.lock
 
 ENTRYPOINT ["weight_setting/entrypoint.sh"]

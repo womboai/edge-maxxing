@@ -22,12 +22,14 @@ WORKDIR /api/validator
 RUN ~/.local/bin/uv sync --compile-bytecode --no-dev --frozen --no-install-project --no-install-workspace
 WORKDIR /api
 
-COPY pipelines pipelines
-COPY base base
-COPY validator validator
+COPY --chown=api:api pipelines pipelines
+COPY --chown=api:api base base
+COPY --chown=api:api validator validator
 COPY --chown=api:api .git .git
 
 WORKDIR /api/validator
 USER root
+
 EXPOSE 8000
+
 ENTRYPOINT ["submission_tester/entrypoint.sh"]

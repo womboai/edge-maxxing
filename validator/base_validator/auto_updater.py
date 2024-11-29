@@ -33,12 +33,20 @@ class AutoUpdater:
                     self._stop_flag.wait(sleep_minutes * 60 - current_time.tm_sec)
             except Exception as e:
                 logger.error(f"Error occurred while checking for updates, attempting to fix the issue by restarting", exc_info=e)
+                self._stop_flag.wait(1)
                 self._restart()
 
     def _check_for_updates(self):
         logger.info("Checking for updates...")
         repo = git.Repo(search_parent_directories=True)
         current_version = repo.head.commit.hexsha
+
+        try:
+            if repo.is_dirty():
+                logger.info("Stashing local changes...")
+                repo.git.stash(include_untracked=True)
+        except Exception as e:
+            logger.error("Unable to stash local changes", exc_info=e)
 
         repo.remotes.origin.pull("main")
 
