@@ -57,6 +57,9 @@ class ContestState(BaseModel):
         stop_flag.wait(next_contest_time.total_seconds())
 
     def get_scores(self) -> dict[Key, float]:
+        if not self.baseline:
+            return {}
+
         return get_contestant_scores(
             submissions=self.submissions,
             benchmarks=self.benchmarks,
