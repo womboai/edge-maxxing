@@ -252,7 +252,6 @@ class InferenceSandbox:
 
 def check_process(process: Popen):
     if process.poll():
-        log_process(process)
         raise InvalidSubmissionError(f"Inference crashed with exit code {process.returncode}")
 
 
@@ -262,4 +261,4 @@ def log_process(process: Popen):
     if stdout:
         logger.info(stdout)
     if stderr:
-        logger.error(stderr)
+        logger.info(stderr)
