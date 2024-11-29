@@ -22,8 +22,14 @@ def get_contestant_ranks(scores: dict[Key, float]) -> dict[Key, int]:
     if not scores:
         return {}
 
-    i = 0
     rank = 0
+
+    if len(scores) == 1:
+        hotkey = next(iter(scores))
+
+        return { hotkey: rank }
+
+    i = 0
 
     scores = list(sorted(scores.items(), key=itemgetter(1), reverse=True))
     score_values = list(map(itemgetter(1), scores))
