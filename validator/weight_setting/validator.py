@@ -76,8 +76,10 @@ class Validator:
         self.uid = list(self.metagraph.nodes.keys()).index(self.keypair.ss58_address)
 
         init_open_telemetry_logging({
+            "neuron.hotkey": self.keypair.ss58_address,
             "neuron.uid": self.uid,
             "neuron.signature": self.signature,
+            "netuid": self.metagraph.netuid,
             "subtensor.chain_endpoint": self.substrate.url,
             "validator.version": self.validator_version,
         })
@@ -113,13 +115,6 @@ class Validator:
     @tracer.start_as_current_span("initialize_contest")
     def initialize_contest(self):
         self.contest_state.benchmarking_state = BenchmarkState.NOT_STARTED
-        for api in self.benchmarking_apis:
-            api.initialize(
-                uid=self.uid,
-                signature=self.signature,
-                substrate_url=self.substrate.url,
-            )
-
         self.metagraph.sync_nodes()
         self.contest_state.start_new_contest(
             benchmarks_version=BENCHMARKS_VERSION,
@@ -159,6 +154,13 @@ class Validator:
         benchmarking_results = [api.results() for api in self.benchmarking_apis]
 
         if any(result.state == BenchmarkState.NOT_STARTED for result in benchmarking_results):
+            for api in self.benchmarking_apis:
+                api.initialize(
+                    uid=self.uid,
+                    signature=self.signature,
+                    netuid=self.metagraph.netuid,
+                    substrate_url=self.substrate.url,
+                )
             send_submissions_to_api(
                 version=self.validator_version,
                 all_apis=self.benchmarking_apis,

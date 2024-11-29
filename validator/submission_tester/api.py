@@ -138,8 +138,10 @@ def initialize(
     _authenticate_request(x_nonce, signature)
 
     init_open_telemetry_logging({
+        "neuron.hotkey": keypair.ss58_address,
         "neuron.uid": init_request.uid,
         "neuron.signature": init_request.signature,
+        "netuid": init_request.netuid,
         "subtensor.chain_endpoint": init_request.substrate_url,
         "api.version": api_version,
     })

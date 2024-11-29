@@ -25,4 +25,5 @@ class BenchmarkingStartRequest(BaseModel):
 class BenchmarkingInitializeRequest(BaseModel):
     uid: Uid
     signature: str
+    netuid: Uid
     substrate_url: str

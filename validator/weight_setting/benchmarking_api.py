@@ -23,7 +23,7 @@ class BenchmarkingApi:
         self._api = api
         self._keypair = keypair
 
-    def initialize(self, uid: Uid, signature: str, substrate_url: str):
+    def initialize(self, uid: Uid, signature: str, netuid: Uid, substrate_url: str):
         requests.post(
             f"{self._api}/initialize",
             headers={
@@ -33,6 +33,7 @@ class BenchmarkingApi:
             data=BenchmarkingInitializeRequest(
                 uid=uid,
                 signature=signature,
+                netuid=netuid,
                 substrate_url=substrate_url,
             ).model_dump_json(),
 
