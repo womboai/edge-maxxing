@@ -56,29 +56,29 @@ class WeightSetter:
     def _run(self):
         while not self._stop_flag.is_set():
             try:
-                self.set_weights()
-                logger.info(f"Successfully set weights, sleeping for {self._epoch_length} blocks")
-                self._stop_flag.wait(self._epoch_length * 12)
+                if self.set_weights():
+                    logger.info(f"Successfully set weights, sleeping for {self._epoch_length} blocks")
+                    self._stop_flag.wait(self._epoch_length * 12)
+                else:
+                    raise RuntimeError("Set weights attempt was unsuccessful")
             except Exception as e:
                 blocks_to_sleep = randint(2, 10)
                 logger.error(f"Failed to set weights, retrying in {blocks_to_sleep} blocks: {e}")
                 self._stop_flag.wait(blocks_to_sleep * 12)
 
     @tracer.start_as_current_span("set_weights")
-    def set_weights(self):
+    def set_weights(self) -> bool:
         contest_state = self._contest_state()
 
         if not contest_state:
             logger.error("Will not set new weights as the contest state has not been set, setting to all ones")
-            self._set_equal_weights()
-            return
+            return self._set_equal_weights()
 
         benchmarks = contest_state.last_benchmarks
 
         if not contest_state.baseline:
             logger.error("Will not set new weights as the baseline benchmarks have not been set, setting to all ones")
-            self._set_equal_weights()
-            return
+            return self._set_equal_weights()
 
         if not contest_state.last_benchmarks:
             if contest_state.benchmarks:
@@ -86,8 +86,7 @@ class WeightSetter:
                 benchmarks = contest_state.benchmarks
             else:
                 logger.error("Will not set new weights as the previous day's benchmarks have not been set, setting to all ones")
-                self._set_equal_weights()
-                return
+                return self._set_equal_weights()
 
         self._metagraph.sync_nodes()
         blacklist = blacklisted_keys()
@@ -102,16 +101,16 @@ class WeightSetter:
 
         weights_by_key = contest_state.calculate_weights(ranks=ranks)
 
-        self._set_weights([
+        return self._set_weights([
             weights_by_key.get(key, 0)
             for key in self._metagraph.nodes.keys()
         ])
 
-    def _set_equal_weights(self):
-        self._set_weights([1.0] * len(self._metagraph.nodes))
+    def _set_equal_weights(self) -> bool:
+        return self._set_weights([1.0] * len(self._metagraph.nodes))
 
-    def _set_weights(self, weights: list[float]):
-        set_node_weights(
+    def _set_weights(self, weights: list[float]) -> bool:
+        return set_node_weights(
             self._substrate(),
             self._keypair,
             node_ids=list(range(len(self._metagraph.nodes))),
