@@ -25,10 +25,14 @@ class ContestState(BaseModel):
     contest_end: datetime
 
     def start_new_contest(self, benchmarks_version: int, submissions: Submissions):
+        logger.info("Starting a new contest")
         self.benchmarks_version = benchmarks_version
         self.submissions = submissions
 
-        self.last_benchmarks = self.benchmarks
+        if self.benchmarking_state == BenchmarkState.FINISHED:
+            logger.info("Updating benchmarks for weight setting")
+            self.last_benchmarks = self.benchmarks
+
         self.benchmarks.clear()
         self.baseline = None
         self.average_benchmarking_time = None
@@ -38,6 +42,7 @@ class ContestState(BaseModel):
         if now.hour >= 12:
             end_time += timedelta(days=1)
         self.contest_end = end_time
+        self.benchmarking_state = BenchmarkState.NOT_STARTED
 
     def get_contest_start(self) -> datetime:
         return self.contest_end - timedelta(days=1)

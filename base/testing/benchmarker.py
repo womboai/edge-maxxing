@@ -91,6 +91,7 @@ class Benchmarker:
                 return
             except Exception as e:
                 logger.error("Failed to generate baseline samples, retrying in 10 minutes", exc_info=e)
+                contest.device.empty_cache()
                 self._stop_flag.wait(600)
 
     def benchmark_submissions(self, contest: Contest, submissions: dict[Key, RepositoryInfo]):
