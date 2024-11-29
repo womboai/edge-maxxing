@@ -91,6 +91,11 @@ class Validator:
             signature=self.signature,
         )
 
+        contest_state = self.state_manager.load_state()
+        if contest_state:
+            self.contest_state = contest_state
+            self.wandb_manager.init_wandb(self.contest_state)
+
         self.weight_setter: WeightSetter = WeightSetter(
             version=self.validator_version,
             epoch_length=self.config["epoch_length"],
@@ -100,11 +105,6 @@ class Validator:
             uid=self.uid,
             contest_state=lambda: self.contest_state,
         )
-
-        contest_state = self.state_manager.load_state()
-        if contest_state:
-            self.contest_state = contest_state
-            self.wandb_manager.init_wandb(self.contest_state)
 
         self.benchmarking_apis = [BenchmarkingApi(api=api, keypair=self.keypair) for api in self.config["benchmarker_api"]]
 
