@@ -62,7 +62,7 @@ class WeightSetter:
                 else:
                     raise RuntimeError("Set weights attempt was unsuccessful")
             except Exception as e:
-                blocks_to_sleep = randint(2, 10)
+                blocks_to_sleep = randint(10, 50)
                 logger.error(f"Failed to set weights, retrying in {blocks_to_sleep} blocks: {e}")
                 self._stop_flag.wait(blocks_to_sleep * 12)
 
@@ -71,21 +71,21 @@ class WeightSetter:
         contest_state = self._contest_state()
 
         if not contest_state:
-            logger.error("Will not set new weights as the contest state has not been set, setting to all ones")
+            logger.warning("Will not set new weights as the contest state has not been set, setting to all ones")
             return self._set_equal_weights()
 
         benchmarks = contest_state.last_benchmarks
 
         if not contest_state.baseline:
-            logger.error("Will not set new weights as the baseline benchmarks have not been set, setting to all ones")
+            logger.warning("Will not set new weights as the baseline benchmarks have not been set, setting to all ones")
             return self._set_equal_weights()
 
         if not contest_state.last_benchmarks:
             if contest_state.benchmarks:
-                logger.error("Setting weights to current benchmarks as the previous day's benchmarks have not been set")
+                logger.info("Setting weights to current benchmarks as the previous day's benchmarks have not been set")
                 benchmarks = contest_state.benchmarks
             else:
-                logger.error("Will not set new weights as the previous day's benchmarks have not been set, setting to all ones")
+                logger.warning("Will not set new weights as the previous day's benchmarks have not been set, setting to all ones")
                 return self._set_equal_weights()
 
         self._metagraph.sync_nodes()
