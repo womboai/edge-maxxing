@@ -63,13 +63,13 @@ class ContestState(BaseModel):
         logger.info(f"Sleeping until next contest: {next_contest_time}")
         stop_flag.wait(next_contest_time.total_seconds())
 
-    def get_scores(self) -> dict[Key, float]:
+    def get_scores(self, benchmarks: Benchmarks) -> dict[Key, float]:
         if not self.baseline:
             return {}
 
         return get_contestant_scores(
             submissions=self.submissions,
-            benchmarks=self.benchmarks,
+            benchmarks=benchmarks,
             baseline=self.baseline,
         )
 

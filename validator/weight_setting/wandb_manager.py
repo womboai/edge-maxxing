@@ -76,7 +76,7 @@ class WandbManager:
             return
 
         data = {
-            "scores": scores or contest_state.get_scores(),
+            "scores": scores or contest_state.get_scores(contest_state.benchmarks),
             "ranks": ranks or contest_state.get_ranks(scores),
         } | contest_state.model_dump()
 

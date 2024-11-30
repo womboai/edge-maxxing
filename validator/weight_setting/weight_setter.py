@@ -96,11 +96,14 @@ class WeightSetter:
         blacklist = blacklisted_keys()
         for hotkey, node in self._metagraph.nodes.items():
             if is_blacklisted(blacklist, hotkey, node.coldkey):
-                benchmarks.pop(hotkey, None)
+                contest_state.benchmarks.pop(hotkey, None)
+                contest_state.last_benchmarks.pop(hotkey, None)
+                contest_state.submissions.pop(hotkey, None)
             if not hotkey in contest_state.submissions:
-                benchmarks.pop(hotkey, None)
+                contest_state.benchmarks.pop(hotkey, None)
+                contest_state.last_benchmarks.pop(hotkey, None)
 
-        scores = contest_state.get_scores()
+        scores = contest_state.get_scores(benchmarks)
         ranks = contest_state.get_ranks(scores)
 
         weights_by_key = contest_state.calculate_weights(ranks=ranks)
