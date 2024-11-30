@@ -10,6 +10,7 @@ from substrateinterface import SubstrateInterface, Keypair
 
 from base.inputs_api import blacklisted_keys, is_blacklisted
 from weight_setting.contest_state import ContestState
+from weight_setting.wandb_manager import WandbManager
 
 logger = get_logger(__name__)
 tracer = trace.get_tracer(__name__)
@@ -25,6 +26,7 @@ class WeightSetter:
     _keypair: Keypair
     _uid: int
     _contest_state: Callable[[], ContestState]
+    _wandb_manager: WandbManager
     _weights_version: int
 
     def __init__(
@@ -36,6 +38,7 @@ class WeightSetter:
         keypair: Keypair,
         uid: int,
         contest_state: Callable[[], ContestState],
+        wandb_manager: WandbManager,
     ):
         self._epoch_length = epoch_length
         self._substrate = substrate
@@ -43,6 +46,7 @@ class WeightSetter:
         self._keypair = keypair
         self._uid = uid
         self._contest_state = contest_state
+        self._wandb_manager = wandb_manager
 
         parts: list[str] = version.split(".")
         self._weights_version = int(parts[0]) * 10000 + int(parts[1]) * 100 + int(parts[2])
@@ -101,6 +105,7 @@ class WeightSetter:
 
         weights_by_key = contest_state.calculate_weights(ranks=ranks)
 
+        self._wandb_manager.send_metrics(contest_state, scores, ranks)
         return self._set_weights([
             weights_by_key.get(key, 0)
             for key in self._metagraph.nodes.keys()

@@ -4,7 +4,7 @@ from typing import Any
 import wandb
 from wandb.apis.public import Run
 
-from base.checkpoint import Uid
+from base.checkpoint import Uid, Key
 from .contest_state import ContestState
 
 
@@ -66,14 +66,18 @@ class WandbManager:
             ],
         )
 
-    def send_metrics(self, contest_state: ContestState):
+    def send_metrics(
+        self,
+        contest_state: ContestState,
+        scores: dict[Key, float] | None = None,
+        ranks: dict[Key, int] | None = None
+    ):
         if not self._run or self.config["wandb.off"]:
             return
 
-        scores = contest_state.get_scores()
         data = {
-            "scores": scores,
-            "ranks": contest_state.get_ranks(scores),
+            "scores": scores or contest_state.get_scores(),
+            "ranks": ranks or contest_state.get_ranks(scores),
         } | contest_state.model_dump()
 
         self._run.log(data=data)

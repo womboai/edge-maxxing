@@ -107,6 +107,7 @@ class Validator:
             keypair=self.keypair,
             uid=self.uid,
             contest_state=lambda: self.contest_state,
+            wandb_manager=self.wandb_manager,
         )
 
         self.benchmarking_apis = [BenchmarkingApi(api=api, keypair=self.keypair) for api in self.config["benchmarker_api"]]
