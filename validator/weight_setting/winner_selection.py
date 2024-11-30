@@ -34,13 +34,20 @@ def get_contestant_ranks(scores: dict[Key, float]) -> dict[Key, int]:
     scores = list(sorted(scores.items(), key=itemgetter(1), reverse=True))
     score_values = list(map(itemgetter(1), scores))
 
-    deviation = median(score_values[i] - score_values[i + 1] for i in range(len(score_values) - 1))
+    deviation = median(
+        score_values[i] - score_values[i + 1]
+        for i in range(len(score_values) - 1)
+        if (
+            score_values[i + 1] > 0 and
+            score_values[i] - score_values[i + 1] > 0.0001
+        )
+    )
 
     scores = iter(scores)
 
     hotkey, last_score = next(scores)
 
-    ranks = {hotkey: rank}
+    ranks = { hotkey: rank }
 
     for hotkey, score in scores:
         difference = last_score - score
