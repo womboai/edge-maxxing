@@ -117,8 +117,8 @@ CONTESTS = [
         output_comparator=partial(ImageOutputComparator, CUDA_4090_DEVICE),
         baseline_repository=RepositoryInfo(url="https://github.com/womboai/flux-schnell-edge-inference", revision="fbfb8f0"),
         metric_weights={
-            MetricType.SIMILARITY_SCORE: 3,
-            MetricType.VRAM_USED: 3,
+            MetricType.SIMILARITY_SCORE: 1,
+            MetricType.VRAM_USED: 1,
             MetricType.GENERATION_TIME: 1,
         }
     ),
