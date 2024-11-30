@@ -37,7 +37,10 @@ def get_contestant_ranks(scores: dict[Key, float]) -> dict[Key, int]:
     deviation = median(
         score_values[i] - score_values[i + 1]
         for i in range(len(score_values) - 1)
-        if score_values[i + 1] > 0 and score_values[i] - score_values[i + 1] > 0.0001,
+        if (
+            score_values[i + 1] > 0 and
+            score_values[i] - score_values[i + 1] > 0.0001
+        )
     )
 
     scores = iter(scores)
