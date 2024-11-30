@@ -148,6 +148,7 @@ class Validator:
 
         if not untested_submissions:
             self.contest_state.benchmarking_state = BenchmarkState.FINISHED
+            self.state_manager.save_state(self.contest_state)
             self.wandb_manager.send_metrics(self.contest_state)
             self.contest_state.sleep_to_next_contest(self._stop_flag)
             return
@@ -182,8 +183,7 @@ class Validator:
 
         if baseline and baseline != self.contest_state.baseline:
             logger.info(f"Updating baseline to {baseline}")
-
-        self.contest_state.baseline = baseline
+            self.contest_state.baseline = baseline
 
         for result in benchmarking_results:
             for key in result.benchmarks.keys() - self.contest_state.benchmarks.keys():
@@ -198,8 +198,7 @@ class Validator:
             benchmarked = len(self.contest_state.benchmarks) + len(self.contest_state.invalid_submissions)
             eta = (len(self.contest_state.submissions) - benchmarked) * average_benchmarking_time
             logger.info(f"{benchmarked}/{len(self.contest_state.submissions)} benchmarked. Average benchmark time: {average_benchmarking_time:.2f}s, ETA: {timedelta(seconds=int(eta))}")
-
-        self.contest_state.average_benchmarking_time = average_benchmarking_time
+            self.contest_state.average_benchmarking_time = average_benchmarking_time
 
     def step(self):
         return self.contest_state.step if self.contest_state else 0
