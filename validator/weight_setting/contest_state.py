@@ -34,6 +34,7 @@ class ContestState(BaseModel):
             self.last_benchmarks = self.benchmarks
 
         self.benchmarks.clear()
+        self.invalid_submissions.clear()
         self.baseline = None
         self.average_benchmarking_time = None
 

@@ -286,6 +286,7 @@ dependencies = [
     { name = "edge-maxxing-pipelines" },
     { name = "fiber" },
     { name = "gitpython" },
+    { name = "netaddr" },
     { name = "opencv-python" },
     { name = "opentelemetry-instrumentation" },
     { name = "pynvml" },
@@ -300,6 +301,7 @@ requires-dist = [
     { name = "edge-maxxing-pipelines", editable = "../pipelines" },
     { name = "fiber", git = "https://github.com/rayonlabs/fiber.git?rev=1.0.0" },
     { name = "gitpython", specifier = ">=3.1.43" },
+    { name = "netaddr", specifier = ">=1.3.0" },
     { name = "opencv-python", specifier = ">=4.10.0.84" },
     { name = "opentelemetry-instrumentation", specifier = ">=0.49b2" },
     { name = "pynvml", specifier = ">=11.5.3" },
@@ -659,6 +661,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c1/90/f5b3a788c4b3d92190e3345d1afa3dd107d5f16b8194e1f61b72582ee9bd/msgspec-0.18.6-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:db1d8626748fa5d29bbd15da58b2d73af25b10aa98abf85aab8028119188ed57", size = 214844 },
     { url = "https://files.pythonhosted.org/packages/ce/0b/d4cc1b09f8dfcc6cc4cc9739c13a86e093fe70257b941ea9feb15df22996/msgspec-0.18.6-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:d70cb3d00d9f4de14d0b31d38dfe60c88ae16f3182988246a9861259c6722af6", size = 217113 },
     { url = "https://files.pythonhosted.org/packages/3f/76/30d8f152299f65c85c46a2cbeaf95ad1d18516b5ce730acdaef696d4cfe6/msgspec-0.18.6-cp312-cp312-win_amd64.whl", hash = "sha256:1003c20bfe9c6114cc16ea5db9c5466e49fae3d7f5e2e59cb70693190ad34da0", size = 187184 },
+]
+
+[[package]]
+name = "netaddr"
+version = "1.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/54/90/188b2a69654f27b221fba92fda7217778208532c962509e959a9cee5229d/netaddr-1.3.0.tar.gz", hash = "sha256:5c3c3d9895b551b763779ba7db7a03487dc1f8e3b385af819af341ae9ef6e48a", size = 2260504 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/12/cc/f4fe2c7ce68b92cbf5b2d379ca366e1edae38cccaad00f69f529b460c3ef/netaddr-1.3.0-py3-none-any.whl", hash = "sha256:c2c6a8ebe5554ce33b7d5b3a306b71bbb373e000bbbf2350dd5213cc56e3dbbe", size = 2262023 },
 ]
 
 [[package]]

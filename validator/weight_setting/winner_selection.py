@@ -87,6 +87,8 @@ def calculate_rank_weights(
     weights = {}
 
     for index, hotkeys in enumerate(rank_hotkeys):
+        if not hotkeys:
+            continue
         incentive_pool = WINNER_PERCENTAGE * ((1 - WINNER_PERCENTAGE) ** index)
         score = incentive_pool / len(hotkeys)
 
