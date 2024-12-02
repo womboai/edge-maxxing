@@ -35,6 +35,9 @@ def start_benchmarking(contest: Contest, keypair: Keypair, submission: Checkpoin
             submissions={keypair.ss58_address: submission},
         )
 
+        print("\nBenchmarking results:")
+        print(benchmarker.benchmarks[keypair.ss58_address])
+
 
 def add_extra_args(argument_parser: ArgumentParser):
     argument_parser.add_argument(

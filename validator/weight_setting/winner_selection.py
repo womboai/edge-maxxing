@@ -15,6 +15,7 @@ def get_contestant_scores(
     return {
         key: submissions[key].contest().calculate_score(baseline, benchmark)
         for key, benchmark in benchmarks.items()
+        if key in submissions
     }
 
 
