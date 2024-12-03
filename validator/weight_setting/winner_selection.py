@@ -3,8 +3,7 @@ from statistics import median
 
 from base.checkpoint import Key, Submissions, Benchmarks
 from base.contest import Metrics
-
-WINNER_PERCENTAGE = 0.80
+from base.inputs_api import get_inputs_state
 
 
 def get_contestant_scores(
@@ -71,6 +70,7 @@ def calculate_rank_weights(
     if not ranks:
         return {}
 
+    winner_percentage = get_inputs_state().winner_percentage
     ranks = iter(sorted(ranks.items(), key=lambda rank: (rank[1], submitted_blocks[rank[0]])))
 
     last_rank = None
@@ -90,7 +90,7 @@ def calculate_rank_weights(
     for index, hotkeys in enumerate(rank_hotkeys):
         if not hotkeys:
             continue
-        incentive_pool = WINNER_PERCENTAGE * ((1 - WINNER_PERCENTAGE) ** index)
+        incentive_pool = winner_percentage * ((1 - winner_percentage) ** index)
         score = incentive_pool / len(hotkeys)
 
         for hotkey in hotkeys:

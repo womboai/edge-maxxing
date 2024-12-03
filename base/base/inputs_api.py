@@ -1,11 +1,38 @@
 import os
 
 import requests
-from pydantic import RootModel
+from cachetools import TTLCache, cached
+from pydantic import RootModel, BaseModel
 
 from pipelines import TextToImageRequest
+from .contest import ContestId, MetricType
 
 INPUTS_ENDPOINT = os.getenv("INPUTS_ENDPOINT", "https://edge-inputs.api.wombo.ai")
+
+
+class InputsState(BaseModel):
+    benchmarks_version: int
+    delayed_weight_setting: bool
+    winner_percentage: float
+    active_contests: dict[ContestId, dict[MetricType, int]]
+
+    def get_metric_weights(self, contest_id: ContestId) -> dict[MetricType, int]:
+        if not contest_id in self.active_contests:
+            raise ValueError(f"Contest {contest_id} is not active")
+
+        return self.active_contests[contest_id]
+
+    def get_active_contests(self) -> set[ContestId]:
+        return set(self.active_contests.keys())
+
+
+class Blacklist(BaseModel):
+    coldkeys: set[str]
+    hotkeys: set[str]
+    dependencies: set[str]
+
+    def is_blacklisted(self, hotkey: str, coldkey: str) -> bool:
+        return hotkey in self.hotkeys or coldkey in self.coldkeys
 
 
 def random_inputs() -> list[TextToImageRequest]:
@@ -20,7 +47,30 @@ def random_inputs() -> list[TextToImageRequest]:
     return RootModel[list[TextToImageRequest]].model_validate_json(response.text).root
 
 
-def blacklisted_keys() -> dict:
+@cached(cache=TTLCache(maxsize=1, ttl=300))
+def get_inputs_state() -> InputsState:
+    response = requests.get(
+        f"{INPUTS_ENDPOINT}/state", headers={
+            "Content-Type": "application/json"
+        },
+    )
+
+    response.raise_for_status()
+
+    data = response.json()
+    return InputsState(
+        benchmarks_version=data["benchmarks_version"],
+        delayed_weight_setting=data["delayed_weight_setting"],
+        winner_percentage=data["winner_percentage"],
+        active_contests={
+            ContestId[contest_name.upper()]: {MetricType[metric_type.upper()]: int(weight) for metric_type, weight in metric_weights.items()}
+            for contest_name, metric_weights in data["active_contests"].items()
+        }
+    )
+
+
+@cached(cache=TTLCache(maxsize=1, ttl=300))
+def get_blacklist() -> Blacklist:
     response = requests.get(
         f"{INPUTS_ENDPOINT}/blacklist", headers={
             "Content-Type": "application/json"
@@ -28,8 +78,4 @@ def blacklisted_keys() -> dict:
     )
 
     response.raise_for_status()
-    return response.json()
-
-
-def is_blacklisted(blacklist: dict, hotkey: str, coldkey: str):
-    return hotkey in blacklist["hotkeys"] or coldkey in blacklist["coldkeys"]
+    return Blacklist.model_validate(response.json())

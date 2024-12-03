@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from base.checkpoint import SPEC_VERSION
 from base.contest import RepositoryInfo, Contest, Metrics
+from base.inputs_api import get_blacklist
 from pipelines import TextToImageRequest
 from .vram_monitor import VRamMonitor
 
@@ -32,10 +33,6 @@ MAX_HF_MODEL_SIZE_GB = 100
 MAX_REPO_SIZE_MB = 16
 
 LOAD_TIMEOUT = 240
-
-BLACKLISTED_DEPENDENCIES = [
-    "pyarmor"
-]
 
 logger = get_logger(__name__)
 tracer = trace.get_tracer(__name__)
@@ -121,7 +118,7 @@ class InferenceSandbox:
 
     @tracer.start_as_current_span("check_blacklist")
     def _check_blacklist(self):
-        self._run(BLACKLIST, BLACKLISTED_DEPENDENCIES)
+        self._run(BLACKLIST, list(get_blacklist().dependencies))
 
     @tracer.start_as_current_span("sync_uv")
     def _sync_uv(self):
