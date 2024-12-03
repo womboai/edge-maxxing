@@ -94,12 +94,16 @@ class Benchmarker:
                 contest.device.empty_cache()
                 self._stop_flag.wait(600)
 
-    def benchmark_submissions(self, contest: Contest, submissions: dict[Key, RepositoryInfo]):
-        self.state = BenchmarkState.IN_PROGRESS
+    def reset(self):
+        self.state = BenchmarkState.NOT_STARTED
         self.benchmarks.clear()
         self.invalid_submissions.clear()
         self.baseline = None
         self.submission_times.clear()
+
+    def benchmark_submissions(self, contest: Contest, submissions: dict[Key, RepositoryInfo]):
+        self.reset()
+        self.state = BenchmarkState.IN_PROGRESS
 
         inputs = random_inputs()
         self._benchmark_baseline(contest, inputs)
