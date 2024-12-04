@@ -61,8 +61,11 @@ class Benchmarker:
             min_similarity=min_similarity,
         )
 
+    def _get_untested_submissions(self, submissions: dict[Key, RepositoryInfo]) -> list[Key]:
+        return list(submissions.keys() - self.benchmarks.keys() - self.invalid_submissions)
+
     def _is_done(self, submissions: dict[Key, RepositoryInfo]) -> bool:
-        return len(self.benchmarks) + len(self.invalid_submissions) == len(submissions)
+        return not self._get_untested_submissions(submissions)
 
     @tracer.start_as_current_span("benchmark")
     def _benchmark_submission(
@@ -111,7 +114,7 @@ class Benchmarker:
         logger.info(f"Benchmarking {len(submissions)} submissions")
         while not self._is_done(submissions) and self.baseline and not self._stop_flag.is_set():
             start_time = perf_counter()
-            key = choice(list(submissions.keys() - self.benchmarks.keys()))
+            key = choice(self._get_untested_submissions(submissions))
             submission = submissions[key]
             logger.info(f"Benchmarking submission '{submission.url}' with revision '{submission.revision}'")
             try:
@@ -141,7 +144,7 @@ class Benchmarker:
 
     def get_average_benchmarking_time(self) -> float | None:
         return (
-            sum(self.submission_times) / len(self.submission_times)
+            mean(self.submission_times)
             if self.submission_times
             else None
         )
