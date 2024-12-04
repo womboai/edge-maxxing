@@ -15,6 +15,7 @@ from substrateinterface import SubstrateInterface, Keypair
 from base.checkpoint import Uid
 from base.config import get_config
 from base.contest import BenchmarkState
+from base.inputs_api import get_inputs_state
 from base.submissions import get_submissions
 from base_validator.api_data import BenchmarkingResults
 from base_validator.auto_updater import AutoUpdater
@@ -27,7 +28,6 @@ from .validator_args import add_args
 from .weight_setter import WeightSetter
 
 BENCHMARK_UPDATE_RATE_BLOCKS = 10
-BENCHMARKS_VERSION = 1
 
 logger = get_logger(__name__)
 tracer = trace.get_tracer(__name__)
@@ -115,10 +115,10 @@ class Validator:
         self.run()
 
     @tracer.start_as_current_span("initialize_contest")
-    def initialize_contest(self):
+    def initialize_contest(self, benchmarks_version: int):
         self.metagraph.sync_nodes()
         self.contest_state.start_new_contest(
-            benchmarks_version=BENCHMARKS_VERSION,
+            benchmarks_version=benchmarks_version,
             submissions=get_submissions(
                 substrate=self.substrate,
                 metagraph=self.metagraph,
@@ -137,11 +137,13 @@ class Validator:
 
     @tracer.start_as_current_span("do_step")
     def do_step(self):
-        if not self.contest_state:
-            self.contest_state = ContestState.create(BENCHMARKS_VERSION)
+        benchmarks_version = get_inputs_state().benchmarks_version
 
-        if self.contest_state.is_ended() or self.contest_state.benchmarks_version != BENCHMARKS_VERSION:
-            self.initialize_contest()
+        if not self.contest_state:
+            self.contest_state = ContestState.create(benchmarks_version)
+
+        if self.contest_state.is_ended() or self.contest_state.benchmarks_version != benchmarks_version:
+            self.initialize_contest(benchmarks_version)
             return
 
         untested_submissions = self.contest_state.get_untested_submissions()
@@ -228,6 +230,7 @@ class Validator:
             except Exception as e:
                 logger.error(f"Error during step {self.step()}", exc_info=e)
                 self.substrate = get_substrate(subtensor_address=self.substrate.url)
+                self._stop_flag.wait(12)
 
 
 def main():

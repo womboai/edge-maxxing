@@ -9,7 +9,8 @@ from fiber.logging_utils import get_logger
 from substrateinterface import Keypair
 
 from base.checkpoint import Key, Uid, Submissions
-from base.contest import ContestId, RepositoryInfo, ACTIVE_CONTESTS
+from base.contest import ContestId, RepositoryInfo
+from base.inputs_api import get_inputs_state
 from base_validator.api_data import BenchmarkingStartRequest, ApiMetadata, BenchmarkingResults, BenchmarkingInitializeRequest
 
 logger = get_logger(__name__)
@@ -105,8 +106,9 @@ def send_submissions_to_api(version: str, all_apis: list[BenchmarkingApi], submi
 
             contest_api_assignment[lowest_contest_id].append(api)
 
+    active_contests = get_inputs_state().get_active_contests()
     for contest_id, apis in contest_api_assignment.items():
-        if not contest_id in ACTIVE_CONTESTS:
+        if not contest_id in active_contests:
             continue
         if contest_id not in submissions_by_contest:
             raise RuntimeError(f"No API compatible with contest type {contest_id.name}")

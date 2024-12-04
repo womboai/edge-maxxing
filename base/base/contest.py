@@ -66,7 +66,6 @@ class Contest:
     device: Device
     output_comparator: Callable[[], OutputComparator]
     baseline_repository: RepositoryInfo
-    metric_weights: dict[MetricType, int]
 
     def __init__(
         self,
@@ -74,19 +73,19 @@ class Contest:
         device: Device,
         output_comparator: Callable[[], OutputComparator],
         baseline_repository: RepositoryInfo,
-        metric_weights: dict[MetricType, int]
     ):
         self.id = contest_id
         self.device = device
         self.output_comparator = output_comparator
         self.baseline_repository = baseline_repository
-        self.metric_weights = metric_weights
 
     def calculate_score(self, baseline: Metrics, benchmark: Benchmark) -> float:
         if benchmark.min_similarity < SIMILARITY_SCORE_THRESHOLD:
             return 0.0
 
-        total_weight = sum(self.metric_weights.values())
+        from .inputs_api import get_inputs_state
+        metric_weights = get_inputs_state().get_metric_weights(self.id)
+        total_weight = sum(metric_weights.values())
 
         scale = 1 / (1 - SIMILARITY_SCORE_THRESHOLD)
         similarity = sqrt((benchmark.average_similarity - SIMILARITY_SCORE_THRESHOLD) * scale)
@@ -95,7 +94,7 @@ class Contest:
             if baseline_value == 0:
                 return 0
             relative_improvement = (baseline_value - benchmark_value) / baseline_value
-            return (relative_improvement * self.metric_weights.get(metric_type, 0)) / total_weight
+            return (relative_improvement * metric_weights.get(metric_type, 0)) / total_weight
 
         score = sum([
             normalize(baseline.generation_time, benchmark.metrics.generation_time, MetricType.GENERATION_TIME),
@@ -105,7 +104,7 @@ class Contest:
             normalize(baseline.load_time, benchmark.metrics.load_time, MetricType.LOAD_TIME)
         ])
 
-        return score * similarity * self.metric_weights.get(MetricType.SIMILARITY_SCORE, 0) / total_weight
+        return score * similarity * metric_weights.get(MetricType.SIMILARITY_SCORE, 0) / total_weight
 
 
 CUDA_4090_DEVICE = CudaDevice(gpu=Gpu.NVIDIA_RTX_4090)
@@ -116,21 +115,12 @@ CONTESTS = [
         device=CUDA_4090_DEVICE,
         output_comparator=partial(ImageOutputComparator, CUDA_4090_DEVICE),
         baseline_repository=RepositoryInfo(url="https://github.com/womboai/flux-schnell-edge-inference", revision="fbfb8f0"),
-        metric_weights={
-            MetricType.SIMILARITY_SCORE: 3,
-            MetricType.VRAM_USED: 3,
-            MetricType.GENERATION_TIME: 1,
-        }
     ),
     Contest(
         contest_id=ContestId.SDXL_NEWDREAM_NVIDIA_4090,
         device=CUDA_4090_DEVICE,
         output_comparator=partial(ImageOutputComparator, CUDA_4090_DEVICE),
         baseline_repository=RepositoryInfo(url="https://github.com/womboai/sdxl-newdream-20-inference", revision="1b3f9ea"),
-        metric_weights={
-            MetricType.SIMILARITY_SCORE: 1,
-            MetricType.GENERATION_TIME: 1,
-        }
     ),
 ]
 
@@ -147,8 +137,3 @@ def find_contest(contest_id: ContestId):
 
 def find_compatible_contests() -> list[ContestId]:
     return [contest.id for contest in CONTESTS if contest.device.is_compatible()]
-
-
-ACTIVE_CONTESTS = [
-    ContestId.FLUX_NVIDIA_4090
-]

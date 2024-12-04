@@ -8,8 +8,8 @@ from substrateinterface import SubstrateInterface, Keypair
 from substrateinterface.storage import StorageKey
 
 from .checkpoint import SPEC_VERSION, Submissions, Key
-from .contest import RepositoryInfo, find_contest, Submission, ContestId, ACTIVE_CONTESTS
-from .inputs_api import is_blacklisted, blacklisted_keys
+from .contest import RepositoryInfo, find_contest, Submission, ContestId
+from .inputs_api import get_blacklist, get_inputs_state
 from .network_commitments import Encoder, Decoder
 
 logger = get_logger(__name__)
@@ -80,8 +80,8 @@ def get_submissions(
     submissions: Submissions = {}
     storage_keys: list[StorageKey] = []
 
-    blacklist = blacklisted_keys()
-    hotkeys = [hotkey for hotkey, node in metagraph.nodes.items() if not is_blacklisted(blacklist, hotkey, node.coldkey)]
+    active_contests = get_inputs_state().get_active_contests()
+    hotkeys = [hotkey for hotkey, node in metagraph.nodes.items() if not get_blacklist().is_blacklisted(hotkey, node.coldkey)]
     for hotkey in hotkeys:
         storage_keys.append(substrate.create_storage_key(
             "Commitments",
@@ -116,7 +116,7 @@ def get_submissions(
             while not decoder.eof:
                 info = CheckpointSubmission.decode(decoder)
 
-                if info.contest_id not in ACTIVE_CONTESTS:
+                if info.contest_id not in active_contests:
                     continue
 
                 if info.repository == find_contest(info.contest_id).baseline_repository.url:

@@ -8,7 +8,7 @@ from fiber.logging_utils import get_logger
 from opentelemetry import trace
 from substrateinterface import SubstrateInterface, Keypair
 
-from base.inputs_api import blacklisted_keys, is_blacklisted
+from base.inputs_api import get_blacklist, get_inputs_state
 from weight_setting.contest_state import ContestState
 from weight_setting.wandb_manager import WandbManager
 
@@ -73,12 +73,19 @@ class WeightSetter:
     @tracer.start_as_current_span("set_weights")
     def set_weights(self) -> bool:
         contest_state = self._contest_state()
+        inputs_state = get_inputs_state()
 
         if not contest_state:
             logger.warning("Will not set new weights as the contest state has not been set, setting to all ones")
             return self._set_equal_weights()
 
-        benchmarks = contest_state.last_benchmarks
+        delayed_weights = inputs_state.delayed_weight_setting
+        benchmarks = contest_state.last_benchmarks if delayed_weights else contest_state.benchmarks
+
+        if not delayed_weights and contest_state.get_untested_submissions():
+            logger.info("Not setting new weights as benchmarking is not done, reusing old weights")
+            delayed_weights = True
+            benchmarks = contest_state.last_benchmarks
 
         if not contest_state.baseline:
             logger.warning("Will not set new weights as the baseline benchmarks have not been set, setting to all ones")
@@ -88,14 +95,13 @@ class WeightSetter:
             if contest_state.benchmarks:
                 logger.info("Setting weights to current benchmarks as the previous day's benchmarks have not been set")
                 benchmarks = contest_state.benchmarks
-            else:
+            elif delayed_weights:
                 logger.warning("Will not set new weights as the previous day's benchmarks have not been set, setting to all ones")
                 return self._set_equal_weights()
 
         self._metagraph.sync_nodes()
-        blacklist = blacklisted_keys()
         for hotkey, node in self._metagraph.nodes.items():
-            if is_blacklisted(blacklist, hotkey, node.coldkey):
+            if get_blacklist().is_blacklisted(hotkey, node.coldkey):
                 contest_state.benchmarks.pop(hotkey, None)
                 contest_state.last_benchmarks.pop(hotkey, None)
                 contest_state.submissions.pop(hotkey, None)

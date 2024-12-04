@@ -10,7 +10,8 @@ from git import GitCommandError, cmd
 from substrateinterface import Keypair
 
 from base.config import get_config
-from base.contest import Contest, find_contest, CONTESTS, ContestId, ACTIVE_CONTESTS
+from base.contest import Contest, find_contest, CONTESTS, ContestId
+from base.inputs_api import get_inputs_state
 from base.submissions import CheckpointSubmission, make_submission
 from testing.benchmarker import Benchmarker
 
@@ -117,12 +118,12 @@ def get_submission(config) -> CheckpointSubmission:
                 print("Invalid revision hash. Should be 7 characters long.")
 
     if not contest:
-        default_contest = ACTIVE_CONTESTS[0]
+        default_contest_id = next(iter(get_inputs_state().active_contests.keys()))
         while True:
             print("\nAvailable contests:")
             for c in CONTESTS:
                 print(f"\t- {c.id.name}")
-            contest_id = input(f"Enter the contest (default: {default_contest.id.name}): ") or default_contest.id.name
+            contest_id = input(f"Enter the contest (default: {default_contest_id.name}): ") or default_contest_id.name
             try:
                 contest = find_contest(ContestId[contest_id])
                 break

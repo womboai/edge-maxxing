@@ -134,6 +134,7 @@ def initialize(
     init_request: Annotated[BenchmarkingInitializeRequest, Body()],
     x_nonce: Annotated[int, Header()],
     signature: Annotated[str, Header()],
+    request: Request,
 ):
     _authenticate_request(x_nonce, signature)
 
@@ -145,3 +146,7 @@ def initialize(
         "subtensor.chain_endpoint": init_request.substrate_url,
         "api.version": api_version,
     })
+
+    benchmarker: Benchmarker = request.state.benchmarker
+    benchmarker.shutdown()
+    benchmarker.reset()

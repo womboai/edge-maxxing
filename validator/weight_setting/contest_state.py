@@ -88,7 +88,7 @@ class ContestState(BaseModel):
 
     @classmethod
     def create(cls, benchmarks_version: int):
-        state = cls(
+        return cls(
             step=0,
             benchmarks_version=benchmarks_version,
             submissions={},
@@ -100,4 +100,3 @@ class ContestState(BaseModel):
             benchmarking_state=BenchmarkState.NOT_STARTED,
             contest_end=current_time()
         )
-        return state
