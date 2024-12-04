@@ -116,7 +116,7 @@ class Benchmarker:
             start_time = perf_counter()
             key = choice(self._get_untested_submissions(submissions))
             submission = submissions[key]
-            logger.info(f"Benchmarking submission '{submission.repository_info}' with revision '{submission.revision}'")
+            logger.info(f"Benchmarking submission '{submission.url}' with revision '{submission.revision}'")
             try:
                 benchmark_output = self._benchmark_submission(contest, inputs, submission)
                 benchmark = self.compare(contest, benchmark_output, self._stop_flag)
