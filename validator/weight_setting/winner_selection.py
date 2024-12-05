@@ -1,9 +1,11 @@
 from operator import itemgetter
-from statistics import median
 
+import numpy
 from base.checkpoint import Key, Submissions, Benchmarks
 from base.contest import Metrics
 from base.inputs_api import get_inputs_state
+
+DEVIATION_THRESHOLD_PERCENTILE = 92
 
 
 def get_contestant_scores(
@@ -34,14 +36,13 @@ def get_contestant_ranks(scores: dict[Key, float]) -> dict[Key, int]:
     scores = list(sorted(scores.items(), key=itemgetter(1), reverse=True))
     score_values = list(map(itemgetter(1), scores))
 
-    deviation = median(
+    deviations = numpy.array(list(
         score_values[i] - score_values[i + 1]
         for i in range(len(score_values) - 1)
-        if (
-            score_values[i + 1] > 0 and
-            score_values[i] - score_values[i + 1] > 0.0001
-        )
-    )
+        if score_values[i + 1] > 0
+    ))
+
+    threshold = numpy.percentile(deviations, DEVIATION_THRESHOLD_PERCENTILE)
 
     scores = iter(scores)
 
@@ -53,8 +54,7 @@ def get_contestant_ranks(scores: dict[Key, float]) -> dict[Key, int]:
         difference = last_score - score
         i += 1
 
-        if difference > deviation:
-            deviation = (deviation * i + difference) / i
+        if difference > threshold:
             rank += 1
 
         ranks[hotkey] = rank
