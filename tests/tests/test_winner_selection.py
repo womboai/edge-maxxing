@@ -1,17 +1,15 @@
+from collections import defaultdict
 from operator import itemgetter
-from random import choice
-from statistics import median
 from unittest import TestCase
 
-import matplotlib.pyplot
-import numpy
 from base.checkpoint import Uid, Key
 from weight_setting.winner_selection import get_contestant_ranks, calculate_rank_weights
 
 
 class WinnerSelectionTest(TestCase):
     def test_winner_selection(self):
-        winners: dict[Uid, Key] = {}
+        winners: dict[Key, list[Uid]] = defaultdict(list)
+
         for uid, data in SAMPLE_CONTEST_RESULTS.items():
             scores = {key: info[0] for key, info in data.items()}
             submitted_blocks = {key: info[1] for key, info in data.items()}
@@ -21,20 +19,21 @@ class WinnerSelectionTest(TestCase):
 
             winner = max(
                 weights.items(),
-                key=lambda item: item[1],
+                key=itemgetter(1),
                 default=None
-            )[0]
+            )
 
-            winners[uid] = winner
+            if not winner:
+                continue
 
-        unique_winners = set(winners.values())
+            winner[winner[0]].append(uid)
 
         msg = "Multiple winners found:\n" + "\n".join(
-            f"{winner}: {', '.join(str(uid) for uid in [uid for uid, w in winners.items() if w == winner])}"
-            for winner in unique_winners
+            f"{winner}: {', '.join(validator_uids)}"
+            for winner, validator_uids in winners.items()
         )
 
-        self.assertEqual(len(unique_winners), 1, msg=msg)
+        self.assertEqual(len(winners), 1, msg=msg)
 
 
 SAMPLE_CONTEST_RESULTS = {
