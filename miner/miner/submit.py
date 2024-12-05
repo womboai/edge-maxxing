@@ -3,16 +3,15 @@ from argparse import ArgumentParser
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from base.config import get_config
+from base.contest import Contest, find_contest, CONTESTS, ContestId, RepositoryInfo
+from base.inputs_api import get_inputs_state
+from base.submissions import CheckpointSubmission, make_submission
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.logging_utils import get_logger
 from git import GitCommandError, cmd
 from substrateinterface import Keypair
-
-from base.config import get_config
-from base.contest import Contest, find_contest, CONTESTS, ContestId
-from base.inputs_api import get_inputs_state
-from base.submissions import CheckpointSubmission, make_submission
 from testing.benchmarker import Benchmarker
 
 VALID_REPO_REGEX = r"^https:\/\/[a-zA-Z0-9.-]+\/[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$"
@@ -31,9 +30,11 @@ def start_benchmarking(contest: Contest, keypair: Keypair, submission: Checkpoin
             sandbox_args=[]
         )
 
+        repository_info = RepositoryInfo(url=submission.repository, revision=submission.revision)
+
         benchmarker.benchmark_submissions(
             contest=contest,
-            submissions={keypair.ss58_address: submission},
+            submissions={keypair.ss58_address: repository_info},
         )
 
         print("\nBenchmarking results:")
