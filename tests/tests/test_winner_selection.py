@@ -26,10 +26,10 @@ class WinnerSelectionTest(TestCase):
             if not winner:
                 continue
 
-            winner[winner[0]].append(uid)
+            winners[winner[0]].append(uid)
 
         msg = "Multiple winners found:\n" + "\n".join(
-            f"{winner}: {', '.join(validator_uids)}"
+            f"{winner}: {', '.join(map(str, validator_uids))}"
             for winner, validator_uids in winners.items()
         )
 
