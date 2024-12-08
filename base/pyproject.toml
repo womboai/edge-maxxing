@@ -27,7 +27,8 @@ edge-maxxing-pipelines = { path = "../pipelines", editable = true }
 
 [dependency-groups]
 dev = [
-    "pytype==2024.10.11"
+    "pytype==2024.10.11",
+    "ruff>=0.8.2",
 ]
 
 [tool.pytype]

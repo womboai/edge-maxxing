@@ -105,7 +105,7 @@ class WeightSetter:
                 contest_state.benchmarks.pop(hotkey, None)
                 contest_state.last_benchmarks.pop(hotkey, None)
                 contest_state.submissions.pop(hotkey, None)
-            if not hotkey in contest_state.submissions:
+            if hotkey not in contest_state.submissions:
                 contest_state.benchmarks.pop(hotkey, None)
                 contest_state.last_benchmarks.pop(hotkey, None)
 
