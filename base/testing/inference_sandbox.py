@@ -7,6 +7,7 @@ from subprocess import run, Popen, PIPE
 from threading import Event
 from time import perf_counter
 
+import psutil
 import toml
 from fiber.logging_utils import get_logger
 from huggingface_hub import HfApi
@@ -17,7 +18,7 @@ from base.checkpoint import SPEC_VERSION
 from base.contest import RepositoryInfo, Contest, Metrics
 from base.inputs_api import get_blacklist
 from pipelines import TextToImageRequest
-from .vram_monitor import VRamMonitor
+from .system_monitor import SystemMonitor
 
 CLEAR_CACHE = abspath(Path(__file__).parent / "clear_cache.sh")
 CLONE = abspath(Path(__file__).parent / "clone.sh")
@@ -183,6 +184,10 @@ class InferenceSandbox:
         size = self._setup_sandbox()
         start_vram = self._contest.device.get_vram_used()
 
+        initial_process = psutil.Process()
+        start_ram = initial_process.memory_info().rss
+        start_cpu = initial_process.cpu_percent()
+
         metrics: list[Metrics] = []
         outputs: list[bytes] = []
 
@@ -206,7 +211,7 @@ class InferenceSandbox:
                     for i, request in enumerate(self._inputs):
                         logger.info(f"Sample {i + 1}/{len(self._inputs)}")
                         start_joules = self._contest.device.get_joules()
-                        vram_monitor = VRamMonitor(self._contest)
+                        system_monitor = SystemMonitor(self._contest)
 
                         data = request.model_dump_json().encode("utf-8")
                         logger.debug(data)
@@ -218,14 +223,16 @@ class InferenceSandbox:
                         generation_time = perf_counter() - start
                         joules_used = self._contest.device.get_joules() - start_joules
                         watts_used = joules_used / generation_time
-                        vram_used = vram_monitor.complete()
+                        results = system_monitor.complete()
 
                         metrics.append(Metrics(
                             generation_time=generation_time,
                             size=size,
-                            vram_used=vram_used,
+                            vram_used=results.vram_usage,
                             watts_used=watts_used,
                             load_time=load_time,
+                            ram_used=results.ram_usage,
+                            cpu_used=results.cpu_usage,
                         ))
                         outputs.append(output)
                         check_process(process)
@@ -234,6 +241,8 @@ class InferenceSandbox:
 
         average_generation_time = sum(metric.generation_time for metric in metrics) / len(metrics)
         vram_used = max(metric.vram_used for metric in metrics) - start_vram
+        ram_used = max(metric.ram_used for metric in metrics) - start_ram
+        cpu_used = max(metric.cpu_used for metric in metrics) - start_cpu
         watts_used = max(metric.watts_used for metric in metrics)
         return BenchmarkOutput(
             metrics=Metrics(
@@ -242,6 +251,8 @@ class InferenceSandbox:
                 vram_used=vram_used,
                 watts_used=watts_used,
                 load_time=load_time,
+                ram_used=ram_used,
+                cpu_used=cpu_used,
             ),
             outputs=outputs,
         )
