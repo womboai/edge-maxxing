@@ -25,6 +25,7 @@ class MetricType(IntEnum):
     VRAM_USED = 3
     WATTS_USED = 4
     LOAD_TIME = 5
+    RAM_USED = 6
 
 
 class ContestId(IntEnum):
@@ -103,6 +104,7 @@ class Contest:
             normalize(baseline.vram_used, benchmark.metrics.vram_used, MetricType.VRAM_USED),
             normalize(baseline.watts_used, benchmark.metrics.watts_used, MetricType.WATTS_USED),
             normalize(baseline.load_time, benchmark.metrics.load_time, MetricType.LOAD_TIME),
+            normalize(baseline.ram_used, benchmark.metrics.ram_used, MetricType.RAM_USED),
         ])
 
         return score * similarity * metric_weights.get(MetricType.SIMILARITY_SCORE, 0) / total_weight
