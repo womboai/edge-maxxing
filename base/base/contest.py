@@ -98,7 +98,7 @@ class Contest:
             if baseline_value == 0:
                 return 0
             relative_improvement = (baseline_value - benchmark_value) / baseline_value
-            return (relative_improvement + 1) * metric_weights.get(metric_type, 0)
+            return relative_improvement * metric_weights.get(metric_type, 0) + 1
 
         score = prod([
             calculate_improvement(baseline.generation_time, benchmark.metrics.generation_time, MetricType.GENERATION_TIME),
