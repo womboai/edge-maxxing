@@ -25,7 +25,6 @@ class MetricType(IntEnum):
     VRAM_USED = 3
     WATTS_USED = 4
     LOAD_TIME = 5
-    RAM_USED = 6
 
 
 class ContestId(IntEnum):
