@@ -42,12 +42,11 @@ class Benchmarker:
         self,
         contest: Contest,
         benchmark_output: BenchmarkOutput,
-        stop_flag: Event,
     ) -> Benchmark:
         similarities: list[float] = []
         with contest.output_comparator() as comparator:
             for baseline_output, optimized_output in zip(self.baseline.outputs, benchmark_output.outputs):
-                if stop_flag.is_set():
+                if self._stop_flag.is_set():
                     raise CancelledError()
 
                 similarities.append(comparator(baseline_output, optimized_output))
@@ -72,7 +71,8 @@ class Benchmarker:
         self,
         contest: Contest,
         inputs: list[TextToImageRequest],
-        repository_info: RepositoryInfo
+        repository_info: RepositoryInfo,
+        timeout: float,
     ) -> BenchmarkOutput:
         return InferenceSandbox(
             sandbox_args=self._sandbox_args,
@@ -81,14 +81,14 @@ class Benchmarker:
             repository_info=repository_info,
             inputs=inputs,
             stop_flag=self._stop_flag,
-        ).benchmark()
+        ).benchmark(timeout=timeout)
 
     @tracer.start_as_current_span("benchmark_baseline")
     def _benchmark_baseline(self, contest: Contest, inputs: list[TextToImageRequest]):
         logger.info("Benchmarking baseline")
         while not self.baseline and not self._stop_flag.is_set():
             try:
-                self.baseline = self._benchmark_submission(contest, inputs, contest.baseline_repository)
+                self.baseline = self._benchmark_submission(contest, inputs, contest.baseline_repository, 30)
             except CancelledError:
                 logger.warning("Benchmarking was canceled while testing the baseline")
                 return
@@ -118,8 +118,9 @@ class Benchmarker:
             submission = submissions[key]
             logger.info(f"Benchmarking submission '{submission.url}' with revision '{submission.revision}'")
             try:
-                benchmark_output = self._benchmark_submission(contest, inputs, submission)
-                benchmark = self.compare(contest, benchmark_output, self._stop_flag)
+                timeout = self.baseline.metrics.generation_time * 2
+                benchmark_output = self._benchmark_submission(contest, inputs, submission, timeout)
+                benchmark = self.compare(contest, benchmark_output)
                 self.benchmarks[key] = benchmark
             except CancelledError:
                 break

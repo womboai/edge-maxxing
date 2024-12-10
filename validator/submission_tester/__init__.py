@@ -1,1 +1,1 @@
-from .api import app
+from .api import app # noqa F401

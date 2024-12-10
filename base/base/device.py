@@ -1,3 +1,4 @@
+import gc
 from abc import ABC, abstractmethod
 from enum import Enum
 
@@ -60,8 +61,9 @@ class CudaDevice(Device):
     def empty_cache(self):
         import torch
 
-        torch.cuda.synchronize()
+        gc.collect()
         torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
 
     def is_compatible(self):
         import torch
@@ -86,7 +88,7 @@ class MpsDevice(Device):
     def empty_cache(self):
         import torch
 
-        torch.mps.synchronize()
+        gc.collect()
         torch.mps.empty_cache()
 
     def is_compatible(self):
