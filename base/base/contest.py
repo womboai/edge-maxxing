@@ -55,7 +55,6 @@ class Metrics(BaseModel):
     watts_used: float
     load_time: float
     ram_used: float
-    cpu_used: float
 
 
 class Benchmark(BaseModel):
