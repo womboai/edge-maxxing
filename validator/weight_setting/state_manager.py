@@ -31,17 +31,17 @@ class StateManager:
         if not self._state_file.exists():
             return None
 
-        logger.info(f"Loading state")
+        logger.info("Loading state")
 
         try:
             with self._state_file.open("rb") as file:
                 return ContestState.model_validate_json(file.read())
         except ValidationError as e:
-            logger.error(f"Failed to load state", exc_info=e)
+            logger.error("Failed to load state", exc_info=e)
             return None
 
     def save_state(self, state: ContestState):
-        logger.debug(f"Saving state")
+        logger.debug("Saving state")
 
         with self._state_file.open("wb") as file:
             file.write(state.model_dump_json(indent=4).encode())

@@ -165,7 +165,7 @@ def submit():
         try:
             start_benchmarking(find_contest(submission.contest_id), keypair, submission)
         except Exception as e:
-            logger.critical(f"Benchmarking failed, submission cancelled", exc_info=e)
+            logger.critical("Benchmarking failed, submission cancelled", exc_info=e)
             exit(1)
 
     print(
