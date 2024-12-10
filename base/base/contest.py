@@ -113,9 +113,12 @@ class Contest:
 
         n = (ratio + sqrt(ratio ** 2 - ratio * 4 + 4)) / 2
 
-        score_factor = (n - 1) / baseline_score
+        score_base = ((n - 1) / baseline_score) * score + 1
 
-        normalized_score = log(score_factor * score + 1, n) - 1
+        if score_base <= 0:
+            return -1
+
+        normalized_score = log(score_base, n) - 1
 
         if normalized_score < 0:
             normalized_score = normalized_score / similarity
