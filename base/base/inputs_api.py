@@ -17,7 +17,7 @@ class InputsState(BaseModel):
     active_contests: dict[ContestId, dict[MetricType, int]]
 
     def get_metric_weights(self, contest_id: ContestId) -> dict[MetricType, int]:
-        if not contest_id in self.active_contests:
+        if contest_id not in self.active_contests:
             raise ValueError(f"Contest {contest_id} is not active")
 
         return self.active_contests[contest_id]

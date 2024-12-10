@@ -406,7 +406,7 @@ dev = [{ name = "pytest", specifier = ">=8.3.4" }]
 
 [[package]]
 name = "edge-maxxing-validator"
-version = "5.6.1"
+version = "5.6.2"
 source = { editable = "../validator" }
 dependencies = [
     { name = "edge-maxxing-base" },

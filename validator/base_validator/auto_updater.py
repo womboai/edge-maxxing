@@ -32,7 +32,7 @@ class AutoUpdater:
                     sleep_minutes = UPDATE_RATE_MINUTES - current_time.tm_min % UPDATE_RATE_MINUTES
                     self._stop_flag.wait(sleep_minutes * 60 - current_time.tm_sec)
             except Exception as e:
-                logger.error(f"Error occurred while checking for updates, attempting to fix the issue by restarting", exc_info=e)
+                logger.error("Error occurred while checking for updates, attempting to fix the issue by restarting", exc_info=e)
                 self._stop_flag.wait(1)
                 self._restart()
 

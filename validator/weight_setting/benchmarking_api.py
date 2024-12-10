@@ -108,7 +108,7 @@ def send_submissions_to_api(version: str, all_apis: list[BenchmarkingApi], submi
 
     active_contests = get_inputs_state().get_active_contests()
     for contest_id, apis in contest_api_assignment.items():
-        if not contest_id in active_contests:
+        if contest_id not in active_contests:
             continue
         if contest_id not in submissions_by_contest:
             raise RuntimeError(f"No API compatible with contest type {contest_id.name}")

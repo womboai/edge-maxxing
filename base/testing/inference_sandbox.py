@@ -1,6 +1,6 @@
 import shutil
 from concurrent.futures import CancelledError
-from multiprocessing.connection import Client
+from multiprocessing.connection import Client, wait
 from os.path import abspath
 from pathlib import Path
 from subprocess import run, Popen, PIPE
@@ -17,7 +17,7 @@ from base.checkpoint import SPEC_VERSION
 from base.contest import RepositoryInfo, Contest, Metrics
 from base.inputs_api import get_blacklist
 from pipelines import TextToImageRequest
-from .vram_monitor import VRamMonitor
+from .system_monitor import SystemMonitor
 
 CLEAR_CACHE = abspath(Path(__file__).parent / "clear_cache.sh")
 CLONE = abspath(Path(__file__).parent / "clone.sh")
@@ -179,7 +179,7 @@ class InferenceSandbox:
         return perf_counter() - start
 
     @tracer.start_as_current_span("start_inference")
-    def benchmark(self) -> BenchmarkOutput:
+    def benchmark(self, timeout: float) -> BenchmarkOutput:
         size = self._setup_sandbox()
         start_vram = self._contest.device.get_vram_used()
 
@@ -206,26 +206,31 @@ class InferenceSandbox:
                     for i, request in enumerate(self._inputs):
                         logger.info(f"Sample {i + 1}/{len(self._inputs)}")
                         start_joules = self._contest.device.get_joules()
-                        vram_monitor = VRamMonitor(self._contest)
+                        system_monitor = SystemMonitor(self._contest, process.pid)
 
                         data = request.model_dump_json().encode("utf-8")
                         logger.debug(data)
                         client.send_bytes(data)
 
                         start = perf_counter()
-                        output = client.recv_bytes()
+
+                        if wait([client], timeout=timeout):
+                            output = client.recv_bytes()
+                        else:
+                            raise InvalidSubmissionError(f"Inference timed out after {timeout} seconds")
 
                         generation_time = perf_counter() - start
                         joules_used = self._contest.device.get_joules() - start_joules
                         watts_used = joules_used / generation_time
-                        vram_used = vram_monitor.complete()
+                        results = system_monitor.complete()
 
                         metrics.append(Metrics(
                             generation_time=generation_time,
                             size=size,
-                            vram_used=vram_used,
+                            vram_used=results.vram_usage,
                             watts_used=watts_used,
                             load_time=load_time,
+                            ram_used=results.ram_usage,
                         ))
                         outputs.append(output)
                         check_process(process)
@@ -234,6 +239,7 @@ class InferenceSandbox:
 
         average_generation_time = sum(metric.generation_time for metric in metrics) / len(metrics)
         vram_used = max(metric.vram_used for metric in metrics) - start_vram
+        ram_used = max(metric.ram_used for metric in metrics)
         watts_used = max(metric.watts_used for metric in metrics)
         return BenchmarkOutput(
             metrics=Metrics(
@@ -242,6 +248,7 @@ class InferenceSandbox:
                 vram_used=vram_used,
                 watts_used=watts_used,
                 load_time=load_time,
+                ram_used=ram_used,
             ),
             outputs=outputs,
         )
