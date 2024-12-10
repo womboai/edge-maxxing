@@ -78,6 +78,7 @@ class WandbManager:
         data = {
             "scores": scores or contest_state.get_scores(contest_state.benchmarks),
             "ranks": ranks or contest_state.get_ranks(scores),
+            "num_gpus": len(self.config["benchmarker_api"]),
         } | contest_state.model_dump()
 
         self._run.log(data=data)
