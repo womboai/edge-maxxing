@@ -148,5 +148,5 @@ def initialize(
     })
 
     benchmarker: Benchmarker = request.state.benchmarker
-    benchmarker.shutdown()
     benchmarker.reset()
+    benchmarker.shutdown()

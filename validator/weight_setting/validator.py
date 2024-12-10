@@ -12,7 +12,7 @@ from opentelemetry import trace
 from requests.exceptions import HTTPError, ConnectionError
 from substrateinterface import SubstrateInterface, Keypair
 
-from base.checkpoint import Uid
+from base.checkpoint import Uid, Submissions
 from base.config import get_config
 from base.contest import BenchmarkState
 from base.inputs_api import get_inputs_state
@@ -114,6 +114,20 @@ class Validator:
 
         self.run()
 
+    def initialize_apis(self, untested_submissions: Submissions):
+        for api in self.benchmarking_apis:
+            api.initialize(
+                uid=self.uid,
+                signature=self.signature,
+                netuid=self.metagraph.netuid,
+                substrate_url=self.substrate.url,
+            )
+        send_submissions_to_api(
+            version=self.validator_version,
+            all_apis=self.benchmarking_apis,
+            submissions=untested_submissions,
+        )
+
     @tracer.start_as_current_span("initialize_contest")
     def initialize_contest(self, benchmarks_version: int):
         self.metagraph.sync_nodes()
@@ -131,6 +145,8 @@ class Validator:
             logger.warning(f"No submissions found, sleeping for {sleep_blocks} blocks")
             self._stop_flag.wait(sleep_blocks * 12)
             return
+
+        self.initialize_apis(self.contest_state.submissions)
 
         self.wandb_manager.init_wandb(self.contest_state)
         logger.info(f"Starting a new contest with {len(self.contest_state.submissions)} submissions")
@@ -158,18 +174,7 @@ class Validator:
         benchmarking_results = [api.results() for api in self.benchmarking_apis]
 
         if any(result.state == BenchmarkState.NOT_STARTED for result in benchmarking_results):
-            for api in self.benchmarking_apis:
-                api.initialize(
-                    uid=self.uid,
-                    signature=self.signature,
-                    netuid=self.metagraph.netuid,
-                    substrate_url=self.substrate.url,
-                )
-            send_submissions_to_api(
-                version=self.validator_version,
-                all_apis=self.benchmarking_apis,
-                submissions=untested_submissions,
-            )
+            self.initialize_apis(untested_submissions)
             return
 
         self.update_benchmarks(benchmarking_results)
