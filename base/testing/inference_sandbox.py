@@ -1,6 +1,6 @@
 import shutil
 from concurrent.futures import CancelledError
-from multiprocessing.connection import Client
+from multiprocessing.connection import Client, wait
 from os.path import abspath
 from pathlib import Path
 from subprocess import run, Popen, PIPE
@@ -179,7 +179,7 @@ class InferenceSandbox:
         return perf_counter() - start
 
     @tracer.start_as_current_span("start_inference")
-    def benchmark(self) -> BenchmarkOutput:
+    def benchmark(self, timeout: float) -> BenchmarkOutput:
         size = self._setup_sandbox()
         start_vram = self._contest.device.get_vram_used()
 
@@ -213,7 +213,11 @@ class InferenceSandbox:
                         client.send_bytes(data)
 
                         start = perf_counter()
-                        output = client.recv_bytes()
+
+                        if wait([client], timeout=timeout):
+                            output = client.recv_bytes()
+                        else:
+                            raise InvalidSubmissionError(f"Inference timed out after {timeout} seconds")
 
                         generation_time = perf_counter() - start
                         joules_used = self._contest.device.get_joules() - start_joules
