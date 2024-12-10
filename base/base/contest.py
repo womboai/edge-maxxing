@@ -1,7 +1,8 @@
+import math
 from dataclasses import dataclass
 from enum import IntEnum
 from functools import partial
-from math import sqrt
+from math import sqrt, prod, log
 from typing import Callable
 
 from pydantic import BaseModel
@@ -19,7 +20,6 @@ class BenchmarkState(IntEnum):
 
 
 class MetricType(IntEnum):
-    SIMILARITY_SCORE = 0
     GENERATION_TIME = 1
     SIZE = 2
     VRAM_USED = 3
@@ -85,26 +85,41 @@ class Contest:
 
         from .inputs_api import get_inputs_state
         metric_weights = get_inputs_state().get_metric_weights(self.id)
-        total_weight = sum(metric_weights.values())
 
-        scale = 1 / (1 - SIMILARITY_SCORE_THRESHOLD)
-        similarity = sqrt((benchmark.average_similarity - SIMILARITY_SCORE_THRESHOLD) * scale)
+        similarity_scale = 1 / (1 - SIMILARITY_SCORE_THRESHOLD)
+        similarity = sqrt((benchmark.average_similarity - SIMILARITY_SCORE_THRESHOLD) * similarity_scale)
 
-        def normalize(baseline_value: float, benchmark_value: float, metric_type: MetricType) -> float:
+        baseline_score = len(metric_weights)
+        highest_score = prod(w + 1 for w in metric_weights.values())
+
+        ratio = highest_score / baseline_score
+
+        def calculate_improvement(baseline_value: float, benchmark_value: float, metric_type: MetricType) -> float:
             if baseline_value == 0:
                 return 0
             relative_improvement = (baseline_value - benchmark_value) / baseline_value
-            return (relative_improvement * metric_weights.get(metric_type, 0)) / total_weight
+            return (relative_improvement + 1) * metric_weights.get(metric_type, 0)
 
-        score = sum([
-            normalize(baseline.generation_time, benchmark.metrics.generation_time, MetricType.GENERATION_TIME),
-            normalize(baseline.size, benchmark.metrics.size, MetricType.SIZE),
-            normalize(baseline.vram_used, benchmark.metrics.vram_used, MetricType.VRAM_USED),
-            normalize(baseline.watts_used, benchmark.metrics.watts_used, MetricType.WATTS_USED),
-            normalize(baseline.load_time, benchmark.metrics.load_time, MetricType.LOAD_TIME)
+        score = prod([
+            calculate_improvement(baseline.generation_time, benchmark.metrics.generation_time, MetricType.GENERATION_TIME),
+            calculate_improvement(baseline.size, benchmark.metrics.size, MetricType.SIZE),
+            calculate_improvement(baseline.vram_used, benchmark.metrics.vram_used, MetricType.VRAM_USED),
+            calculate_improvement(baseline.watts_used, benchmark.metrics.watts_used, MetricType.WATTS_USED),
+            calculate_improvement(baseline.load_time, benchmark.metrics.load_time, MetricType.LOAD_TIME)
         ])
 
-        return score * similarity * metric_weights.get(MetricType.SIMILARITY_SCORE, 0) / total_weight
+        n = (ratio + sqrt(ratio ** 2 - ratio * 4 + 4)) / 2
+
+        score_factor = (n - 1) / baseline_score
+
+        normalized_score = log(score_factor * score + 1, n) - 1
+
+        if normalized_score < 0:
+            normalized_score = normalized_score / similarity
+        else:
+            normalized_score = normalized_score * similarity
+
+        return max(-1.0, min(1.0, normalized_score))
 
 
 CUDA_4090_DEVICE = CudaDevice(gpu=Gpu.NVIDIA_RTX_4090)
