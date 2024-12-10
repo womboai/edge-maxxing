@@ -25,6 +25,7 @@ class MetricType(IntEnum):
     VRAM_USED = 3
     WATTS_USED = 4
     LOAD_TIME = 5
+    RAM_USED = 6
 
 
 class ContestId(IntEnum):
@@ -52,6 +53,7 @@ class Metrics(BaseModel):
     vram_used: float
     watts_used: float
     load_time: float
+    ram_used: float
 
 
 class Benchmark(BaseModel):
@@ -105,7 +107,8 @@ class Contest:
             calculate_improvement(baseline.size, benchmark.metrics.size, MetricType.SIZE),
             calculate_improvement(baseline.vram_used, benchmark.metrics.vram_used, MetricType.VRAM_USED),
             calculate_improvement(baseline.watts_used, benchmark.metrics.watts_used, MetricType.WATTS_USED),
-            calculate_improvement(baseline.load_time, benchmark.metrics.load_time, MetricType.LOAD_TIME)
+            calculate_improvement(baseline.load_time, benchmark.metrics.load_time, MetricType.LOAD_TIME),
+            calculate_improvement(baseline.ram_used, benchmark.metrics.ram_used, MetricType.RAM_USED),
         ])
 
         n = (ratio + sqrt(ratio ** 2 - ratio * 4 + 4)) / 2

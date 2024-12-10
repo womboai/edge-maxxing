@@ -1,4 +1,3 @@
-import gc
 from abc import ABC, abstractmethod
 from io import BytesIO
 from typing import ContextManager
@@ -76,5 +75,4 @@ class ImageOutputComparator(OutputComparator):
         del self.clip
         del self.processor
 
-        gc.collect()
         self.device.empty_cache()
