@@ -31,7 +31,7 @@ class ContestState(BaseModel):
 
         if self.benchmarking_state == BenchmarkState.FINISHED:
             logger.info("Updating benchmarks for weight setting")
-            self.last_benchmarks = self.benchmarks
+            self.last_benchmarks = dict(self.benchmarks)
 
         self.benchmarks.clear()
         self.invalid_submissions.clear()

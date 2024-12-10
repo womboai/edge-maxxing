@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools >= 75.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "edge-maxxing-tests"
+description = "Validator unit tests"
+requires-python = ">=3.10,<3.13"
+version = "1.0.0"
+dependencies = [
+    "edge-maxxing-validator>=5.5.8",
+]
+
+[tool.uv.sources]
+edge-maxxing-validator = { path = "../validator", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+]
+
+[tool.setuptools]
+packages = [
+    "tests"
+]

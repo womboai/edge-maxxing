@@ -2,7 +2,7 @@ from threading import Thread, Event
 
 from base.contest import Contest
 
-SAMPLE_RATE_MS = 10
+SAMPLE_RATE_MS = 100
 
 
 class VRamMonitor:
