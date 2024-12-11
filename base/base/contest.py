@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from .device import Device, CudaDevice, Gpu
 from .output_comparator import OutputComparator, ImageOutputComparator
 
-SIMILARITY_SCORE_THRESHOLD = 0.7
+SIMILARITY_SCORE_THRESHOLD = 0.8
 
 
 class BenchmarkState(IntEnum):
