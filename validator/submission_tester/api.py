@@ -16,6 +16,7 @@ from base.contest import find_compatible_contests, find_contest, CONTESTS
 from base_validator.api_data import BenchmarkingStartRequest, BenchmarkingResults, ApiMetadata, BenchmarkingInitializeRequest
 from base_validator.auto_updater import AutoUpdater
 from base_validator.telemetry import init_open_telemetry_logging
+from base.system_info import get_system_info, SystemInfo
 from testing.benchmarker import Benchmarker
 
 hotkey = os.getenv("VALIDATOR_HOTKEY_SS58_ADDRESS")
@@ -128,6 +129,9 @@ def metadata(request: Request) -> ApiMetadata:
         compatible_contests=request.state.compatible_contests,
     )
 
+@app.get("/hardware")
+def hardware() -> SystemInfo:
+    return get_system_info()
 
 @app.post("/initialize")
 def initialize(

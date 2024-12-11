@@ -5,6 +5,7 @@ import wandb
 from wandb.apis.public import Run
 
 from base.checkpoint import Uid, Key
+from base.system_info import SystemInfo
 from .contest_state import ContestState
 
 
@@ -69,6 +70,7 @@ class WandbManager:
     def send_metrics(
         self,
         contest_state: ContestState,
+        api_hardware: list[SystemInfo],
         scores: dict[Key, float] | None = None,
         ranks: dict[Key, int] | None = None
     ):
@@ -77,6 +79,7 @@ class WandbManager:
 
         data = {
             "scores": scores or contest_state.get_scores(contest_state.benchmarks),
+            "api_hardware": [api.model_dump() for api in api_hardware],
             "ranks": ranks or contest_state.get_ranks(scores),
             "num_gpus": len(self.config["benchmarker_api"]),
         } | contest_state.model_dump()

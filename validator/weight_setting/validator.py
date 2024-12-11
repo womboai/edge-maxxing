@@ -17,6 +17,7 @@ from base.config import get_config
 from base.contest import BenchmarkState
 from base.inputs_api import get_inputs_state
 from base.submissions import get_submissions
+from base.system_info import SystemInfo
 from base_validator.api_data import BenchmarkingResults
 from base_validator.auto_updater import AutoUpdater
 from base_validator.telemetry import init_open_telemetry_logging
@@ -70,6 +71,7 @@ class Validator:
 
     weight_setter: WeightSetter
     benchmarking_apis: list[BenchmarkingApi]
+    api_hardware: list[SystemInfo] = []
 
     def __init__(self):
         self.metagraph.sync_nodes()
@@ -107,6 +109,7 @@ class Validator:
             keypair=self.keypair,
             uid=self.uid,
             contest_state=lambda: self.contest_state,
+            api_hardware=self.api_hardware,
             wandb_manager=self.wandb_manager,
         )
 
@@ -115,6 +118,7 @@ class Validator:
         self.run()
 
     def initialize_apis(self, untested_submissions: Submissions):
+        self.api_hardware.clear()
         for api in self.benchmarking_apis:
             api.initialize(
                 uid=self.uid,
@@ -122,6 +126,7 @@ class Validator:
                 netuid=self.metagraph.netuid,
                 substrate_url=self.substrate.url,
             )
+            self.api_hardware.append(api.hardware())
         send_submissions_to_api(
             version=self.validator_version,
             all_apis=self.benchmarking_apis,
@@ -167,7 +172,7 @@ class Validator:
         if not untested_submissions:
             self.contest_state.benchmarking_state = BenchmarkState.FINISHED
             self.state_manager.save_state(self.contest_state)
-            self.wandb_manager.send_metrics(self.contest_state)
+            self.wandb_manager.send_metrics(self.contest_state, self.api_hardware)
             self.contest_state.sleep_to_next_contest(self._stop_flag)
             return
 
@@ -228,7 +233,7 @@ class Validator:
                 if self.contest_state:
                     self.contest_state.step += 1
                     self.state_manager.save_state(self.contest_state)
-                    self.wandb_manager.send_metrics(self.contest_state)
+                    self.wandb_manager.send_metrics(self.contest_state, self.api_hardware)
             except (ConnectionError, HTTPError) as e:
                 logger.error(f"Error connecting to API, retrying in 10 blocks: {e}")
                 self._stop_flag.wait(BENCHMARK_UPDATE_RATE_BLOCKS * 12)

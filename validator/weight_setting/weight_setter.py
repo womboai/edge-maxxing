@@ -9,6 +9,7 @@ from opentelemetry import trace
 from substrateinterface import SubstrateInterface, Keypair
 
 from base.inputs_api import get_blacklist, get_inputs_state
+from base.system_info import SystemInfo
 from weight_setting.contest_state import ContestState
 from weight_setting.wandb_manager import WandbManager
 
@@ -26,6 +27,7 @@ class WeightSetter:
     _keypair: Keypair
     _uid: int
     _contest_state: Callable[[], ContestState]
+    _api_hardware: list[SystemInfo]
     _wandb_manager: WandbManager
     _weights_version: int
 
@@ -38,6 +40,7 @@ class WeightSetter:
         keypair: Keypair,
         uid: int,
         contest_state: Callable[[], ContestState],
+        api_hardware: list[SystemInfo],
         wandb_manager: WandbManager,
     ):
         self._epoch_length = epoch_length
@@ -46,6 +49,7 @@ class WeightSetter:
         self._keypair = keypair
         self._uid = uid
         self._contest_state = contest_state
+        self._api_hardware = api_hardware
         self._wandb_manager = wandb_manager
 
         parts: list[str] = version.split(".")
@@ -114,7 +118,7 @@ class WeightSetter:
 
         weights_by_key = contest_state.calculate_weights(ranks=ranks)
 
-        self._wandb_manager.send_metrics(contest_state, scores, ranks)
+        self._wandb_manager.send_metrics(contest_state, self._api_hardware, scores, ranks)
         return self._set_weights([
             weights_by_key.get(key, 0)
             for key in self._metagraph.nodes.keys()
