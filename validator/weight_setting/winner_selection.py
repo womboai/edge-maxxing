@@ -42,7 +42,7 @@ def get_contestant_ranks(scores: dict[Key, float]) -> dict[Key, int]:
         if score_values[i + 1] > 0
     ))
 
-    if not deviations:
+    if not len(deviations):
         return {}
 
     threshold = numpy.percentile(deviations, DEVIATION_THRESHOLD_PERCENTILE)
