@@ -92,7 +92,7 @@ class Contest:
         similarity = sqrt((benchmark.average_similarity - SIMILARITY_SCORE_THRESHOLD) * similarity_scale)
 
         baseline_score = len(metric_weights)
-        highest_score = prod(w + 1 for w in metric_weights.values())
+        highest_score = prod(abs(w) + 1 for w in metric_weights.values())
 
         ratio = highest_score / baseline_score
 
