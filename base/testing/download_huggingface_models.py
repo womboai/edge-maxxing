@@ -2,12 +2,12 @@ import json
 import os
 import sys
 
+os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+
 from huggingface_hub import snapshot_download
 
 
 def main():
-    os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
-
     for model_specification in sys.argv[1:]:
         model = json.loads(model_specification)
 
