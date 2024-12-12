@@ -48,7 +48,7 @@ class AutoUpdater:
         except Exception as e:
             logger.error("Unable to stash local changes", exc_info=e)
 
-        repo.remotes.origin.pull(repo.head.name)
+        repo.git.pull()
 
         new_version = repo.head.commit.hexsha
 
