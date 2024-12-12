@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 from base.contest import Submission, Benchmark
 
 TIMEZONE = ZoneInfo("America/Los_Angeles")
-SPEC_VERSION = 7
+SPEC_VERSION = 8
 
 Uid: TypeAlias = int
 Key: TypeAlias = str
