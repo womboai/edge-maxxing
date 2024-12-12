@@ -135,7 +135,7 @@ CONTESTS = [
         contest_id=ContestId.FLUX_NVIDIA_4090,
         device=CUDA_4090_DEVICE,
         output_comparator=partial(ImageOutputComparator, CUDA_4090_DEVICE),
-        baseline_repository=RepositoryInfo(url="https://github.com/womboai/flux-schnell-edge-inference", revision="fbfb8f0"),
+        baseline_repository=RepositoryInfo(url="https://github.com/womboai/flux-schnell-edge-inference", revision="ad3d6ba"),
     ),
     Contest(
         contest_id=ContestId.SDXL_NEWDREAM_NVIDIA_4090,
