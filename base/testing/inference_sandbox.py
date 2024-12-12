@@ -136,8 +136,8 @@ class InferenceSandbox:
     def _download_huggingface_models(self, models: list[ModelSpecification]) -> int:
         try:
             total_model_size = 0
-            for model, revision in models:
-                model_info = hf_api.model_info(model, revision=revision, files_metadata=True)
+            for model in models:
+                model_info = hf_api.model_info(model.repository, revision=model.revision, files_metadata=True)
                 for sibling in model_info.siblings:
                     total_model_size += sibling.size
         except Exception as e:
