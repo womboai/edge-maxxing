@@ -119,6 +119,8 @@ class WeightSetter:
         weights_by_key = contest_state.calculate_weights(ranks=ranks)
 
         if not weights_by_key:
+            logger.warning("Will not set new weights as all scores are equal")
+
             return self._set_equal_weights()
 
         self._wandb_manager.send_metrics(contest_state, self._api_hardware, scores, ranks)
