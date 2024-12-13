@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 from base.config import get_config
 from base.contest import Contest, find_contest, CONTESTS, ContestId, RepositoryInfo
 from base.inputs_api import get_inputs_state
-from base.submissions import CheckpointSubmission, make_submission
+from base.submissions import CheckpointSubmission, make_submission, REVISION_LENGTH
 from fiber.chain.chain_utils import load_hotkey_keypair
 from fiber.chain.interface import get_substrate
 from fiber.logging_utils import get_logger
@@ -90,7 +90,7 @@ def validate(repository: str, revision: str, contest: Contest):
 
 def get_latest_revision(repository: str):
     git = cmd.Git()
-    return git.ls_remote(repository).split()[0]
+    return git.ls_remote(repository).split()[0][:REVISION_LENGTH]
 
 
 def get_submission(config) -> CheckpointSubmission:
