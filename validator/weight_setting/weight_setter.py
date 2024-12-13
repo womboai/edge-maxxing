@@ -119,7 +119,7 @@ class WeightSetter:
         weights_by_key = contest_state.calculate_weights(ranks=ranks)
 
         if not weights_by_key:
-            logger.warning("Will not set new weights as all scores are equal")
+            logger.warning("Will not set new weights as all scores are equal, setting to all ones")
 
             return self._set_equal_weights()
 
