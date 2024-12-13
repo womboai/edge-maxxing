@@ -12,6 +12,7 @@ from base.checkpoint import Key, Uid, Submissions
 from base.contest import ContestId, RepositoryInfo
 from base.inputs_api import get_inputs_state
 from base_validator.api_data import BenchmarkingStartRequest, ApiMetadata, BenchmarkingResults, BenchmarkingInitializeRequest
+from base.system_info import SystemInfo
 
 logger = get_logger(__name__)
 
@@ -59,6 +60,11 @@ class BenchmarkingApi:
         response = requests.get(f"{self._api}/metadata")
         response.raise_for_status()
         return ApiMetadata.model_validate(response.json())
+
+    def hardware(self) -> SystemInfo:
+        response = requests.get(f"{self._api}/hardware")
+        response.raise_for_status()
+        return SystemInfo.model_validate(response.json())
 
     def results(self) -> BenchmarkingResults:
         response = requests.get(f"{self._api}/state")
