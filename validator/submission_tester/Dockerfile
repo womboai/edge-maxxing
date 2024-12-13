@@ -3,6 +3,7 @@ FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y sudo pipx git git-lfs build-essential python3-dev python3-opencv
 
 RUN useradd --create-home --home-dir /home/api api
+RUN useradd --shell=/bin/false --create-home --home-dir /home/sandbox sandbox
 
 USER api
 

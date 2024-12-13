@@ -6,12 +6,13 @@ from pathlib import Path
 from subprocess import run, Popen, PIPE
 from threading import Event
 from time import perf_counter
+from typing import Annotated
 
 import toml
 from fiber.logging_utils import get_logger
 from huggingface_hub import HfApi
 from opentelemetry import trace
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from base.checkpoint import SPEC_VERSION
 from base.contest import RepositoryInfo, Contest, Metrics
@@ -23,7 +24,7 @@ CLEAR_CACHE = abspath(Path(__file__).parent / "clear_cache.sh")
 CLONE = abspath(Path(__file__).parent / "clone.sh")
 BLACKLIST = abspath(Path(__file__).parent / "blacklist.sh")
 SYNC_UV = abspath(Path(__file__).parent / "sync_uv.sh")
-DOWNLOAD_HUGGINGFACE_MODELS = abspath(Path(__file__).parent / "download_huggingface_models.sh")
+DOWNLOAD_HUGGINGFACE_MODELS = abspath(Path(__file__).parent / "download_huggingface_models.py")
 
 NETWORK_JAIL = abspath(Path(__file__).parent / "libnetwork_jail.so")
 START_INFERENCE_SCRIPT = abspath(Path(__file__).parent / "start_inference.sh")
@@ -46,6 +47,13 @@ class InvalidSubmissionError(Exception):
 class BenchmarkOutput(BaseModel):
     metrics: Metrics
     outputs: list[bytes]
+
+
+class ModelSpecification(BaseModel):
+    repository: str
+    revision: str
+    include: Annotated[list[str], Field(default_factory=lambda: [])]
+    exclude: Annotated[list[str], Field(default_factory=lambda: [])]
 
 
 class InferenceSandbox:
@@ -125,11 +133,11 @@ class InferenceSandbox:
         self._run(SYNC_UV, [])
 
     @tracer.start_as_current_span("download_huggingface_models")
-    def _download_huggingface_models(self, models: list[str]) -> int:
+    def _download_huggingface_models(self, models: list[ModelSpecification]) -> int:
         try:
             total_model_size = 0
             for model in models:
-                model_info = hf_api.model_info(repo_id=model, files_metadata=True)
+                model_info = hf_api.model_info(model.repository, revision=model.revision, files_metadata=True)
                 for sibling in model_info.siblings:
                     total_model_size += sibling.size
         except Exception as e:
@@ -138,7 +146,9 @@ class InferenceSandbox:
         if total_model_size > MAX_HF_MODEL_SIZE_GB * 1024 ** 3:
             raise InvalidSubmissionError(f"Size of all Hugging Face models exceeds {MAX_HF_MODEL_SIZE_GB} GB")
 
-        self._run(DOWNLOAD_HUGGINGFACE_MODELS, models)
+        python_executable = str((self._sandbox_directory / ".venv" / "bin" / "python").absolute())
+
+        self._run(python_executable, [DOWNLOAD_HUGGINGFACE_MODELS] + [model.model_dump_json() for model in models])
 
         return total_model_size
 
@@ -151,7 +161,7 @@ class InferenceSandbox:
             with open(self._sandbox_directory / "pyproject.toml", 'r') as file:
                 pyproject = toml.load(file)
                 version = int(pyproject["project"]["version"])
-                models = pyproject["tool"]["edge-maxxing"]["models"]
+                models = list(map(ModelSpecification.model_validate, pyproject["tool"]["edge-maxxing"]["models"]))
         except Exception as e:
             raise InvalidSubmissionError("Failed to read submission info") from e
 
