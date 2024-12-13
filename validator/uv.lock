@@ -2,23 +2,21 @@ version = 1
 requires-python = ">=3.10, <3.13"
 resolution-markers = [
     "python_full_version < '3.11' and platform_system == 'Darwin' and sys_platform != 'linux'",
-    "python_full_version < '3.11' and platform_system == 'Darwin' and sys_platform == 'linux'",
+    "python_version < '0'",
     "python_full_version < '3.11' and platform_machine == 'aarch64' and platform_system == 'Linux' and sys_platform != 'linux'",
     "python_full_version < '3.11' and platform_machine == 'aarch64' and platform_system == 'Linux' and sys_platform == 'linux'",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_system != 'Darwin' and sys_platform != 'linux') or (python_full_version < '3.11' and platform_system != 'Darwin' and platform_system != 'Linux' and sys_platform != 'linux')",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_system != 'Darwin' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_system != 'Darwin' and platform_system != 'Linux' and sys_platform == 'linux')",
+    "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_system == 'Linux' and sys_platform != 'linux') or (python_full_version < '3.11' and platform_system != 'Darwin' and platform_system != 'Linux' and sys_platform != 'linux')",
+    "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_system == 'Linux' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_system != 'Darwin' and platform_system != 'Linux' and sys_platform == 'linux')",
     "python_full_version == '3.11.*' and platform_system == 'Darwin' and sys_platform != 'linux'",
-    "python_full_version == '3.11.*' and platform_system == 'Darwin' and sys_platform == 'linux'",
     "python_full_version == '3.11.*' and platform_machine == 'aarch64' and platform_system == 'Linux' and sys_platform != 'linux'",
     "python_full_version == '3.11.*' and platform_machine == 'aarch64' and platform_system == 'Linux' and sys_platform == 'linux'",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and platform_system != 'Darwin' and sys_platform != 'linux') or (python_full_version == '3.11.*' and platform_system != 'Darwin' and platform_system != 'Linux' and sys_platform != 'linux')",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and platform_system != 'Darwin' and sys_platform == 'linux') or (python_full_version == '3.11.*' and platform_system != 'Darwin' and platform_system != 'Linux' and sys_platform == 'linux')",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and platform_system == 'Linux' and sys_platform != 'linux') or (python_full_version == '3.11.*' and platform_system != 'Darwin' and platform_system != 'Linux' and sys_platform != 'linux')",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and platform_system == 'Linux' and sys_platform == 'linux') or (python_full_version == '3.11.*' and platform_system != 'Darwin' and platform_system != 'Linux' and sys_platform == 'linux')",
     "python_full_version >= '3.12' and platform_system == 'Darwin' and sys_platform != 'linux'",
-    "python_full_version >= '3.12' and platform_system == 'Darwin' and sys_platform == 'linux'",
     "python_full_version >= '3.12' and platform_machine == 'aarch64' and platform_system == 'Linux' and sys_platform != 'linux'",
     "python_full_version >= '3.12' and platform_machine == 'aarch64' and platform_system == 'Linux' and sys_platform == 'linux'",
-    "(python_full_version >= '3.12' and platform_machine != 'aarch64' and platform_system != 'Darwin' and sys_platform != 'linux') or (python_full_version >= '3.12' and platform_system != 'Darwin' and platform_system != 'Linux' and sys_platform != 'linux')",
-    "(python_full_version >= '3.12' and platform_machine != 'aarch64' and platform_system != 'Darwin' and sys_platform == 'linux') or (python_full_version >= '3.12' and platform_system != 'Darwin' and platform_system != 'Linux' and sys_platform == 'linux')",
+    "(python_full_version >= '3.12' and platform_machine != 'aarch64' and platform_system == 'Linux' and sys_platform != 'linux') or (python_full_version >= '3.12' and platform_system != 'Darwin' and platform_system != 'Linux' and sys_platform != 'linux')",
+    "(python_full_version >= '3.12' and platform_machine != 'aarch64' and platform_system == 'Linux' and sys_platform == 'linux') or (python_full_version >= '3.12' and platform_system != 'Darwin' and platform_system != 'Linux' and sys_platform == 'linux')",
 ]
 
 [[package]]
@@ -26,13 +24,13 @@ name = "accelerate"
 version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "huggingface-hub" },
-    { name = "numpy" },
-    { name = "packaging" },
-    { name = "psutil" },
-    { name = "pyyaml" },
-    { name = "safetensors" },
-    { name = "torch" },
+    { name = "huggingface-hub", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "numpy", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "packaging", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "psutil", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "pyyaml", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "safetensors", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "torch", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/51/0b/179cc63d3a4f52e8cb233f2153a3e5a417522c85ea4b1dd25f6f2b377369/accelerate-1.1.1.tar.gz", hash = "sha256:0d39dfac557052bc735eb2703a0e87742879e1e40b88af8a2f9a93233d4cd7db", size = 335346 }
 wheels = [
@@ -53,10 +51,10 @@ name = "anyio"
 version = "4.6.2.post1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
-    { name = "idna" },
-    { name = "sniffio" },
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+    { name = "exceptiongroup", marker = "(python_full_version < '3.11' and platform_system != 'Darwin') or (python_full_version < '3.11' and sys_platform != 'linux')" },
+    { name = "idna", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "sniffio", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "typing-extensions", marker = "(python_full_version < '3.11' and platform_system != 'Darwin') or (python_full_version < '3.11' and sys_platform != 'linux')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9f/09/45b9b7a6d4e45c6bcb5bf61d19e3ab87df68e0601fa8c5293de3542546cc/anyio-4.6.2.post1.tar.gz", hash = "sha256:4c8bc31ccdb51c7f7bd251f51c609e038d63e34219b44aa86e47576389880b4c", size = 173422 }
 wheels = [
@@ -68,7 +66,7 @@ name = "asgiref"
 version = "3.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", marker = "(python_full_version < '3.11' and platform_system != 'Darwin') or (python_full_version < '3.11' and sys_platform != 'linux')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/29/38/b3395cc9ad1b56d2ddac9970bc8f4141312dbaec28bc7c218b0dfafd0f42/asgiref-3.8.1.tar.gz", hash = "sha256:c343bd80a0bec947a9860adb4c432ffa7db769836c64238fc34bdc3fec84d590", size = 35186 }
 wheels = [
@@ -116,7 +114,7 @@ name = "cffi"
 version = "1.17.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pycparser" },
+    { name = "pycparser", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fc/97/c783634659c2920c3fc70419e3af40972dbaf758daa229a7d6ea6135c90d/cffi-1.17.1.tar.gz", hash = "sha256:1c39c6016c32bc48dd54561950ebd6836e1670f2ae46128f67cf49e789c52824", size = 516621 }
 wheels = [
@@ -216,7 +214,7 @@ name = "click"
 version = "8.1.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "platform_system == 'Windows'" },
+    { name = "colorama", marker = "platform_system == 'Windows' and sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/96/d3/f04c7bfcf5c1862a2a5b845c6b2b360488cf47af55dfa79c98f6a6bf98b5/click-8.1.7.tar.gz", hash = "sha256:ca9853ad459e787e2192211578cc907e7594e294c7ccc834310722b41b9ca6de", size = 336121 }
 wheels = [
@@ -237,7 +235,7 @@ name = "cytoolz"
 version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "toolz" },
+    { name = "toolz", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e2/4c/ca9b05bdfa28ddbb4a5365c27021a1d4be61db7d8f6b4e5d4e76aa4ba3b7/cytoolz-1.0.0.tar.gz", hash = "sha256:eb453b30182152f9917a5189b7d99046b6ce90cdf8aeb0feff4b2683e600defd", size = 626708 }
 wheels = [
@@ -295,7 +293,7 @@ name = "deprecated"
 version = "1.2.15"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "wrapt" },
+    { name = "wrapt", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/2e/a3/53e7d78a6850ffdd394d7048a31a6f14e44900adedf190f9a165f6b69439/deprecated-1.2.15.tar.gz", hash = "sha256:683e561a90de76239796e6b6feac66b99030d2dd3fcf61ef996330f14bbb9b0d", size = 2977612 }
 wheels = [
@@ -307,14 +305,14 @@ name = "diffusers"
 version = "0.31.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "filelock" },
-    { name = "huggingface-hub" },
-    { name = "importlib-metadata" },
-    { name = "numpy" },
-    { name = "pillow" },
-    { name = "regex" },
-    { name = "requests" },
-    { name = "safetensors" },
+    { name = "filelock", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "huggingface-hub", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "importlib-metadata", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "numpy", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "pillow", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "regex", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "requests", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "safetensors", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/78/5d/156acb741303abbee214926804c5f0d09eacd35d05ad942577e996acdac3/diffusers-0.31.0.tar.gz", hash = "sha256:b1d01a73e45d43a0630c299173915dddd69fc50f2ae8f2ab5de4fd245eaed72f", size = 2308202 }
 wheels = [
@@ -326,7 +324,7 @@ name = "docker-pycreds"
 version = "0.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "six" },
+    { name = "six", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c5/e6/d1f6c00b7221e2d7c4b470132c931325c8b22c51ca62417e300f5ce16009/docker-pycreds-0.4.0.tar.gz", hash = "sha256:6ce3270bcaf404cc4c3e27e4b6c70d3521deae82fb508767870fdbf772d584d4", size = 8754 }
 wheels = [
@@ -338,7 +336,7 @@ name = "ecdsa"
 version = "0.19.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "six" },
+    { name = "six", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5e/d0/ec8ac1de7accdcf18cfe468653ef00afd2f609faf67c423efbd02491051b/ecdsa-0.19.0.tar.gz", hash = "sha256:60eaad1199659900dd0af521ed462b793bbdf867432b3948e87416ae4caf6bf8", size = 197791 }
 wheels = [
@@ -350,18 +348,18 @@ name = "edge-maxxing-base"
 version = "1.0.0"
 source = { editable = "../base" }
 dependencies = [
-    { name = "accelerate" },
-    { name = "cachetools" },
-    { name = "diffusers" },
-    { name = "edge-maxxing-pipelines" },
-    { name = "fiber" },
-    { name = "gitpython" },
-    { name = "netaddr" },
-    { name = "opencv-python" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "pynvml" },
-    { name = "scikit-image" },
-    { name = "transformers" },
+    { name = "accelerate", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "cachetools", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "diffusers", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "edge-maxxing-pipelines", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "fiber", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "gitpython", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "netaddr", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opencv-python", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "pynvml", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "scikit-image", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "transformers", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 
 [package.metadata]
@@ -370,7 +368,7 @@ requires-dist = [
     { name = "cachetools", specifier = ">=5.5.0" },
     { name = "diffusers", specifier = ">=0.31.0" },
     { name = "edge-maxxing-pipelines", editable = "../pipelines" },
-    { name = "fiber", git = "https://github.com/rayonlabs/fiber.git?rev=1.0.0" },
+    { name = "fiber", git = "https://github.com/rayonlabs/fiber.git?rev=2.0.1" },
     { name = "gitpython", specifier = ">=3.1.43" },
     { name = "netaddr", specifier = ">=1.3.0" },
     { name = "opencv-python", specifier = ">=4.10.0.84" },
@@ -391,7 +389,7 @@ name = "edge-maxxing-pipelines"
 version = "1.0.0"
 source = { editable = "../pipelines" }
 dependencies = [
-    { name = "pydantic" },
+    { name = "pydantic", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 
 [package.metadata]
@@ -399,41 +397,41 @@ requires-dist = [{ name = "pydantic", specifier = ">=2.9.2" }]
 
 [[package]]
 name = "edge-maxxing-validator"
-version = "5.6.3"
+version = "5.7.0"
 source = { editable = "." }
 dependencies = [
-    { name = "edge-maxxing-base" },
-    { name = "fastapi" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-distro" },
-    { name = "opentelemetry-exporter-otlp" },
-    { name = "opentelemetry-instrumentation-aiohttp-client" },
-    { name = "opentelemetry-instrumentation-aiohttp-server" },
-    { name = "opentelemetry-instrumentation-asyncio" },
-    { name = "opentelemetry-instrumentation-dbapi" },
-    { name = "opentelemetry-instrumentation-fastapi" },
-    { name = "opentelemetry-instrumentation-grpc" },
-    { name = "opentelemetry-instrumentation-httpx" },
-    { name = "opentelemetry-instrumentation-jinja2" },
-    { name = "opentelemetry-instrumentation-logging" },
-    { name = "opentelemetry-instrumentation-requests" },
-    { name = "opentelemetry-instrumentation-sqlite3" },
-    { name = "opentelemetry-instrumentation-starlette" },
-    { name = "opentelemetry-instrumentation-system-metrics" },
-    { name = "opentelemetry-instrumentation-threading" },
-    { name = "opentelemetry-instrumentation-tortoiseorm" },
-    { name = "opentelemetry-instrumentation-urllib" },
-    { name = "opentelemetry-instrumentation-urllib3" },
-    { name = "opentelemetry-instrumentation-wsgi" },
-    { name = "opentelemetry-sdk" },
-    { name = "uvicorn" },
-    { name = "wandb" },
+    { name = "edge-maxxing-base", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "fastapi", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-distro", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-exporter-otlp", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-aiohttp-client", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-aiohttp-server", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-asyncio", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-dbapi", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-fastapi", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-grpc", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-httpx", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-jinja2", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-logging", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-requests", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-sqlite3", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-starlette", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-system-metrics", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-threading", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-tortoiseorm", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-urllib", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-urllib3", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-wsgi", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-sdk", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "uvicorn", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "wandb", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 
 [package.dev-dependencies]
 dev = [
-    { name = "pytype" },
-    { name = "ruff" },
+    { name = "pytype", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "ruff", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 
 [package.metadata]
@@ -486,8 +484,8 @@ name = "eth-keys"
 version = "0.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "eth-typing" },
-    { name = "eth-utils" },
+    { name = "eth-typing", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "eth-utils", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/58/4a/aabe0bff4e299858845fba5598c435f2bee0646366b9635750133904e2d8/eth_keys-0.6.0.tar.gz", hash = "sha256:ba33230f851d02c894e83989185b21d76152c49b37e35b61b1d8a6d9f1d20430", size = 28944 }
 wheels = [
@@ -499,7 +497,7 @@ name = "eth-typing"
 version = "5.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions" },
+    { name = "typing-extensions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/94/0a/27010c2670f130019d787906038f43d4c0b2896d696d3bbc46e98c75ea61/eth_typing-5.0.0.tar.gz", hash = "sha256:87ce7cee75665c09d2dcff8de1b496609d5e32fcd2e2b1d8fc0370c29eedcdc0", size = 22595 }
 wheels = [
@@ -511,10 +509,10 @@ name = "eth-utils"
 version = "2.3.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cytoolz", marker = "implementation_name == 'cpython'" },
-    { name = "eth-hash" },
-    { name = "eth-typing" },
-    { name = "toolz", marker = "implementation_name == 'pypy'" },
+    { name = "cytoolz", marker = "(implementation_name == 'cpython' and platform_system != 'Darwin') or (implementation_name == 'cpython' and sys_platform != 'linux')" },
+    { name = "eth-hash", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "eth-typing", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "toolz", marker = "(implementation_name == 'pypy' and platform_system != 'Darwin') or (implementation_name == 'pypy' and sys_platform != 'linux')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b8/b0/ec73fd8b9a836a1b0f09db8e9ca22e3c1f7be1e4a36ce4a9e254819ee37a/eth_utils-2.3.2.tar.gz", hash = "sha256:1986d704b29202386c9bc4b27b948a134320c11c8104c45ca367e4663ae7d10e", size = 74656 }
 wheels = [
@@ -535,9 +533,9 @@ name = "fastapi"
 version = "0.115.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pydantic" },
-    { name = "starlette" },
-    { name = "typing-extensions" },
+    { name = "pydantic", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "starlette", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "typing-extensions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ae/29/f71316b9273b6552a263748e49cd7b83898dc9499a663d30c7b9cb853cb8/fastapi-0.115.5.tar.gz", hash = "sha256:0e7a4d0dc0d01c68df21887cce0945e72d3c48b9f4f79dfe7a7d53aa08fbb289", size = 301047 }
 wheels = [
@@ -546,15 +544,16 @@ wheels = [
 
 [[package]]
 name = "fiber"
-version = "1.0.0"
-source = { git = "https://github.com/rayonlabs/fiber.git?rev=1.0.0#199d6432b748c2a93c3ee0c34db72418b19c6d7f" }
+version = "2.0.0"
+source = { git = "https://github.com/rayonlabs/fiber.git?rev=2.0.1#40ef46551d507a7173792f109db3dc6a62378c3d" }
 dependencies = [
-    { name = "colorama" },
-    { name = "eth-typing" },
-    { name = "pydantic" },
-    { name = "python-dotenv" },
-    { name = "substrate-interface" },
-    { name = "tenacity" },
+    { name = "colorama", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "eth-typing", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "netaddr", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "pydantic", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "python-dotenv", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "substrate-interface", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "tenacity", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 
 [[package]]
@@ -580,7 +579,7 @@ name = "gitdb"
 version = "4.0.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "smmap" },
+    { name = "smmap", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/19/0d/bbb5b5ee188dec84647a4664f3e11b06ade2bde568dbd489d9d64adef8ed/gitdb-4.0.11.tar.gz", hash = "sha256:bf5421126136d6d0af55bc1e7c1af1c397a34f5b7bd79e776cd3e89785c2b04b", size = 394469 }
 wheels = [
@@ -592,7 +591,7 @@ name = "gitpython"
 version = "3.1.43"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "gitdb" },
+    { name = "gitdb", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b6/a1/106fd9fa2dd989b6fb36e5893961f82992cf676381707253e0bf93eb1662/GitPython-3.1.43.tar.gz", hash = "sha256:35f314a9f878467f5453cc1fee295c3e18e52f1b99f10f6cf5b1682e968a9e7c", size = 214149 }
 wheels = [
@@ -604,7 +603,7 @@ name = "googleapis-common-protos"
 version = "1.66.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "protobuf" },
+    { name = "protobuf", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ff/a7/8e9cccdb1c49870de6faea2a2764fa23f627dd290633103540209f03524c/googleapis_common_protos-1.66.0.tar.gz", hash = "sha256:c3e7b33d15fdca5374cc0a7346dd92ffa847425cc4ea941d970f13680052ec8c", size = 114376 }
 wheels = [
@@ -660,13 +659,13 @@ name = "huggingface-hub"
 version = "0.26.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "filelock" },
-    { name = "fsspec" },
-    { name = "packaging" },
-    { name = "pyyaml" },
-    { name = "requests" },
-    { name = "tqdm" },
-    { name = "typing-extensions" },
+    { name = "filelock", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "fsspec", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "packaging", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "pyyaml", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "requests", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "tqdm", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "typing-extensions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d5/a8/882ae5d1cfa7c9c5be32feee4cee56d9873078913953423e47a756da110d/huggingface_hub-0.26.2.tar.gz", hash = "sha256:b100d853465d965733964d123939ba287da60a547087783ddff8a323f340332b", size = 375621 }
 wheels = [
@@ -687,8 +686,8 @@ name = "imageio"
 version = "2.36.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy" },
-    { name = "pillow" },
+    { name = "numpy", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "pillow", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4f/34/a714fd354f5f7fe650477072d4da21446849b20c02045dcf7ac827495121/imageio-2.36.0.tar.gz", hash = "sha256:1c8f294db862c256e9562354d65aa54725b8dafed7f10f02bb3ec20ec1678850", size = 389492 }
 wheels = [
@@ -709,7 +708,7 @@ name = "importlab"
 version = "0.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "networkx" },
+    { name = "networkx", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f5/22/ab9494dccf1e237276f98364d53673bc0ab97ebe5cb671e960f18710457d/importlab-0.8.1.tar.gz", hash = "sha256:b3893853b1f6eb027da509c3b40e6787e95dd66b4b66f1b3613aad77556e1465", size = 28856 }
 wheels = [
@@ -721,7 +720,7 @@ name = "importlib-metadata"
 version = "8.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "zipp" },
+    { name = "zipp", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cd/12/33e59336dca5be0c398a7482335911a33aa0e20776128f038019f1a95f1b/importlib_metadata-8.5.0.tar.gz", hash = "sha256:71522656f0abace1d072b9e5481a48f07c138e00f079c38c8f883823f9c26bd7", size = 55304 }
 wheels = [
@@ -733,7 +732,7 @@ name = "jinja2"
 version = "3.1.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "markupsafe" },
+    { name = "markupsafe", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ed/55/39036716d19cab0747a5020fc7e907f362fbf48c984b14e62127f7e68e5d/jinja2-3.1.4.tar.gz", hash = "sha256:4a3aee7acbbe7303aede8e9648d13b8bf88a429282aa6122a993f0ac800cb369", size = 240245 }
 wheels = [
@@ -745,7 +744,7 @@ name = "lazy-loader"
 version = "0.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "packaging" },
+    { name = "packaging", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/6f/6b/c875b30a1ba490860c93da4cabf479e03f584eba06fe5963f6f6644653d8/lazy_loader-0.4.tar.gz", hash = "sha256:47c75182589b91a4e1a85a136c074285a5ad4d9f39c63e0d7fb76391c4574cd1", size = 15431 }
 wheels = [
@@ -757,7 +756,7 @@ name = "libcst"
 version = "1.5.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyyaml" },
+    { name = "pyyaml", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/27/a6/a19b587108b15d3e0bfa8d0944265809581c8b8e161e22c9c9060afbbf4a/libcst-1.5.1.tar.gz", hash = "sha256:71cb294db84df9e410208009c732628e920111683c2f2b2e0c5b71b98464f365", size = 773387 }
 wheels = [
@@ -997,7 +996,7 @@ name = "nvidia-cudnn-cu12"
 version = "9.1.0.70"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12", marker = "(platform_machine != 'aarch64' and platform_system != 'Darwin') or (platform_system != 'Darwin' and platform_system != 'Linux')" },
+    { name = "nvidia-cublas-cu12", marker = "(platform_machine != 'aarch64' and platform_system == 'Linux') or (platform_system != 'Darwin' and platform_system != 'Linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9f/fd/713452cd72343f682b1c7b9321e23829f00b842ceaedcda96e742ea0b0b3/nvidia_cudnn_cu12-9.1.0.70-py3-none-manylinux2014_x86_64.whl", hash = "sha256:165764f44ef8c61fcdfdfdbe769d687e06374059fbb388b6c89ecb0e28793a6f", size = 664752741 },
@@ -1008,7 +1007,7 @@ name = "nvidia-cufft-cu12"
 version = "11.2.1.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12", marker = "(platform_machine != 'aarch64' and platform_system != 'Darwin') or (platform_system != 'Darwin' and platform_system != 'Linux')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(platform_machine != 'aarch64' and platform_system == 'Linux') or (platform_system != 'Darwin' and platform_system != 'Linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7a/8a/0e728f749baca3fbeffad762738276e5df60851958be7783af121a7221e7/nvidia_cufft_cu12-11.2.1.3-py3-none-manylinux2014_aarch64.whl", hash = "sha256:5dad8008fc7f92f5ddfa2101430917ce2ffacd86824914c82e28990ad7f00399", size = 211422548 },
@@ -1029,9 +1028,9 @@ name = "nvidia-cusolver-cu12"
 version = "11.6.1.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12", marker = "(platform_machine != 'aarch64' and platform_system != 'Darwin') or (platform_system != 'Darwin' and platform_system != 'Linux')" },
-    { name = "nvidia-cusparse-cu12", marker = "(platform_machine != 'aarch64' and platform_system != 'Darwin') or (platform_system != 'Darwin' and platform_system != 'Linux')" },
-    { name = "nvidia-nvjitlink-cu12", marker = "(platform_machine != 'aarch64' and platform_system != 'Darwin') or (platform_system != 'Darwin' and platform_system != 'Linux')" },
+    { name = "nvidia-cublas-cu12", marker = "(platform_machine != 'aarch64' and platform_system == 'Linux') or (platform_system != 'Darwin' and platform_system != 'Linux')" },
+    { name = "nvidia-cusparse-cu12", marker = "(platform_machine != 'aarch64' and platform_system == 'Linux') or (platform_system != 'Darwin' and platform_system != 'Linux')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(platform_machine != 'aarch64' and platform_system == 'Linux') or (platform_system != 'Darwin' and platform_system != 'Linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/46/6b/a5c33cf16af09166845345275c34ad2190944bcc6026797a39f8e0a282e0/nvidia_cusolver_cu12-11.6.1.9-py3-none-manylinux2014_aarch64.whl", hash = "sha256:d338f155f174f90724bbde3758b7ac375a70ce8e706d70b018dd3375545fc84e", size = 127634111 },
@@ -1043,7 +1042,7 @@ name = "nvidia-cusparse-cu12"
 version = "12.3.1.170"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12", marker = "(platform_machine != 'aarch64' and platform_system != 'Darwin') or (platform_system != 'Darwin' and platform_system != 'Linux')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(platform_machine != 'aarch64' and platform_system == 'Linux') or (platform_system != 'Darwin' and platform_system != 'Linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/96/a9/c0d2f83a53d40a4a41be14cea6a0bf9e668ffcf8b004bd65633f433050c0/nvidia_cusparse_cu12-12.3.1.170-py3-none-manylinux2014_aarch64.whl", hash = "sha256:9d32f62896231ebe0480efd8a7f702e143c98cfaa0e8a76df3386c1ba2b54df3", size = 207381987 },
@@ -1081,7 +1080,7 @@ name = "opencv-python"
 version = "4.10.0.84"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4a/e7/b70a2d9ab205110d715906fc8ec83fbb00404aeb3a37a0654fdb68eb0c8c/opencv-python-4.10.0.84.tar.gz", hash = "sha256:72d234e4582e9658ffea8e9cae5b63d488ad06994ef12d81dc303b17472f3526", size = 95103981 }
 wheels = [
@@ -1098,8 +1097,8 @@ name = "opentelemetry-api"
 version = "1.28.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "deprecated" },
-    { name = "importlib-metadata" },
+    { name = "deprecated", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "importlib-metadata", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/51/34/e4e9245c868c6490a46ffedf6bd5b0f512bbc0a848b19e3a51f6bbad648c/opentelemetry_api-1.28.2.tar.gz", hash = "sha256:ecdc70c7139f17f9b0cf3742d57d7020e3e8315d6cffcdf1a12a905d45b19cc0", size = 62796 }
 wheels = [
@@ -1111,9 +1110,9 @@ name = "opentelemetry-distro"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-sdk" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-sdk", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/86/61/93af58d88f0c2087e7652bbdf7dd277eacc153e537b60e6ab85d47d1a89a/opentelemetry_distro-0.49b2.tar.gz", hash = "sha256:ce9961bc6df0937c6157642c9e1212caeec9049161523f43fafadc1e4191c8e9", size = 2553 }
 wheels = [
@@ -1125,8 +1124,8 @@ name = "opentelemetry-exporter-otlp"
 version = "1.28.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-exporter-otlp-proto-grpc" },
-    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-exporter-otlp-proto-grpc", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-exporter-otlp-proto-http", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/8a/eb/ad88c61b4e51cdd294ad4ae7c45b35120fb381eb019675954c4fc15b6c4c/opentelemetry_exporter_otlp-1.28.2.tar.gz", hash = "sha256:45f8d7fe4cdd41526464b542ce91b1fd1ae661be92d2c6cba71a3d948b2bdf70", size = 6155 }
 wheels = [
@@ -1138,7 +1137,7 @@ name = "opentelemetry-exporter-otlp-proto-common"
 version = "1.28.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-proto" },
+    { name = "opentelemetry-proto", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/60/cd/cd990f891b64e7698b8a6b6ab90dfac7f957db5a3d06788acd52f73ad4c0/opentelemetry_exporter_otlp_proto_common-1.28.2.tar.gz", hash = "sha256:7aebaa5fc9ff6029374546df1f3a62616fda07fccd9c6a8b7892ec130dd8baca", size = 19136 }
 wheels = [
@@ -1150,13 +1149,13 @@ name = "opentelemetry-exporter-otlp-proto-grpc"
 version = "1.28.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "deprecated" },
-    { name = "googleapis-common-protos" },
-    { name = "grpcio" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-exporter-otlp-proto-common" },
-    { name = "opentelemetry-proto" },
-    { name = "opentelemetry-sdk" },
+    { name = "deprecated", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "googleapis-common-protos", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "grpcio", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-exporter-otlp-proto-common", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-proto", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-sdk", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f7/4c/b5374467e97f2b290611de746d0e6cab3a07aec865d6b99d11535cd60059/opentelemetry_exporter_otlp_proto_grpc-1.28.2.tar.gz", hash = "sha256:07c10378380bbb01a7f621a5ce833fc1fab816e971140cd3ea1cd587840bc0e6", size = 26227 }
 wheels = [
@@ -1168,13 +1167,13 @@ name = "opentelemetry-exporter-otlp-proto-http"
 version = "1.28.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "deprecated" },
-    { name = "googleapis-common-protos" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-exporter-otlp-proto-common" },
-    { name = "opentelemetry-proto" },
-    { name = "opentelemetry-sdk" },
-    { name = "requests" },
+    { name = "deprecated", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "googleapis-common-protos", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-exporter-otlp-proto-common", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-proto", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-sdk", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "requests", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b1/91/4e32e52d13dbdf9560bc095dfe66a2c09e0034a886f7725fcda8fe10a052/opentelemetry_exporter_otlp_proto_http-1.28.2.tar.gz", hash = "sha256:d9b353d67217f091aaf4cfe8693c170973bb3e90a558992570d97020618fda79", size = 15043 }
 wheels = [
@@ -1186,10 +1185,10 @@ name = "opentelemetry-instrumentation"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "packaging" },
-    { name = "wrapt" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "packaging", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "wrapt", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/6f/1f/9fa51f6f64f4d179f4e3370eb042176ff7717682428552f5e1f4c5efcc09/opentelemetry_instrumentation-0.49b2.tar.gz", hash = "sha256:8cf00cc8d9d479e4b72adb9bd267ec544308c602b7188598db5a687e77b298e2", size = 26480 }
 wheels = [
@@ -1201,11 +1200,11 @@ name = "opentelemetry-instrumentation-aiohttp-client"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "opentelemetry-util-http" },
-    { name = "wrapt" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-util-http", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "wrapt", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/72/18/b278851567dce775957800fc26c976f8d4cbfee3411f569b716d30d2790b/opentelemetry_instrumentation_aiohttp_client-0.49b2.tar.gz", hash = "sha256:46df2cf68de8c0787b57e925d7764acb0db8bd5f9a9446b1bf470b63f782e762", size = 13596 }
 wheels = [
@@ -1217,11 +1216,11 @@ name = "opentelemetry-instrumentation-aiohttp-server"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "opentelemetry-util-http" },
-    { name = "wrapt" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-util-http", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "wrapt", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/17/e7/ce43efe4782a8586849ee5158964ddf2d0cb94307cc41ed692a9e8661a16/opentelemetry_instrumentation_aiohttp_server-0.49b2.tar.gz", hash = "sha256:3e1f603cb4d899f8d4d8c557c3ab166f28271aff5d7b9963f5ebcc700d865e4a", size = 5641 }
 wheels = [
@@ -1233,11 +1232,11 @@ name = "opentelemetry-instrumentation-asgi"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "asgiref" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "opentelemetry-util-http" },
+    { name = "asgiref", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-util-http", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/84/42/079079bd7c0423bfab987a6457e34468b6ddccf501d3c91d2795c200d65d/opentelemetry_instrumentation_asgi-0.49b2.tar.gz", hash = "sha256:2af5faf062878330714efe700127b837038c4d9d3b70b451ab2424d5076d6c1c", size = 24106 }
 wheels = [
@@ -1249,10 +1248,10 @@ name = "opentelemetry-instrumentation-asyncio"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "wrapt" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "wrapt", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/41/09/779d93c91e82df67401a02faeafa47a877a497ce85ab2080424fa9ebf43e/opentelemetry_instrumentation_asyncio-0.49b2.tar.gz", hash = "sha256:e08c9d184ae3a7701c6058c547bc299df2cedee746b0d6a2902e314423dd9f31", size = 12737 }
 wheels = [
@@ -1264,10 +1263,10 @@ name = "opentelemetry-instrumentation-dbapi"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "wrapt" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "wrapt", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/73/a5/a2bc4f57105133c21a16fbfb93cafb6a2efd0d0c4c2fba644f89b7693100/opentelemetry_instrumentation_dbapi-0.49b2.tar.gz", hash = "sha256:702fd576df514c47e81cb670c4f1b8884ea66f92e43d978ac787aeea852988a7", size = 12197 }
 wheels = [
@@ -1279,11 +1278,11 @@ name = "opentelemetry-instrumentation-fastapi"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-instrumentation-asgi" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "opentelemetry-util-http" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-asgi", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-util-http", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/87/ed/a1275d5aac63edfad0afb012d2d5917412f09ac5f773c86b465b2b0d2549/opentelemetry_instrumentation_fastapi-0.49b2.tar.gz", hash = "sha256:3aa81ed7acf6aa5236d96e90a1218c5e84a9c0dce8fa63bf34ceee6218354b63", size = 19217 }
 wheels = [
@@ -1295,10 +1294,10 @@ name = "opentelemetry-instrumentation-grpc"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "wrapt" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "wrapt", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1c/35/71da3bc31b70eb88e4cef644f66ccd02977d65c3381871ba3c7a888a5ee1/opentelemetry_instrumentation_grpc-0.49b2.tar.gz", hash = "sha256:d2b041b179b94af2963d4accdb959c7ff18f2fe4bd502110cb8892321c70e155", size = 30746 }
 wheels = [
@@ -1310,11 +1309,11 @@ name = "opentelemetry-instrumentation-httpx"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "opentelemetry-util-http" },
-    { name = "wrapt" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-util-http", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "wrapt", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b2/76/ecd15d1ebd587b638d032ec83b0a8eb08467bec4e679a2421c3a9cc13ea0/opentelemetry_instrumentation_httpx-0.49b2.tar.gz", hash = "sha256:4330f56b0ad382843a1e8fe6179d20c2d2be3ee78e60b9f01ee892b1600de44f", size = 17762 }
 wheels = [
@@ -1326,9 +1325,9 @@ name = "opentelemetry-instrumentation-jinja2"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "wrapt" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "wrapt", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/8f/5a/504dc3c5d0611825c86035b2f67c1c1f4e7e08275057a4f77efbce560c62/opentelemetry_instrumentation_jinja2-0.49b2.tar.gz", hash = "sha256:cfb86c53b9c3e3f50f360a52a59a3073cf143b7e97beca1191e326efee7de0ab", size = 8208 }
 wheels = [
@@ -1340,8 +1339,8 @@ name = "opentelemetry-instrumentation-logging"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e8/5f/142d5f7b73774bc0baa801d97011b6f9bde5bb202e88ed2b9394581898e3/opentelemetry_instrumentation_logging-0.49b2.tar.gz", hash = "sha256:625c825cb180d1a4da8008af2dc21de5f668af120f3821af16317cd3a2378d7e", size = 9718 }
 wheels = [
@@ -1353,10 +1352,10 @@ name = "opentelemetry-instrumentation-requests"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "opentelemetry-util-http" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-util-http", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b2/39/23f0c2497fc3f452f0dd978e4b9c0aaa9e3cf206ea84c3fed1ad8872a397/opentelemetry_instrumentation_requests-0.49b2.tar.gz", hash = "sha256:ea7216f13f42d3220ccd60cefd104fae656c9206bf5e3030d59fa367a9452e99", size = 14108 }
 wheels = [
@@ -1368,9 +1367,9 @@ name = "opentelemetry-instrumentation-sqlite3"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-instrumentation-dbapi" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-dbapi", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fb/94/28873232ca6330c1c1fefe1799d2f32fb4dce6457fd0ad4a3546a8f30d85/opentelemetry_instrumentation_sqlite3-0.49b2.tar.gz", hash = "sha256:91a479f84d8fb384d93ef2ee563ab584babf1e1ebe0a47e98a30037d845e96ca", size = 7513 }
 wheels = [
@@ -1382,11 +1381,11 @@ name = "opentelemetry-instrumentation-starlette"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-instrumentation-asgi" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "opentelemetry-util-http" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation-asgi", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-util-http", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/54/e9/e203dc5f1069e8c445adbccad33a44ef2723d22adf8f47b334df987cc91a/opentelemetry_instrumentation_starlette-0.49b2.tar.gz", hash = "sha256:206768ef9a77e00b97436a3a8ad90366c554ea28a17288bcfd0e07ea5d5bd891", size = 14153 }
 wheels = [
@@ -1398,9 +1397,9 @@ name = "opentelemetry-instrumentation-system-metrics"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "psutil" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "psutil", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/72/58/da2548aaa7d53cf2763db2f8ff88ceac865fca2e5c7fb1d640df939ce91c/opentelemetry_instrumentation_system_metrics-0.49b2.tar.gz", hash = "sha256:2ef4949c0c0f64e6b7437b8d23e0ee57245ab3d0d38501157bb93f4e4151207c", size = 13671 }
 wheels = [
@@ -1412,9 +1411,9 @@ name = "opentelemetry-instrumentation-threading"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "wrapt" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "wrapt", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/6f/05/389901f2de122504e2372e34124616e7722e48df88ac6b8c7fb5e88bff95/opentelemetry_instrumentation_threading-0.49b2.tar.gz", hash = "sha256:6a65149ff0e2adfcc4829480c101975723e090e5f63b8e0dfca74c4bacf6ed9c", size = 8272 }
 wheels = [
@@ -1426,9 +1425,9 @@ name = "opentelemetry-instrumentation-tortoiseorm"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0c/74/617f9f12c8e4dd03ec9d44eaf497cde060e402c90d4d0353dd931229a671/opentelemetry_instrumentation_tortoiseorm-0.49b2.tar.gz", hash = "sha256:cac5afabd1e834372c9abae063067eef8b063323b50377934bdd0384e9f9b3fc", size = 8230 }
 wheels = [
@@ -1440,10 +1439,10 @@ name = "opentelemetry-instrumentation-urllib"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "opentelemetry-util-http" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-util-http", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/90/f0/295d399e0bdc89fe7ca36cccf3d09d274f7c97b8d444441e83704df8ce49/opentelemetry_instrumentation_urllib-0.49b2.tar.gz", hash = "sha256:a148c073de6a1bbaf3ca423e639840cd2aa554eb0dda95077c111e46ea91d8ca", size = 13817 }
 wheels = [
@@ -1455,11 +1454,11 @@ name = "opentelemetry-instrumentation-urllib3"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "opentelemetry-util-http" },
-    { name = "wrapt" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-util-http", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "wrapt", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/72/43/7b8e65657dfe3c0f38ddb46e940b21991feeebb7b1011c71c71dd71b3da9/opentelemetry_instrumentation_urllib3-0.49b2.tar.gz", hash = "sha256:28f47fe8044f321c6f5cadce4a6c3d4fdb9b86b610aac28ea8eb9820017cdfa3", size = 15418 }
 wheels = [
@@ -1471,10 +1470,10 @@ name = "opentelemetry-instrumentation-wsgi"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "opentelemetry-util-http" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-util-http", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/99/30/b9df5bdc50073002b093e630bcde1385e3df6c6114f338291f9922f92f01/opentelemetry_instrumentation_wsgi-0.49b2.tar.gz", hash = "sha256:0bd88510fa45fa6ba70bd444060c0a1ee12e45e02bb4bcba19bc4f955269b872", size = 17719 }
 wheels = [
@@ -1486,7 +1485,7 @@ name = "opentelemetry-proto"
 version = "1.28.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "protobuf" },
+    { name = "protobuf", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d0/45/96c4f34c79fd87dc8a1c0c432f23a5a202729f21e4e63c8b36fc8e57767a/opentelemetry_proto-1.28.2.tar.gz", hash = "sha256:7c0d125a6b71af88bfeeda16bfdd0ff63dc2cf0039baf6f49fa133b203e3f566", size = 34316 }
 wheels = [
@@ -1498,9 +1497,9 @@ name = "opentelemetry-sdk"
 version = "1.28.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "typing-extensions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4b/f4/840a5af4efe48d7fb4c456ad60fd624673e871a60d6494f7ff8a934755d4/opentelemetry_sdk-1.28.2.tar.gz", hash = "sha256:5fed24c5497e10df30282456fe2910f83377797511de07d14cec0d3e0a1a3110", size = 157272 }
 wheels = [
@@ -1512,8 +1511,8 @@ name = "opentelemetry-semantic-conventions"
 version = "0.49b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "deprecated" },
-    { name = "opentelemetry-api" },
+    { name = "deprecated", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/7d/0a/e3b93f94aa3223c6fd8e743502a1fefd4fb3a753d8f501ce2a418f7c0bd4/opentelemetry_semantic_conventions-0.49b2.tar.gz", hash = "sha256:44e32ce6a5bb8d7c0c617f84b9dc1c8deda1045a07dc16a688cc7cbeab679997", size = 95213 }
 wheels = [
@@ -1839,9 +1838,9 @@ name = "pydantic"
 version = "2.9.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "annotated-types" },
-    { name = "pydantic-core" },
-    { name = "typing-extensions" },
+    { name = "annotated-types", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "pydantic-core", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "typing-extensions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a9/b7/d9e3f12af310e1120c21603644a1cd86f59060e040ec5c3a80b8f05fae30/pydantic-2.9.2.tar.gz", hash = "sha256:d155cef71265d1e9807ed1c32b4c8deec042a44a50a4188b25ac67ecd81a9c0f", size = 769917 }
 wheels = [
@@ -1853,7 +1852,7 @@ name = "pydantic-core"
 version = "2.23.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions" },
+    { name = "typing-extensions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e2/aa/6b6a9b9f8537b872f552ddd46dd3da230367754b6f707b8e1e963f515ea3/pydantic_core-2.23.4.tar.gz", hash = "sha256:2584f7cf844ac4d970fba483a717dbe10c1c1c96a969bf65d61ffe94df1b2863", size = 402156 }
 wheels = [
@@ -1908,7 +1907,7 @@ name = "pydot"
 version = "3.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyparsing" },
+    { name = "pyparsing", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/85/10/4e4da8c271540dc35914e927546cbb821397f0f9477f4079cd8732946699/pydot-3.0.2.tar.gz", hash = "sha256:9180da540b51b3aa09fbf81140b3edfbe2315d778e8589a7d0a4a69c41332bae", size = 167979 }
 wheels = [
@@ -1920,7 +1919,7 @@ name = "pynacl"
 version = "1.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi" },
+    { name = "cffi", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a7/22/27582568be639dfe22ddb3902225f91f2f17ceff88ce80e4db396c8986da/PyNaCl-1.5.0.tar.gz", hash = "sha256:8ac7448f09ab85811607bdd21ec2464495ac8b7c66d146bf545b0f08fb9220ba", size = 3392854 }
 wheels = [
@@ -1967,19 +1966,19 @@ name = "pytype"
 version = "2024.10.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "attrs" },
-    { name = "immutabledict" },
-    { name = "importlab" },
-    { name = "jinja2" },
-    { name = "libcst" },
-    { name = "msgspec" },
-    { name = "networkx" },
-    { name = "ninja" },
-    { name = "pycnite" },
-    { name = "pydot" },
-    { name = "tabulate" },
-    { name = "toml" },
-    { name = "typing-extensions" },
+    { name = "attrs", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "immutabledict", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "importlab", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "jinja2", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "libcst", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "msgspec", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "networkx", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "ninja", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "pycnite", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "pydot", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "tabulate", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "toml", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "typing-extensions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9c/7a/6fd33673f9c7b9e5f4f8107028c323b1c72acc0f909f1b9b3391a31ea604/pytype-2024.10.11.tar.gz", hash = "sha256:ae5ff82f0b07d5ad68d4ec32a3e8de44fad6ed565a821a76aca50a14df382274", size = 2789497 }
 wheels = [
@@ -2088,10 +2087,10 @@ name = "requests"
 version = "2.32.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "certifi" },
-    { name = "charset-normalizer" },
-    { name = "idna" },
-    { name = "urllib3" },
+    { name = "certifi", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "charset-normalizer", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "idna", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "urllib3", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/63/70/2bf7780ad2d390a8d301ad0b550f1581eadbd9a20f896afe06353c2a2913/requests-2.32.3.tar.gz", hash = "sha256:55365417734eb18255590a9ff9eb97e9e1da868d4ccd6402399eaf68af20a760", size = 131218 }
 wheels = [
@@ -2179,9 +2178,9 @@ name = "scalecodec"
 version = "1.2.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "base58" },
-    { name = "more-itertools" },
-    { name = "requests" },
+    { name = "base58", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "more-itertools", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "requests", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/bc/7c/703893e7a8751318517a3dd8c0c060b2c30ffa33f4ab5dd6a4ed483f7967/scalecodec-1.2.11.tar.gz", hash = "sha256:99a2cdbfccdcaf22bd86b86da55a730a2855514ad2309faef4a4a93ac6cbeb8d", size = 150260 }
 wheels = [
@@ -2193,14 +2192,14 @@ name = "scikit-image"
 version = "0.24.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "imageio" },
-    { name = "lazy-loader" },
-    { name = "networkx" },
-    { name = "numpy" },
-    { name = "packaging" },
-    { name = "pillow" },
-    { name = "scipy" },
-    { name = "tifffile" },
+    { name = "imageio", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "lazy-loader", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "networkx", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "numpy", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "packaging", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "pillow", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "scipy", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "tifffile", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5d/c5/bcd66bf5aae5587d3b4b69c74bee30889c46c9778e858942ce93a030e1f3/scikit_image-0.24.0.tar.gz", hash = "sha256:5d16efe95da8edbeb363e0c4157b99becbd650a60b77f6e3af5768b66cf007ab", size = 22693928 }
 wheels = [
@@ -2226,7 +2225,7 @@ name = "scipy"
 version = "1.14.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/62/11/4d44a1f274e002784e4dbdb81e0ea96d2de2d1045b2132d5af62cc31fd28/scipy-1.14.1.tar.gz", hash = "sha256:5a275584e726026a5699459aa72f828a610821006228e841b94275c4a7c08417", size = 58620554 }
 wheels = [
@@ -2261,8 +2260,8 @@ name = "sentry-sdk"
 version = "2.19.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "certifi" },
-    { name = "urllib3" },
+    { name = "certifi", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "urllib3", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a2/0e/cc0e60f0e0cfd5a9e42622ff5a227301c6475a56bcfa82e8e893bc209f20/sentry_sdk-2.19.0.tar.gz", hash = "sha256:ee4a4d2ae8bfe3cac012dcf3e4607975904c137e1738116549fc3dbbb6ff0e36", size = 298045 }
 wheels = [
@@ -2358,7 +2357,7 @@ name = "starlette"
 version = "0.41.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "anyio" },
+    { name = "anyio", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1a/4c/9b5764bd22eec91c4039ef4c55334e9187085da2d8a2df7bd570869aae18/starlette-0.41.3.tar.gz", hash = "sha256:0e4ab3d16522a255be6b28260b938eae2482f98ce5cc934cb08dce8dc3ba5835", size = 2574159 }
 wheels = [
@@ -2370,21 +2369,21 @@ name = "substrate-interface"
 version = "1.7.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "base58" },
-    { name = "certifi" },
-    { name = "ecdsa" },
-    { name = "eth-keys" },
-    { name = "eth-utils" },
-    { name = "idna" },
-    { name = "py-bip39-bindings" },
-    { name = "py-ed25519-zebra-bindings" },
-    { name = "py-sr25519-bindings" },
-    { name = "pycryptodome" },
-    { name = "pynacl" },
-    { name = "requests" },
-    { name = "scalecodec" },
-    { name = "websocket-client" },
-    { name = "xxhash" },
+    { name = "base58", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "certifi", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "ecdsa", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "eth-keys", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "eth-utils", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "idna", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "py-bip39-bindings", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "py-ed25519-zebra-bindings", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "py-sr25519-bindings", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "pycryptodome", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "pynacl", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "requests", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "scalecodec", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "websocket-client", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "xxhash", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/04/46/81b93a374c7969b334fa18214f16f97750789edae4f14eb081dffd9a0916/substrate-interface-1.7.10.tar.gz", hash = "sha256:0dec0104abc16d01c3d22700253a84e67430b5e56c46efea71fea47063a8eaa4", size = 80393 }
 wheels = [
@@ -2396,7 +2395,7 @@ name = "sympy"
 version = "1.13.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "mpmath" },
+    { name = "mpmath", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ca/99/5a5b6f19ff9f083671ddf7b9632028436167cd3d33e11015754e41b249a4/sympy-1.13.1.tar.gz", hash = "sha256:9cebf7e04ff162015ce31c9c6c9144daa34a93bd082f54fd8f12deca4f47515f", size = 7533040 }
 wheels = [
@@ -2426,7 +2425,7 @@ name = "tifffile"
 version = "2024.9.20"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f2/14/6fe362c483166b3a44521ac5c92c98f096bd7fb05512e8730d0e23e152c9/tifffile-2024.9.20.tar.gz", hash = "sha256:3fbf3be2f995a7051a8ae05a4be70c96fc0789f22ed6f1c4104c973cf68a640b", size = 367207 }
 wheels = [
@@ -2438,7 +2437,7 @@ name = "tokenizers"
 version = "0.20.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "huggingface-hub" },
+    { name = "huggingface-hub", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/da/25/b1681c1c30ea3ea6e584ae3fffd552430b12faa599b558c4c4783f56d7ff/tokenizers-0.20.3.tar.gz", hash = "sha256:2278b34c5d0dd78e087e1ca7f9b1dcbf129d80211afa645f214bd6e051037539", size = 340513 }
 wheels = [
@@ -2510,10 +2509,10 @@ name = "torch"
 version = "2.5.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "filelock" },
-    { name = "fsspec" },
-    { name = "jinja2" },
-    { name = "networkx" },
+    { name = "filelock", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "fsspec", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "jinja2", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "networkx", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
     { name = "nvidia-cublas-cu12", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
     { name = "nvidia-cuda-cupti-cu12", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
     { name = "nvidia-cuda-nvrtc-cu12", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
@@ -2526,10 +2525,10 @@ dependencies = [
     { name = "nvidia-nccl-cu12", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
     { name = "nvidia-nvjitlink-cu12", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
     { name = "nvidia-nvtx-cu12", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
-    { name = "setuptools", marker = "python_full_version >= '3.12'" },
-    { name = "sympy" },
+    { name = "setuptools", marker = "(python_full_version >= '3.12' and platform_system != 'Darwin') or (python_full_version >= '3.12' and sys_platform != 'linux')" },
+    { name = "sympy", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
     { name = "triton", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
-    { name = "typing-extensions" },
+    { name = "typing-extensions", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2a/ef/834af4a885b31a0b32fff2d80e1e40f771e1566ea8ded55347502440786a/torch-2.5.1-cp310-cp310-manylinux1_x86_64.whl", hash = "sha256:71328e1bbe39d213b8721678f9dcac30dfc452a46d586f1d514a6aa0a99d4744", size = 906446312 },
@@ -2551,7 +2550,7 @@ name = "tqdm"
 version = "4.67.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "platform_system == 'Windows'" },
+    { name = "colorama", marker = "platform_system == 'Windows' and sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737 }
 wheels = [
@@ -2563,16 +2562,16 @@ name = "transformers"
 version = "4.46.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "filelock" },
-    { name = "huggingface-hub" },
-    { name = "numpy" },
-    { name = "packaging" },
-    { name = "pyyaml" },
-    { name = "regex" },
-    { name = "requests" },
-    { name = "safetensors" },
-    { name = "tokenizers" },
-    { name = "tqdm" },
+    { name = "filelock", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "huggingface-hub", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "numpy", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "packaging", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "pyyaml", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "regex", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "requests", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "safetensors", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "tokenizers", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "tqdm", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/37/5a/58f96c83e566f907ae39f16d4401bbefd8bb85c60bd1e6a95c419752ab90/transformers-4.46.3.tar.gz", hash = "sha256:8ee4b3ae943fe33e82afff8e837f4b052058b07ca9be3cb5b729ed31295f72cc", size = 8627944 }
 wheels = [
@@ -2584,7 +2583,7 @@ name = "triton"
 version = "3.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "filelock", marker = "(platform_machine != 'aarch64' and platform_system != 'Darwin') or (platform_system != 'Darwin' and platform_system != 'Linux')" },
+    { name = "filelock", marker = "(platform_machine != 'aarch64' and platform_system == 'Linux') or (platform_system != 'Darwin' and platform_system != 'Linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/98/29/69aa56dc0b2eb2602b553881e34243475ea2afd9699be042316842788ff5/triton-3.1.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6b0dd10a925263abbe9fa37dcde67a5e9b2383fc269fdf59f5657cac38c5d1d8", size = 209460013 },
@@ -2615,9 +2614,9 @@ name = "uvicorn"
 version = "0.32.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click" },
-    { name = "h11" },
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+    { name = "click", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "h11", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "typing-extensions", marker = "(python_full_version < '3.11' and platform_system != 'Darwin') or (python_full_version < '3.11' and sys_platform != 'linux')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/6a/3c/21dba3e7d76138725ef307e3d7ddd29b763119b3aa459d02cc05fefcff75/uvicorn-0.32.1.tar.gz", hash = "sha256:ee9519c246a72b1c084cea8d3b44ed6026e78a4a309cbedae9c37e4cb9fbb175", size = 77630 }
 wheels = [
@@ -2629,18 +2628,18 @@ name = "wandb"
 version = "0.18.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click" },
-    { name = "docker-pycreds" },
-    { name = "gitpython" },
-    { name = "platformdirs" },
-    { name = "protobuf" },
-    { name = "psutil" },
-    { name = "pyyaml" },
-    { name = "requests" },
-    { name = "sentry-sdk" },
-    { name = "setproctitle" },
-    { name = "setuptools" },
-    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
+    { name = "click", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "docker-pycreds", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "gitpython", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "platformdirs", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "protobuf", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "psutil", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "pyyaml", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "requests", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "sentry-sdk", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "setproctitle", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "setuptools", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },
+    { name = "typing-extensions", marker = "(python_full_version < '3.12' and platform_system != 'Darwin') or (python_full_version < '3.12' and sys_platform != 'linux')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d5/10/81cd2519a92c5dc76f0a3553daa32bc58875e05abae6eca4509e65c87d63/wandb-0.18.7.tar.gz", hash = "sha256:00f9891558d4833ee47f21ce6c603499f0bd1a7ce117ff55ee1a041e9094f9a2", size = 9505273 }
 wheels = [
