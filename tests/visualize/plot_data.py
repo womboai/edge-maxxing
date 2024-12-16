@@ -1,16 +1,18 @@
 import json
 from operator import itemgetter
 from pathlib import Path
+from statistics import mean
 
 import numpy
-from dash import Dash, html, dcc, Output, Input
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
+from dash import Dash, html, dcc, Output, Input
 from scipy.stats import percentileofscore
 
 TEST_DATA_DIRECTORY = Path(__file__).parent.parent / "test_data"
 
-days = [file.name[:-5] for file in TEST_DATA_DIRECTORY.iterdir()]
+days = [file.stem for file in TEST_DATA_DIRECTORY.glob("*.json")]
 
 app = Dash()
 
@@ -25,13 +27,25 @@ def visualize_validator(data: dict, percentile: float):
         ) for i in range(len(values))
     ]
 
-    score_differences_array = numpy.array([score_data[2] for score_data in scores if score_data[2] > 0])
+    deviations = numpy.array([
+        values[i + 1][1] - values[i][1]
+        for i in range(len(values) - 1)
+        if values[i][1] > 0
+    ])
+
+    q1 = numpy.percentile(deviations, 25)
+    q3 = numpy.percentile(deviations, 75)
+    iqr = q3 - q1
+
+    anomaly_threshold = q3 + iqr * 1.5
+
+    mean_threshold = mean(deviations)
 
     data_frame = pd.DataFrame(
         {
             "hotkey": list(map(itemgetter(0), scores)),
             "score": list(map(itemgetter(1), scores)),
-            "difference_percentile": [percentileofscore(score_differences_array, score_data[2]) for score_data in scores],
+            "difference_percentile": [percentileofscore(deviations, score_data[2]) for score_data in scores],
             "difference": list(map(itemgetter(2), scores)),
         }
     )
@@ -39,8 +53,11 @@ def visualize_validator(data: dict, percentile: float):
     figure = px.bar(data_frame, x="hotkey", y="difference", color="difference_percentile")
 
     if percentile:
-        threshold = numpy.percentile(score_differences_array, percentile)
-        figure.add_hline(y=threshold)
+        threshold = numpy.percentile(deviations, percentile)
+        figure.add_traces(go.Scatter(x=data_frame.hotkey, y=len(data_frame) * [threshold], mode="lines"))
+
+    figure.add_traces(go.Scatter(x=data_frame.hotkey, y=len(data_frame) * [mean_threshold], mode="lines"))
+    figure.add_traces(go.Scatter(x=data_frame.hotkey, y=len(data_frame) * [anomaly_threshold], mode="lines"))
 
     return dcc.Graph(figure=figure)
 

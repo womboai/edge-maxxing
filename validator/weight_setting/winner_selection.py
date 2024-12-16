@@ -1,4 +1,5 @@
 from operator import itemgetter
+from statistics import mean
 
 import numpy
 from base.checkpoint import Key, Submissions, Benchmarks
@@ -36,16 +37,24 @@ def get_contestant_ranks(scores: dict[Key, float]) -> dict[Key, int]:
     scores = list(sorted(scores.items(), key=itemgetter(1), reverse=True))
     score_values = list(map(itemgetter(1), scores))
 
-    deviations = numpy.array(list(
+    deviations = numpy.array([
         score_values[i] - score_values[i + 1]
         for i in range(len(score_values) - 1)
         if score_values[i + 1] > 0
-    ))
+    ])
 
     if not len(deviations):
         return {}
 
-    threshold = numpy.percentile(deviations, DEVIATION_THRESHOLD_PERCENTILE)
+    q1 = numpy.percentile(deviations, 25)
+    q3 = numpy.percentile(deviations, 75)
+    iqr = q3 - q1
+
+    anomaly_threshold = q3 + iqr * 1.5
+    mean_threshold = mean(deviations)
+    percentile_threshold = numpy.percentile(deviations, DEVIATION_THRESHOLD_PERCENTILE)
+
+    threshold = max(anomaly_threshold, mean_threshold, percentile_threshold)
 
     scores = iter(scores)
 

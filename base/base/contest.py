@@ -80,26 +80,26 @@ class Contest:
         self.output_comparator = output_comparator
         self.baseline_repository = baseline_repository
 
+    def get_metric_weights(self):
+        # Local import due to circular import
+        from .inputs_api import get_inputs_state
+
+        return get_inputs_state().get_metric_weights(self.id)
+
     def calculate_score(self, baseline: Metrics, benchmark: Benchmark) -> float:
         if benchmark.min_similarity < SIMILARITY_SCORE_THRESHOLD:
             return -1
 
-        from .inputs_api import get_inputs_state
-        metric_weights = get_inputs_state().get_metric_weights(self.id)
+        metric_weights = self.get_metric_weights()
 
         similarity_scale = 1 / (1 - SIMILARITY_SCORE_THRESHOLD)
         similarity = sqrt((benchmark.average_similarity - SIMILARITY_SCORE_THRESHOLD) * similarity_scale)
 
         # Normalize all weights to remove any common multiplication factors(ie weights of 4, 8 should be 1, 2)
-        minimum_metric_weight = min(metric_weights.values())
-
-        # score for all metrics being 0.0
-        baseline_score = len(metric_weights)
+        minimum_metric_weight = min(abs(w) for w in metric_weights.values())
 
         # limit as metrics approach 1.0
         highest_score = prod(abs(w) / minimum_metric_weight + 1 for w in metric_weights.values())
-
-        ratio = highest_score / baseline_score
 
         def calculate_improvement(baseline_value: float, benchmark_value: float, metric_type: MetricType) -> float:
             if baseline_value == 0:
@@ -117,14 +117,14 @@ class Contest:
             calculate_improvement(baseline.ram_used, benchmark.metrics.ram_used, MetricType.RAM_USED),
         ])
 
-        if ratio == 2:
+        if highest_score == 2:
             # Special case where we can linearly normalize the score
-            normalized_score = score / baseline_score
+            normalized_score = score
         else:
             # Normalize so baseline_score translates to 1.0, highest_score translates to 2.0
-            n = (ratio + sqrt(ratio ** 2 - ratio * 4 + 4)) / 2
+            n = (highest_score + sqrt(highest_score ** 2 - highest_score * 4 + 4)) / 2
 
-            score_base = ((n - 1) / baseline_score) * score + 1
+            score_base = (n - 1) * score + 1
 
             if score_base <= 0:
                 return -1
