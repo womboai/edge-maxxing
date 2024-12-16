@@ -17,21 +17,26 @@ app = Dash()
 def visualize_validator(data: dict, percentile: float):
     values = sorted(((hotkey, score_info["score"]) for hotkey, score_info in data.items()), key=itemgetter(1))
 
-    differences = [
-        (f"{values[i + 1][0][:5]}..", values[i + 1][1] - values[i][1]) for i in range(len(values) - 1)
+    scores = [
+        (
+            f"{values[i][0][:5]}..",
+            values[i][1],
+            0.0 if i == 0 else values[i][1] - values[i - 1][1],
+        ) for i in range(len(values))
     ]
 
-    score_differences_array = numpy.array(list(map(itemgetter(1), differences)))
+    score_differences_array = numpy.array(list(map(itemgetter(2), scores)))
 
     data_frame = pd.DataFrame(
         {
-            "hotkey-pair": list(map(itemgetter(0), differences)),
+            "hotkey": list(map(itemgetter(0), scores)),
+            "score": list(map(itemgetter(1), scores)),
             "difference_percentile": [percentileofscore(score_differences_array, score_difference) for score_difference in score_differences_array],
             "difference": score_differences_array,
         }
     )
 
-    figure = px.bar(data_frame, x="hotkey-pair", y="difference", color="difference_percentile")
+    figure = px.bar(data_frame, x="hotkey", y="difference", color="difference_percentile")
 
     if percentile:
         threshold = numpy.percentile(score_differences_array, percentile)

@@ -5,7 +5,7 @@ from base.checkpoint import Key, Submissions, Benchmarks
 from base.contest import Metrics
 from base.inputs_api import get_inputs_state
 
-DEVIATION_THRESHOLD_PERCENTILE = 85
+DEVIATION_THRESHOLD_PERCENTILE = 90
 
 
 def get_contestant_scores(
