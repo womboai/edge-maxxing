@@ -82,7 +82,7 @@ class Contest:
 
     def calculate_score(self, baseline: Metrics, benchmark: Benchmark) -> float:
         if benchmark.min_similarity < SIMILARITY_SCORE_THRESHOLD:
-            return 0.0
+            return -1
 
         from .inputs_api import get_inputs_state
         metric_weights = get_inputs_state().get_metric_weights(self.id)
@@ -103,7 +103,8 @@ class Contest:
 
         def calculate_improvement(baseline_value: float, benchmark_value: float, metric_type: MetricType) -> float:
             if baseline_value == 0:
-                return 0
+                return 1
+
             relative_improvement = (baseline_value - benchmark_value) / baseline_value
             return relative_improvement * metric_weights.get(metric_type, 0) + 1
 
