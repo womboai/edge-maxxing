@@ -25,14 +25,14 @@ def visualize_validator(data: dict, percentile: float):
         ) for i in range(len(values))
     ]
 
-    score_differences_array = numpy.array(list(map(itemgetter(2), scores)))
+    score_differences_array = numpy.array([score_data[2] for score_data in scores if score_data[2] > 0])
 
     data_frame = pd.DataFrame(
         {
             "hotkey": list(map(itemgetter(0), scores)),
             "score": list(map(itemgetter(1), scores)),
-            "difference_percentile": [percentileofscore(score_differences_array, score_difference) for score_difference in score_differences_array],
-            "difference": score_differences_array,
+            "difference_percentile": [percentileofscore(score_differences_array, score_data[2]) for score_data in scores],
+            "difference": list(map(itemgetter(2), scores)),
         }
     )
 
@@ -67,7 +67,7 @@ def callback_func(day: str, percentile: float):
 
 app.layout = html.Div(children=[
     dcc.Dropdown(days, days[0], id="day-filter"),
-    dcc.Slider(0, 100, value=85, id="percentile"),
+    dcc.Slider(0, 100, value=90, id="percentile"),
     html.Div(id="data-slot"),
 ])
 
