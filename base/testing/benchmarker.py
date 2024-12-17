@@ -1,3 +1,5 @@
+import os
+import signal
 from concurrent.futures import CancelledError
 from datetime import timedelta
 from pathlib import Path
@@ -93,9 +95,8 @@ class Benchmarker:
                 logger.warning("Benchmarking was canceled while testing the baseline")
                 return
             except Exception as e:
-                logger.error("Failed to generate baseline samples, retrying in 10 minutes", exc_info=e)
-                contest.device.empty_cache()
-                self._stop_flag.wait(600)
+                logger.error("Failed to generate baseline samples, attempting to fix the issue by restarting", exc_info=e)
+                os.kill(os.getpid(), signal.SIGTERM)
 
     def reset(self):
         self.state = BenchmarkState.NOT_STARTED
