@@ -71,16 +71,16 @@ class WandbManager:
         self,
         contest_state: ContestState,
         api_hardware: list[SystemInfo],
-        scores: dict[Key, float] | None = None,
-        ranks: dict[Key, int] | None = None
     ):
         if not self._run or self.config["wandb.off"]:
             return
 
+        scores = contest_state.get_scores(contest_state.benchmarks)
+
         data = {
-            "scores": scores or contest_state.get_scores(contest_state.benchmarks),
+            "scores": scores,
             "api_hardware": [api.model_dump() for api in api_hardware],
-            "ranks": ranks or contest_state.get_ranks(scores),
+            "ranks": contest_state.get_ranks(scores),
             "num_gpus": len(self.config["benchmarker_api"]),
         } | contest_state.model_dump()
 

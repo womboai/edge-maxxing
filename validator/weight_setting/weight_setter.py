@@ -123,7 +123,7 @@ class WeightSetter:
 
             return self._set_equal_weights()
 
-        self._wandb_manager.send_metrics(contest_state, self._api_hardware, scores, ranks)
+        self._wandb_manager.send_metrics(contest_state, self._api_hardware)
         return self._set_weights([
             weights_by_key.get(key, 0)
             for key in self._metagraph.nodes.keys()
