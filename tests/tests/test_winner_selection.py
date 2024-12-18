@@ -1,15 +1,8 @@
-import json
-from collections import defaultdict
-from datetime import datetime
-from operator import itemgetter
-from pathlib import Path
 from unittest import TestCase
 
-from base.checkpoint import Uid, Key
 from base.contest import MetricType, Contest, Metrics, Benchmark
-from weight_setting.winner_selection import get_contestant_ranks, calculate_rank_weights
 
-TEST_DATA_DIRECTORY = Path(__file__).parent.parent / "test_data"
+from weight_setting.winner_selection import calculate_score_weights
 
 class WinnerSelectionTest(TestCase):
     def test_scoring(self):
@@ -66,32 +59,18 @@ class WinnerSelectionTest(TestCase):
         self.assertGreater(score(metrics(time=3, vram=5, ram=5)), score(metrics(time=5, vram=9, ram=5)))
         self.assertGreater(score(metrics(time=3, vram=4, ram=5)), score(metrics(time=4, vram=5, ram=5)))
 
-    def test_winner_selection(self):
-        for path in TEST_DATA_DIRECTORY.glob("*.json"):
-            winners: dict[Key, list[Uid]] = defaultdict(list)
-            date: datetime = datetime.strptime(path.stem, "%Y-%m-%d")
-            with path.open("r") as file:
-                for uid, data in json.load(file).items():
-                    scores = {key: info["score"] for key, info in data.items()}
-                    submitted_blocks = {key: info["block"] for key, info in data.items()}
+    def test_score_weights(self):
+        scores = {
+            "a": 0.212,
+            "b": 0.21,
+            "c": 0.19,
+            "d": 0.15,
+        }
 
-                    ranks = get_contestant_ranks(scores)
-                    weights = calculate_rank_weights(submitted_blocks, ranks)
+        winner_percentage = 0.25
+        scores = calculate_score_weights(winner_percentage, scores)
 
-                    winner = max(
-                        weights.items(),
-                        key=itemgetter(1),
-                        default=None
-                    )
-
-                    if not winner:
-                        continue
-
-                    winners[winner[0]].append(uid)
-
-            msg = f"Multiple winners found on {date.strftime('%Y-%m-%d')}:\n" + "\n".join(
-                f"{winner}: {', '.join(map(str, validator_uids))}"
-                for winner, validator_uids in winners.items()
-            )
-
-            self.assertEqual(len(winners), 1, msg=msg)
+        self.assertEqual(scores["a"], winner_percentage)
+        self.assertGreater(scores["a"], scores["b"])
+        self.assertGreater(scores["b"], scores["c"])
+        self.assertGreater(scores["c"], scores["d"])

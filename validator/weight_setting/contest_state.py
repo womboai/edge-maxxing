@@ -8,6 +8,9 @@ from base.checkpoint import Key, current_time, Submissions, Benchmarks
 from base.contest import Metrics, BenchmarkState
 from weight_setting.winner_selection import get_contestant_scores, get_contestant_ranks, calculate_rank_weights
 
+from inputs_api import get_inputs_state
+from winner_selection import calculate_score_weights
+
 logger = get_logger(__name__)
 
 
@@ -74,17 +77,10 @@ class ContestState(BaseModel):
             baseline=self.baseline,
         )
 
-    def get_ranks(self, scores: dict[Key, float]) -> dict[Key, int]:
-        return get_contestant_ranks(scores=scores)
+    def calculate_weights(self, scores: dict[Key, float]):
+        winner_percentage = get_inputs_state().winner_percentage
 
-    def calculate_weights(self, ranks: dict[Key, int]):
-        return calculate_rank_weights(
-            submitted_blocks={
-                key: submission.block
-                for key, submission in self.submissions.items()
-            },
-            ranks=ranks,
-        )
+        return calculate_score_weights(winner_percentage, scores)
 
     @classmethod
     def create(cls, benchmarks_version: int):
