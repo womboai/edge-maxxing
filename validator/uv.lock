@@ -397,7 +397,7 @@ requires-dist = [{ name = "pydantic", specifier = ">=2.9.2" }]
 
 [[package]]
 name = "edge-maxxing-validator"
-version = "5.7.0"
+version = "5.8.0"
 source = { editable = "." }
 dependencies = [
     { name = "edge-maxxing-base", marker = "platform_system != 'Darwin' or sys_platform != 'linux'" },

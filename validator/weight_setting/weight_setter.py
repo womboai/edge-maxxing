@@ -114,9 +114,8 @@ class WeightSetter:
                 contest_state.last_benchmarks.pop(hotkey, None)
 
         scores = contest_state.get_scores(benchmarks)
-        ranks = contest_state.get_ranks(scores)
 
-        weights_by_key = contest_state.calculate_weights(ranks=ranks)
+        weights_by_key = contest_state.calculate_weights(scores)
 
         if not weights_by_key:
             logger.warning("Will not set new weights as all scores are equal, setting to all ones")
