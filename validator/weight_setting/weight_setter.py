@@ -2,8 +2,11 @@ from random import randint
 from threading import Thread, Event
 from typing import Callable
 
+from bittensor_commit_reveal import get_encrypted_commit
+from bt_decode import SubnetHyperparameters
+from fiber.chain.fetch_nodes import _query_runtime_api
 from fiber.chain.metagraph import Metagraph
-from fiber.chain.weights import set_node_weights
+from fiber.chain.weights import set_node_weights, _normalize_and_quantize_weights
 from fiber.logging_utils import get_logger
 from opentelemetry import trace
 from substrateinterface import SubstrateInterface, Keypair
@@ -133,13 +136,79 @@ class WeightSetter:
     def _set_equal_weights(self) -> bool:
         return self._set_weights([1.0] * len(self._metagraph.nodes))
 
-    def _set_weights(self, weights: list[float]) -> bool:
-        return set_node_weights(
-            self._substrate(),
-            self._keypair,
-            node_ids=list(range(len(weights))),
-            node_weights=weights,
-            netuid=self._metagraph.netuid,
-            validator_node_id=self._uid,
+    def _commit_reveal(
+        self,
+        weights: list[float],
+        hyperparameters: SubnetHyperparameters,
+        block: int,
+    ):
+        logger.info("Attempting to commit weights...")
+
+        substrate = self._substrate()
+
+        tempo = hyperparameters.tempo
+
+        node_ids_formatted, node_weights_formatted = _normalize_and_quantize_weights(list(range(len(weights))), weights)
+
+        # Encrypt `commit_hash` with t-lock and `get reveal_round`
+        commit_for_reveal, reveal_round = get_encrypted_commit(
+            uids=node_ids_formatted,
+            weights=node_weights_formatted,
             version_key=self._weights_version,
+            tempo=tempo,
+            current_block=block,
+            netuid=self._metagraph.netuid,
+            subnet_reveal_period_epochs=hyperparameters.commit_reveal_weights_interval,
         )
+
+        call = substrate.compose_call(
+            call_module="SubtensorModule",
+            call_function="commit_crv3_weights",
+            call_params={
+                "netuid": self._metagraph.netuid,
+                "commit": commit_for_reveal,
+                "reveal_round": reveal_round,
+            },
+        )
+
+        extrinsic = substrate.create_signed_extrinsic(
+            call=call,
+            keypair=self._keypair,
+        )
+
+        substrate.submit_extrinsic(extrinsic=extrinsic)
+
+        logger.info("Not waiting for finalization or inclusion to commit weights. Returning immediately.")
+
+    def _set_weights(self, weights: list[float]) -> bool:
+        substrate = self._substrate()
+
+        block = substrate.get_block_number(None)  # type: ignore
+
+        hex_bytes_result = _query_runtime_api(
+            substrate=substrate,
+            runtime_api="SubnetInfoRuntimeApi",
+            method="get_subnet_hyperparams",
+            params=[self._metagraph.netuid],
+            block=block,
+        )
+
+        if hex_bytes_result.startswith("0x"):
+            bytes_result = bytes.fromhex(hex_bytes_result[2:])
+        else:
+            bytes_result = bytes.fromhex(hex_bytes_result)
+
+        hyperparameters = SubnetHyperparameters.decode(bytes_result)
+
+        if hyperparameters.commit_reveal_weights_enabled:
+            self._commit_reveal(weights, hyperparameters, block)
+        else:
+            return set_node_weights(
+                substrate,
+                self._keypair,
+                node_ids=list(range(len(weights))),
+                node_weights=weights,
+                netuid=self._metagraph.netuid,
+                validator_node_id=self._uid,
+                version_key=self._weights_version,
+            )

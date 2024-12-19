@@ -6,14 +6,17 @@ build-backend = "setuptools.build_meta"
 name = "edge-maxxing-validator"
 description = "The validator which checks models and checkpoints provided by miners"
 requires-python = ">=3.10,<3.13"
-version = "5.8.2"
+version = "5.9.0"
 dependencies = [
-    "edge-maxxing-base==1.0.0",
+    "edge-maxxing-base",
+    "wandb>=0.18.7",
+    "bt-decode>=0.4.0",
+    "toml>=0.10.0",
+    "bittensor-commit-reveal>=0.1.0",
     "opentelemetry-api>=1.28.2",
     "opentelemetry-sdk>=1.28.2",
     "opentelemetry-exporter-otlp>=1.28.2",
     "opentelemetry-distro>=0.49b2",
-    "wandb>=0.18.7",
     "opentelemetry-instrumentation-asyncio>=0.49b2",
     "opentelemetry-instrumentation-dbapi>=0.49b2",
     "opentelemetry-instrumentation-logging>=0.49b2",
@@ -38,6 +41,11 @@ dependencies = [
 
 [tool.uv.sources]
 edge-maxxing-base = { path = "../base", editable = true }
+
+[tool.uv]
+override-dependencies = [
+    "toml; sys_platform == 'never'",
+]
 
 [dependency-groups]
 dev = [
