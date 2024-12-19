@@ -106,7 +106,6 @@ class WeightSetter:
         self._metagraph.sync_nodes()
         for hotkey, node in self._metagraph.nodes.items():
             if get_blacklist().is_blacklisted(hotkey, node.coldkey):
-                contest_state.benchmarks.pop(hotkey, None)
                 contest_state.last_benchmarks.pop(hotkey, None)
                 contest_state.submissions.pop(hotkey, None)
             if hotkey not in contest_state.submissions:
