@@ -202,6 +202,8 @@ class WeightSetter:
 
         if hyperparameters.commit_reveal_weights_enabled:
             self._commit_reveal(weights, hyperparameters, block)
+
+            return True
         else:
             return set_node_weights(
                 substrate,
