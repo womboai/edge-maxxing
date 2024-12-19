@@ -23,6 +23,6 @@ def calculate_score_weights(winner_percentage: float, scores: dict[Key, float]) 
     sorted_scores = sorted(scores.items(), key=itemgetter(1), reverse=True)
 
     return {
-        hotkey: min(0, winner_percentage * ((1 - winner_percentage) ** index) * score)
+        hotkey: max(0.0, winner_percentage * ((1 - winner_percentage) ** index) * score)
         for index, (hotkey, score) in enumerate(sorted_scores)
     }

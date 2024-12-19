@@ -122,10 +122,13 @@ class WeightSetter:
             return self._set_equal_weights()
 
         self._wandb_manager.send_metrics(contest_state, self._api_hardware)
-        return self._set_weights([
-            weights_by_key.get(key, 0)
-            for key in self._metagraph.nodes.keys()
-        ])
+
+        weights = [0.0] * len(self._metagraph.nodes)
+
+        for key, weight in weights_by_key.items():
+            weights[self._metagraph.nodes[key].node_id] = weight
+
+        return self._set_weights(weights)
 
     def _set_equal_weights(self) -> bool:
         return self._set_weights([1.0] * len(self._metagraph.nodes))
@@ -134,7 +137,7 @@ class WeightSetter:
         return set_node_weights(
             self._substrate(),
             self._keypair,
-            node_ids=list(range(len(self._metagraph.nodes))),
+            node_ids=list(range(len(weights))),
             node_weights=weights,
             netuid=self._metagraph.netuid,
             validator_node_id=self._uid,
