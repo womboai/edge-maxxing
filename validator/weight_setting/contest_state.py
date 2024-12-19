@@ -7,8 +7,7 @@ from pydantic import BaseModel, ConfigDict
 from base.checkpoint import Key, current_time, Submissions, Benchmarks
 from base.contest import Metrics, BenchmarkState
 from base.inputs_api import get_inputs_state
-from weight_setting.winner_selection import get_contestant_scores
-from winner_selection import calculate_score_weights
+from weight_setting.winner_selection import get_contestant_scores, calculate_score_weights
 
 logger = get_logger(__name__)
 
