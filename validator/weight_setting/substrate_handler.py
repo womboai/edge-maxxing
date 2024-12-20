@@ -21,7 +21,7 @@ class SubstrateHandler:
         wait=wait_exponential(multiplier=1.5, min=2, max=5),
         reraise=True,
     )
-    def execute(self, action: Callable[[SubstrateInterface], R]):
+    def execute(self, action: Callable[[SubstrateInterface], R]) -> R:
         try:
             return action(self._substrate)
         except BaseException:
