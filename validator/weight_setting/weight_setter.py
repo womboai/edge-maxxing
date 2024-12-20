@@ -9,12 +9,12 @@ from fiber.chain.metagraph import Metagraph
 from fiber.chain.weights import set_node_weights, _normalize_and_quantize_weights
 from fiber.logging_utils import get_logger
 from opentelemetry import trace
-from substrateinterface import SubstrateInterface, Keypair
+from substrateinterface import Keypair
 
 from base.inputs_api import get_blacklist, get_inputs_state
+from base.substrate_handler import SubstrateHandler
 from base.system_info import SystemInfo
 from weight_setting.contest_state import ContestState
-from weight_setting.substrate_handler import SubstrateHandler
 from weight_setting.wandb_manager import WandbManager
 
 logger = get_logger(__name__)

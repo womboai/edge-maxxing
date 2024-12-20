@@ -7,11 +7,11 @@ from pydantic import BaseModel, Field
 from substrateinterface import SubstrateInterface, Keypair
 from substrateinterface.storage import StorageKey
 
-from weight_setting.substrate_handler import SubstrateHandler
 from .checkpoint import SPEC_VERSION, Submissions, Key
 from .contest import RepositoryInfo, find_contest, Submission, ContestId
 from .inputs_api import get_blacklist, get_inputs_state
 from .network_commitments import Encoder, Decoder
+from .substrate_handler import SubstrateHandler
 
 logger = get_logger(__name__)
 

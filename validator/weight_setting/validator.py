@@ -17,11 +17,11 @@ from base.config import get_config
 from base.contest import BenchmarkState
 from base.inputs_api import get_inputs_state
 from base.submissions import get_submissions
+from base.substrate_handler import SubstrateHandler
 from base.system_info import SystemInfo
 from base_validator.api_data import BenchmarkingResults
 from base_validator.auto_updater import AutoUpdater
 from base_validator.telemetry import init_open_telemetry_logging
-from weight_setting.substrate_handler import SubstrateHandler
 from weight_setting.wandb_manager import WandbManager
 from .benchmarking_api import BenchmarkingApi, send_submissions_to_api
 from .contest_state import ContestState
