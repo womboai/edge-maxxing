@@ -21,6 +21,7 @@ from base.system_info import SystemInfo
 from base_validator.api_data import BenchmarkingResults
 from base_validator.auto_updater import AutoUpdater
 from base_validator.telemetry import init_open_telemetry_logging
+from weight_setting.substrate_handler import SubstrateHandler
 from weight_setting.wandb_manager import WandbManager
 from .benchmarking_api import BenchmarkingApi, send_submissions_to_api
 from .contest_state import ContestState
@@ -54,6 +55,8 @@ class Validator:
         subtensor_network=config["subtensor.network"],
         subtensor_address=config["subtensor.chain_endpoint"]
     )
+
+    substrate_handler = SubstrateHandler(substrate.url)
 
     metagraph: Metagraph = Metagraph(
         substrate=substrate,
@@ -104,7 +107,7 @@ class Validator:
         self.weight_setter: WeightSetter = WeightSetter(
             version=self.validator_version,
             epoch_length=self.config["epoch_length"],
-            substrate=lambda: self.substrate,
+            substrate_handler=self.substrate_handler,
             metagraph=self.metagraph,
             keypair=self.keypair,
             uid=self.uid,
@@ -139,9 +142,8 @@ class Validator:
         self.contest_state.start_new_contest(
             benchmarks_version=benchmarks_version,
             submissions=get_submissions(
-                substrate=self.substrate,
+                substrate_handler=self.substrate_handler,
                 metagraph=self.metagraph,
-                block=self.substrate.get_block_number(None),  # type: ignore
             )
         )
 
@@ -239,7 +241,7 @@ class Validator:
                 self._stop_flag.wait(BENCHMARK_UPDATE_RATE_BLOCKS * 12)
             except Exception as e:
                 logger.error(f"Error during step {self.step()}", exc_info=e)
-                self.substrate = get_substrate(subtensor_address=self.substrate.url)
+
                 self._stop_flag.wait(12)
 
 
