@@ -11,6 +11,7 @@ from .checkpoint import SPEC_VERSION, Submissions, Key
 from .contest import RepositoryInfo, find_contest, Submission, ContestId
 from .inputs_api import get_blacklist, get_inputs_state
 from .network_commitments import Encoder, Decoder
+from .substrate_handler import SubstrateHandler
 
 logger = get_logger(__name__)
 
@@ -73,26 +74,23 @@ def make_submission(
 
 
 def get_submissions(
-    substrate: SubstrateInterface,
+    substrate_handler: SubstrateHandler,
     metagraph: Metagraph,
-    block: int
 ) -> Submissions:
     submissions: Submissions = {}
     storage_keys: list[StorageKey] = []
 
     active_contests = get_inputs_state().get_active_contests()
     hotkeys = [hotkey for hotkey, node in metagraph.nodes.items() if not get_blacklist().is_blacklisted(hotkey, node.coldkey)]
+
     for hotkey in hotkeys:
-        storage_keys.append(substrate.create_storage_key(
+        storage_keys.append(substrate_handler.substrate.create_storage_key(
             "Commitments",
             "CommitmentOf",
             [metagraph.netuid, hotkey]
         ))
 
-    commitments = substrate.query_multi(
-        storage_keys=storage_keys,
-        block_hash=substrate.get_block_hash(block),
-    )
+    commitments = substrate_handler.execute(lambda s: s.query_multi(storage_keys=storage_keys))
 
     for storage, commitment in commitments:
         hotkey = storage.params[1]
