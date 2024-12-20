@@ -1,6 +1,5 @@
 from typing import Callable, TypeVar
 
-from fiber.chain.interface import get_substrate
 from substrateinterface import SubstrateInterface
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -10,8 +9,8 @@ R = TypeVar("R")
 class SubstrateHandler:
     _substrate: SubstrateInterface
 
-    def __init__(self, url: str):
-        self._substrate = get_substrate(url)
+    def __init__(self, substrate: SubstrateInterface):
+        self._substrate = substrate
 
     @property
     def substrate(self):

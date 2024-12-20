@@ -56,7 +56,7 @@ class Validator:
         subtensor_address=config["subtensor.chain_endpoint"]
     )
 
-    substrate_handler = SubstrateHandler(substrate.url)
+    substrate_handler = SubstrateHandler(substrate)
 
     metagraph: Metagraph = Metagraph(
         substrate=substrate,
