@@ -9,9 +9,10 @@ from fiber.chain.metagraph import Metagraph
 from fiber.chain.weights import set_node_weights, _normalize_and_quantize_weights
 from fiber.logging_utils import get_logger
 from opentelemetry import trace
-from substrateinterface import SubstrateInterface, Keypair
+from substrateinterface import Keypair
 
 from base.inputs_api import get_blacklist, get_inputs_state
+from base.substrate_handler import SubstrateHandler
 from base.system_info import SystemInfo
 from weight_setting.contest_state import ContestState
 from weight_setting.wandb_manager import WandbManager
@@ -25,7 +26,7 @@ class WeightSetter:
     _stop_flag: Event = Event()
 
     _epoch_length: int
-    _substrate: Callable[[], SubstrateInterface]
+    _substrate_handler: SubstrateHandler
     _metagraph: Metagraph
     _keypair: Keypair
     _uid: int
@@ -38,7 +39,7 @@ class WeightSetter:
         self,
         version: str,
         epoch_length: int,
-        substrate: Callable[[], SubstrateInterface],
+        substrate_handler: SubstrateHandler,
         metagraph: Metagraph,
         keypair: Keypair,
         uid: int,
@@ -47,7 +48,7 @@ class WeightSetter:
         wandb_manager: WandbManager,
     ):
         self._epoch_length = epoch_length
-        self._substrate = substrate
+        self._substrate_handler = substrate_handler
         self._metagraph = metagraph
         self._keypair = keypair
         self._uid = uid
@@ -103,7 +104,9 @@ class WeightSetter:
                 logger.info("Setting weights to current benchmarks as the previous day's benchmarks have not been set")
                 benchmarks = contest_state.benchmarks
             elif delayed_weights:
-                logger.warning("Will not set new weights as the previous day's benchmarks have not been set, setting to all ones")
+                logger.warning(
+                    "Will not set new weights as the previous day's benchmarks have not been set, setting to all ones"
+                    )
                 return self._set_equal_weights()
 
         self._metagraph.sync_nodes()
@@ -144,8 +147,6 @@ class WeightSetter:
     ):
         logger.info("Attempting to commit weights...")
 
-        substrate = self._substrate()
-
         tempo = hyperparameters.tempo
 
         node_ids_formatted, node_weights_formatted = _normalize_and_quantize_weights(list(range(len(weights))), weights)
@@ -161,32 +162,34 @@ class WeightSetter:
             subnet_reveal_period_epochs=hyperparameters.commit_reveal_weights_interval,
         )
 
-        call = substrate.compose_call(
-            call_module="SubtensorModule",
-            call_function="commit_crv3_weights",
-            call_params={
-                "netuid": self._metagraph.netuid,
-                "commit": commit_for_reveal,
-                "reveal_round": reveal_round,
-            },
+        call = self._substrate_handler.execute(
+            lambda s: s.compose_call(
+                call_module="SubtensorModule",
+                call_function="commit_crv3_weights",
+                call_params={
+                    "netuid": self._metagraph.netuid,
+                    "commit": commit_for_reveal,
+                    "reveal_round": reveal_round,
+                },
+            )
         )
 
-        extrinsic = substrate.create_signed_extrinsic(
-            call=call,
-            keypair=self._keypair,
+        extrinsic = self._substrate_handler.execute(
+            lambda s: s.create_signed_extrinsic(
+                call=call,
+                keypair=self._keypair,
+            )
         )
 
-        substrate.submit_extrinsic(extrinsic=extrinsic)
+        self._substrate_handler.execute(lambda s: s.submit_extrinsic(extrinsic=extrinsic))
 
         logger.info("Not waiting for finalization or inclusion to commit weights. Returning immediately.")
 
     def _set_weights(self, weights: list[float]) -> bool:
-        substrate = self._substrate()
-
-        block = substrate.get_block_number(None)  # type: ignore
+        block = self._substrate_handler.execute(lambda s: s.get_block_number(None))  # type: ignore
 
         hex_bytes_result = _query_runtime_api(
-            substrate=substrate,
+            substrate=self._substrate_handler.substrate,
             runtime_api="SubnetInfoRuntimeApi",
             method="get_subnet_hyperparams",
             params=[self._metagraph.netuid],
@@ -206,7 +209,7 @@ class WeightSetter:
             return True
         else:
             return set_node_weights(
-                substrate,
+                self._substrate_handler.substrate,
                 self._keypair,
                 node_ids=list(range(len(weights))),
                 node_weights=weights,
