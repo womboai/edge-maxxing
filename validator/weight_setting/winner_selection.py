@@ -1,5 +1,3 @@
-from operator import itemgetter
-
 from base.checkpoint import Key, Submissions, Benchmarks
 from base.contest import Metrics
 
@@ -16,13 +14,14 @@ def get_contestant_scores(
     }
 
 
-def calculate_score_weights(winner_percentage: float, scores: dict[Key, float]) -> dict[Key, float]:
+def calculate_score_weights(_winner_percentage: float, scores: dict[Key, float]) -> dict[Key, float]:
     """
     Assumes that copies are removed from the scores
     """
-    sorted_scores = sorted(scores.items(), key=itemgetter(1), reverse=True)
+
+    min_score = min(scores.values())
 
     return {
-        hotkey: winner_percentage * ((1 - winner_percentage) ** index)
-        for index, (hotkey, score) in enumerate(sorted_scores)
+        hotkey: score + min_score
+        for hotkey, score in scores
     }
