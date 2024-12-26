@@ -23,5 +23,5 @@ def calculate_score_weights(_winner_percentage: float, scores: dict[Key, float])
 
     return {
         hotkey: score + min_score
-        for hotkey, score in scores
+        for hotkey, score in scores.items()
     }
