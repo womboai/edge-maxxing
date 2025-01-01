@@ -25,6 +25,6 @@ class SubstrateHandler:
         try:
             return action(self._substrate)
         except BaseException:
-            self._substrate.close()
+            self._substrate = SubstrateInterface(self._substrate.url)
 
             raise
