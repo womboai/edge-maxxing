@@ -81,14 +81,19 @@ def get_submissions(
     storage_keys: list[StorageKey] = []
 
     active_contests = get_inputs_state().get_active_contests()
-    hotkeys = [hotkey for hotkey, node in metagraph.nodes.items() if not get_blacklist().is_blacklisted(hotkey, node.coldkey)]
+    hotkeys = [hotkey for hotkey, node in metagraph.nodes.items() if
+               not get_blacklist().is_blacklisted(hotkey, node.coldkey)]
 
     for hotkey in hotkeys:
-        storage_keys.append(substrate_handler.substrate.create_storage_key(
-            "Commitments",
-            "CommitmentOf",
-            [metagraph.netuid, hotkey]
-        ))
+        storage_keys.append(
+            substrate_handler.execute(
+                lambda s: s.create_storage_key(
+                    "Commitments",
+                    "CommitmentOf",
+                    [metagraph.netuid, hotkey]
+                ),
+            ),
+        )
 
     commitments = substrate_handler.execute(lambda s: s.query_multi(storage_keys=storage_keys))
 
@@ -147,7 +152,8 @@ def deduplicate_submissions(submissions: Submissions) -> Submissions:
         existing_repository_key, existing_repository = existing_repositories.get(url, (None, None))
         existing_revision_key, existing_revision = existing_revisions.get(revision, (None, None))
 
-        if (existing_repository and existing_repository.block < block) or (existing_revision and existing_revision.block < block):
+        if (existing_repository and existing_repository.block < block) or (
+            existing_revision and existing_revision.block < block):
             to_remove.add(key)
             continue
 
