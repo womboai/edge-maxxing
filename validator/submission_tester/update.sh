@@ -9,7 +9,7 @@ useradd --create-home --home-dir /home/api api || true
 useradd --shell=/bin/false --create-home --home-dir /home/sandbox sandbox || true
 
 chown -R api:api /api/.git
-chown api:api /api/validator/.venv
+chown api:api /api/validator/.venv || true
 chown api:api /api/validator/uv.lock
 
 pkill -9 -u sandbox || true
