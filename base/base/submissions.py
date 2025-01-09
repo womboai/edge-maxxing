@@ -81,8 +81,10 @@ def get_submissions(
     storage_keys: list[StorageKey] = []
 
     active_contests = get_inputs_state().get_active_contests()
-    hotkeys = [hotkey for hotkey, node in metagraph.nodes.items() if
-               not get_blacklist().is_blacklisted(hotkey, node.coldkey)]
+    hotkeys = [
+        hotkey for hotkey, node in metagraph.nodes.items()
+        if not get_blacklist().is_blacklisted(hotkey, node.coldkey)
+    ]
 
     for hotkey in hotkeys:
         storage_keys.append(

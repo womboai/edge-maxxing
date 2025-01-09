@@ -5,6 +5,7 @@ from cachetools import TTLCache, cached
 from pydantic import RootModel, BaseModel
 
 from pipelines import TextToImageRequest
+from .checkpoint import Key
 from .contest import ContestId, MetricType
 
 INPUTS_ENDPOINT = os.getenv("INPUTS_ENDPOINT", "https://edge-inputs.api.wombo.ai")
@@ -27,12 +28,24 @@ class InputsState(BaseModel):
 
 
 class Blacklist(BaseModel):
-    coldkeys: set[str]
-    hotkeys: set[str]
+    coldkeys: set[Key]
+    hotkeys: set[Key]
     dependencies: set[str]
 
-    def is_blacklisted(self, hotkey: str, coldkey: str) -> bool:
-        return hotkey in self.hotkeys or coldkey in self.coldkeys
+    def is_blacklisted(self, hotkey: Key, coldkey: Key) -> bool:
+        if hotkey in self.hotkeys or coldkey in self.coldkeys:
+            return True
+
+        return any(
+            submission.hotkey == hotkey
+            for submission in get_duplicate_submissions()
+        )
+
+
+class DuplicateSubmission(BaseModel):
+    hotkey: Key
+    copy_of: Key
+    url: str
 
 
 def random_inputs() -> list[TextToImageRequest]:
@@ -79,3 +92,14 @@ def get_blacklist() -> Blacklist:
 
     response.raise_for_status()
     return Blacklist.model_validate(response.json())
+
+@cached(cache=TTLCache(maxsize=1, ttl=300))
+def get_duplicate_submissions() -> list[DuplicateSubmission]:
+    response = requests.get(
+        f"{INPUTS_ENDPOINT}/duplicate_submissions", headers={
+            "Content-Type": "application/json"
+        },
+    )
+
+    response.raise_for_status()
+    return RootModel[list[DuplicateSubmission]].model_validate_json(response.text).root
