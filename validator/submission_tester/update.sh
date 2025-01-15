@@ -8,9 +8,9 @@ DEBIAN_FRONTEND=noninteractive apt-get -y install sudo pipx git git-lfs build-es
 useradd --create-home --home-dir /home/api api || true
 useradd --shell=/bin/false --create-home --home-dir /home/sandbox sandbox || true
 
-chown api:api /api/pipelines
-chown api:api /api/base
-chown api:api /api/validator
+chown -R api:api /api/pipelines
+find /api/base -path "/api/base/.venv" -prune -o -exec chown api:api {} + || true
+find /api/validator -path "/api/validator/.venv" -prune -o -exec chown api:api {} + || true
 
 chown -R api:api /api/.git
 chown api:api /api/validator/.venv || true
