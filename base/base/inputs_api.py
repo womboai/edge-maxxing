@@ -44,7 +44,7 @@ class Blacklist(BaseModel):
 
 class DuplicateSubmission(BaseModel):
     hotkey: Key
-    copy_of: Key
+    copy_of: str
     url: str
 
 
