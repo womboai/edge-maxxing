@@ -138,6 +138,7 @@ class Validator:
 
     @tracer.start_as_current_span("initialize_contest")
     def initialize_contest(self, benchmarks_version: int):
+        logger.info("Initializing contest")
         self.metagraph.sync_nodes()
         self.contest_state.start_new_contest(
             benchmarks_version=benchmarks_version,

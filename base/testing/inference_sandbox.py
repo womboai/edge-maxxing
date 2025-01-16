@@ -177,9 +177,11 @@ class InferenceSandbox:
     @tracer.start_as_current_span("wait_for_socket")
     def wait_for_socket(self, process: Popen) -> float:
         start = perf_counter()
-        for _ in range(LOAD_TIMEOUT):
+        for i in range(LOAD_TIMEOUT):
             if self._socket_path.exists():
+                logger.info("Socket found")
                 break
+            logger.info(f"Waiting for socket {i + 1}/{LOAD_TIMEOUT}")
             self._stop_flag.wait(1)
             check_process(process)
             if self._stop_flag.is_set():
