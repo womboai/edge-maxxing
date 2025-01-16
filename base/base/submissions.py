@@ -3,6 +3,7 @@ from typing import Annotated
 from fiber.chain.commitments import publish_raw_commitment, _deserialize_commitment_field
 from fiber.chain.metagraph import Metagraph
 from fiber.logging_utils import get_logger
+from opentelemetry import trace
 from pydantic import BaseModel, Field
 from substrateinterface import SubstrateInterface, Keypair
 from substrateinterface.storage import StorageKey
@@ -14,6 +15,7 @@ from .network_commitments import Encoder, Decoder
 from .substrate_handler import SubstrateHandler
 
 logger = get_logger(__name__)
+tracer = trace.get_tracer(__name__)
 
 REVISION_LENGTH = 7
 
@@ -72,7 +74,7 @@ def make_submission(
         wait_for_finalization=False,
     )
 
-
+@tracer.start_as_current_span("get_submissions")
 def get_submissions(
     substrate_handler: SubstrateHandler,
     metagraph: Metagraph,

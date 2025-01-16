@@ -177,11 +177,9 @@ class InferenceSandbox:
     @tracer.start_as_current_span("wait_for_socket")
     def wait_for_socket(self, process: Popen) -> float:
         start = perf_counter()
-        for i in range(LOAD_TIMEOUT):
+        for _ in range(LOAD_TIMEOUT):
             if self._socket_path.exists():
-                logger.info("Socket found")
                 break
-            logger.info(f"Waiting for socket {i + 1}/{LOAD_TIMEOUT}")
             self._stop_flag.wait(1)
             check_process(process)
             if self._stop_flag.is_set():
@@ -250,6 +248,16 @@ class InferenceSandbox:
                         check_process(process)
             finally:
                 log_process(process)
+                if process.poll() is None:
+                    logger.info("Terminating process")
+                    try:
+                        process.terminate()
+                        process.wait(timeout=5)
+                    except TimeoutError:
+                        logger.warning("Process didn't terminate gracefully, killing...")
+                        process.kill()
+                        process.wait()
+                    logger.info("Process terminated")
 
         average_generation_time = sum(metric.generation_time for metric in metrics) / len(metrics)
         vram_used = max(metric.vram_used for metric in metrics) - start_vram
