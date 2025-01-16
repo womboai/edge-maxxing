@@ -210,7 +210,9 @@ class InferenceSandbox:
             bufsize=1,
         ) as process:
             try:
+                logger.info("Waiting for socket")
                 load_time = self.wait_for_socket(process)
+                logger.info("Starting inference")
                 with Client(abspath(self._socket_path)) as client:
                     logger.info(f"Benchmarking {len(self._inputs)} samples")
                     for i, request in enumerate(self._inputs):
