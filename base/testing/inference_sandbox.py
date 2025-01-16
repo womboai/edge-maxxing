@@ -247,17 +247,7 @@ class InferenceSandbox:
                         outputs.append(output)
                         check_process(process)
             finally:
-                log_process(process)
-                if process.poll() is None:
-                    logger.info("Terminating process")
-                    try:
-                        process.terminate()
-                        process.wait(timeout=5)
-                    except TimeoutError:
-                        logger.warning("Process didn't terminate gracefully, killing...")
-                        process.kill()
-                        process.wait()
-                    logger.info("Process terminated")
+                logger.info("Exiting inference sandbox")
 
         average_generation_time = sum(metric.generation_time for metric in metrics) / len(metrics)
         vram_used = max(metric.vram_used for metric in metrics) - start_vram
@@ -282,6 +272,7 @@ def check_process(process: Popen):
 
 
 def log_process(process: Popen):
+    logger.info("Process logs:")
     stdout = process.stdout.read()
     stderr = process.stderr.read()
     if stdout:

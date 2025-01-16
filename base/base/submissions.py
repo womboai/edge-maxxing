@@ -99,7 +99,9 @@ def get_submissions(
             ),
         )
 
+    logger.info(f"Getting commitments for {len(storage_keys)} hotkeys")
     commitments = substrate_handler.execute(lambda s: s.query_multi(storage_keys=storage_keys))
+    logger.info(f"Got {len(commitments)} commitments")
 
     for storage, commitment in commitments:
         hotkey = storage.params[1]
