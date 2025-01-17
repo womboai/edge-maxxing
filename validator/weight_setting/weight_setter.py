@@ -66,6 +66,7 @@ class WeightSetter:
         self._stop_flag.set()
 
     def _run(self):
+        self._stop_flag.wait(self._epoch_length * 12)
         while not self._stop_flag.is_set():
             try:
                 if self.set_weights():
