@@ -33,19 +33,14 @@ class Blacklist(BaseModel):
     dependencies: set[str]
 
     def is_blacklisted(self, hotkey: Key, coldkey: Key) -> bool:
-        if hotkey in self.hotkeys or coldkey in self.coldkeys:
-            return True
-
-        return any(
-            submission.hotkey == hotkey
-            for submission in get_duplicate_submissions()
-        )
+        return hotkey in self.hotkeys or coldkey in self.coldkeys
 
 
 class DuplicateSubmission(BaseModel):
     hotkey: Key
-    copy_of: str
     url: str
+    revision: str
+    copy_of: str
 
 
 def random_inputs() -> list[TextToImageRequest]:
@@ -103,3 +98,9 @@ def get_duplicate_submissions() -> list[DuplicateSubmission]:
 
     response.raise_for_status()
     return RootModel[list[DuplicateSubmission]].model_validate_json(response.text).root
+
+def on_duplicate_list(hotkey: Key, revision: str) -> bool:
+    return any(
+        submission.hotkey == hotkey and submission.revision == revision
+        for submission in get_duplicate_submissions()
+    )
