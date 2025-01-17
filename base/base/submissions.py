@@ -90,6 +90,7 @@ def get_submissions(
     ]
 
     for hotkey in hotkeys:
+        logger.info(f"Creating storage key for {hotkey}")
         storage_keys.append(
             substrate_handler.execute(
                 lambda s: s.create_storage_key(
