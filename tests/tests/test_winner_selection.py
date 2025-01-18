@@ -50,9 +50,9 @@ class WinnerSelectionTest(TestCase):
             ram=0.01,
         )
 
-        self.assertEqual(score(baseline, 1.0), 1.0)
+        self.assertEqual(score(baseline, 1.0), 0.0)
         self.assertGreater(score(perfect_model, 1.0), score(bad_model, 1.0))
-        self.assertEqual(score(perfect_model, 0.0), 0.0)
+        self.assertEqual(score(perfect_model, 0.0), -1.0)
 
         # Time is more important than VRAM in the weights set above, so slightly faster time is better than significantly better VRAM(which according to the weights, higher is better)
         self.assertGreater(score(metrics(time=3, vram=5, ram=5)), score(metrics(time=5, vram=9, ram=5)))

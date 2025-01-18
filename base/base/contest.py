@@ -88,7 +88,7 @@ class Contest:
 
     def calculate_score(self, baseline: Metrics, benchmark: Benchmark) -> float:
         if benchmark.min_similarity < SIMILARITY_SCORE_THRESHOLD:
-            return 0
+            return -1
 
         metric_weights = self.get_metric_weights()
         metric_gcd = gcd(*metric_weights.values())
