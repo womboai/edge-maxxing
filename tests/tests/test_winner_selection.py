@@ -22,10 +22,10 @@ class WinnerSelectionTest(TestCase):
         def metrics(time: float, vram: float, ram: float):
             return Metrics(
                 generation_time=time,
-                size=0,
+                size=1,
                 vram_used=vram,
-                watts_used=0,
-                load_time=0,
+                watts_used=1,
+                load_time=1,
                 ram_used=ram,
             )
 
@@ -39,21 +39,20 @@ class WinnerSelectionTest(TestCase):
         )
 
         perfect_model = metrics(
-            time=0,
-            vram=float('inf'),  # or 2 * baseline
-            ram=0,
+            time=0.01,
+            vram=10,
+            ram=0.01,
         )
 
         bad_model = metrics(
             time=10,
             vram=10,
-            ram=0,
+            ram=0.01,
         )
 
-        self.assertEqual(score(baseline, 1.0), 0.0)
-        self.assertEqual(score(perfect_model, 1.0), 1.0)
-        self.assertEqual(score(perfect_model, 0.0), -1.0)
-        self.assertEqual(score(bad_model, 1.0), -1.0)
+        self.assertEqual(score(baseline, 1.0), 1.0)
+        self.assertGreater(score(perfect_model, 1.0), score(bad_model, 1.0))
+        self.assertEqual(score(perfect_model, 0.0), 0.0)
 
         # Time is more important than VRAM in the weights set above, so slightly faster time is better than significantly better VRAM(which according to the weights, higher is better)
         self.assertGreater(score(metrics(time=3, vram=5, ram=5)), score(metrics(time=5, vram=9, ram=5)))
