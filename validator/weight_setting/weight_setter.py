@@ -139,7 +139,10 @@ class WeightSetter:
         weights = [0.0] * len(self._metagraph.nodes)
 
         for key, weight in weights_by_key.items():
-            weights[self._metagraph.nodes[key].node_id] = weight
+            node = self._metagraph.nodes.get(key)
+
+            if node:
+                weights[node.node_id] = weight
 
         return self._set_weights(weights)
 
