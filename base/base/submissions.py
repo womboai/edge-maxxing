@@ -144,7 +144,7 @@ def get_submissions(
                     block=submitted_block
                 )
         except Exception as e:
-            logger.error(f"Failed to get submission from miner {hotkey}: {e}")
+            logger.error(f"Failed to get submission from miner {hotkey}", exc_info=e)
             continue
 
     return deduplicate_submissions(submissions)

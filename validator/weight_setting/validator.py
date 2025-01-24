@@ -240,7 +240,7 @@ class Validator:
                     self.state_manager.save_state(self.contest_state)
                     self.wandb_manager.send_metrics(self.contest_state, self.api_hardware)
             except (ConnectionError, HTTPError) as e:
-                logger.error(f"Error connecting to API, retrying in 10 blocks: {e}")
+                logger.error(f"Error connecting to API, retrying in 10 blocks", exc_info=e)
                 self._stop_flag.wait(BENCHMARK_UPDATE_RATE_BLOCKS * 12)
             except Exception as e:
                 logger.error(f"Error during step {self.step()}", exc_info=e)

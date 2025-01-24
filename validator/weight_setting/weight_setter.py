@@ -76,7 +76,7 @@ class WeightSetter:
                     raise RuntimeError("Set weights attempt was unsuccessful")
             except Exception as e:
                 blocks_to_sleep = randint(10, 50)
-                logger.error(f"Failed to set weights, retrying in {blocks_to_sleep} blocks: {e}")
+                logger.error(f"Failed to set weights, retrying in {blocks_to_sleep} blocks", exc_info=e)
                 self._stop_flag.wait(blocks_to_sleep * 12)
 
     @tracer.start_as_current_span("set_weights")

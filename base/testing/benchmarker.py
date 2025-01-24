@@ -126,7 +126,7 @@ class Benchmarker:
             except CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Failed to benchmark submission '{submission}': '{e}'", exc_info=e)
+                logger.error(f"Failed to benchmark submission '{submission}'", exc_info=e)
                 self.invalid_submissions.add(key)
             finally:
                 self.submission_times.append(perf_counter() - start_time)

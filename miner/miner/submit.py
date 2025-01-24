@@ -85,7 +85,7 @@ def validate(repository: str, revision: str, contest: Contest):
     try:
         git.ls_remote(repository, revision)
     except GitCommandError as e:
-        raise ValueError(f"Invalid repository or revision: {e}")
+        raise ValueError(f"Invalid repository or revision") from e
 
 
 def get_latest_revision(repository: str):
