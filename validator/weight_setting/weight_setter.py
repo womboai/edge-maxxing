@@ -1,5 +1,5 @@
 from random import randint
-from threading import Thread, Event
+from threading import Thread, Event, Lock
 from typing import Callable
 
 from bittensor_commit_reveal import get_encrypted_commit
@@ -23,7 +23,8 @@ tracer = trace.get_tracer(__name__)
 
 class WeightSetter:
     _thread: Thread
-    _stop_flag: Event = Event()
+    _stop_flag: Event
+    lock: Lock
 
     _epoch_length: int
     _substrate_handler: SubstrateHandler
@@ -59,6 +60,9 @@ class WeightSetter:
         parts: list[str] = version.split(".")
         self._weights_version = int(parts[0]) * 10000 + int(parts[1]) * 100 + int(parts[2])
 
+        self._stop_flag = Event()
+        self.lock = Lock()
+
         self._thread = Thread(target=self._run)
         self._thread.start()
 
@@ -66,10 +70,12 @@ class WeightSetter:
         self._stop_flag.set()
 
     def _run(self):
-        self._stop_flag.wait(self._epoch_length * 12)
         while not self._stop_flag.is_set():
             try:
-                if self.set_weights():
+                with self.lock:
+                    successful = self.set_weights()
+
+                if successful:
                     logger.info(f"Successfully set weights, sleeping for {self._epoch_length} blocks")
                     self._stop_flag.wait(self._epoch_length * 12)
                 else:
