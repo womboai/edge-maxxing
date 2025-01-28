@@ -10,7 +10,7 @@ from substrateinterface.storage import StorageKey
 
 from .checkpoint import SPEC_VERSION, Submissions, Key
 from .contest import RepositoryInfo, find_contest, Submission, ContestId
-from .inputs_api import get_blacklist, get_inputs_state, on_duplicate_list
+from .inputs_api import get_blacklist, get_inputs_state, on_safe_list
 from .network_commitments import Encoder, Decoder
 from .substrate_handler import SubstrateHandler
 
@@ -132,7 +132,7 @@ def get_submissions(
                 if info.repository == find_contest(info.contest_id).baseline_repository.url:
                     continue
 
-                if on_duplicate_list(hotkey, info.revision):
+                if not on_safe_list(hotkey, info.revision):
                     continue
 
                 repository_info = RepositoryInfo(url=info.repository, revision=info.revision)

@@ -43,6 +43,17 @@ class DuplicateSubmission(BaseModel):
     copy_of: str
 
 
+class SafeSubmissions(BaseModel):
+    hotkey: Key
+    url: str
+    revision: str
+
+
+class DuplicateSelection(BaseModel):
+    safe_submissions: list[SafeSubmissions]
+    duplicate_submissions: list[DuplicateSubmission]
+
+
 def random_inputs() -> list[TextToImageRequest]:
     response = requests.get(
         f"{INPUTS_ENDPOINT}/current_batch", headers={
@@ -88,8 +99,9 @@ def get_blacklist() -> Blacklist:
     response.raise_for_status()
     return Blacklist.model_validate(response.json())
 
+
 @cached(cache=TTLCache(maxsize=1, ttl=300))
-def get_duplicate_submissions() -> list[DuplicateSubmission]:
+def get_duplicate_submissions() -> DuplicateSelection:
     response = requests.get(
         f"{INPUTS_ENDPOINT}/duplicate_submissions", headers={
             "Content-Type": "application/json"
@@ -97,10 +109,11 @@ def get_duplicate_submissions() -> list[DuplicateSubmission]:
     )
 
     response.raise_for_status()
-    return RootModel[list[DuplicateSubmission]].model_validate_json(response.text).root
+    return DuplicateSelection.model_validate(response.json())
 
-def on_duplicate_list(hotkey: Key, revision: str) -> bool:
+
+def on_safe_list(hotkey: Key, revision: str) -> bool:
     return any(
         submission.hotkey == hotkey and submission.revision == revision
-        for submission in get_duplicate_submissions()
+        for submission in get_duplicate_submissions().safe_submissions
     )
