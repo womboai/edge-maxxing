@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from .device import Device, CudaDevice, Gpu
 from .output_comparator import OutputComparator, ImageOutputComparator
 
-SIMILARITY_SCORE_THRESHOLD = 0.8
+SIMILARITY_SCORE_THRESHOLD = 0.75
 
 
 class BenchmarkState(IntEnum):
@@ -93,8 +93,9 @@ class Contest:
         metric_weights = self.get_metric_weights()
         metric_gcd = gcd(*metric_weights.values())
 
-        similarity_scale = 1 / (1 - SIMILARITY_SCORE_THRESHOLD)
-        similarity = sqrt((benchmark.average_similarity - SIMILARITY_SCORE_THRESHOLD) * similarity_scale)
+        offset_similarity = benchmark.average_similarity - SIMILARITY_SCORE_THRESHOLD
+        passable_similarity_range = 1 - SIMILARITY_SCORE_THRESHOLD
+        similarity = pow(offset_similarity / passable_similarity_range, passable_similarity_range)
 
         def calculate_improvement(baseline_value: float, benchmark_value: float, metric_type: MetricType) -> float:
             metric_weight = metric_weights.get(metric_type)

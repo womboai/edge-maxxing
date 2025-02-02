@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "edge-maxxing-validator"
 description = "The validator which checks models and checkpoints provided by miners"
 requires-python = ">=3.10,<3.13"
-version = "5.9.14"
+version = "5.9.15"
 dependencies = [
     "edge-maxxing-base",
     "wandb>=0.18.7",
