@@ -45,7 +45,7 @@ git config --system pull.autostash true
 
 sudo -u api pipx ensurepath
 sudo -u api pipx install uv
-sudo -u api /home/api/.local/bin/uv sync --no-dev --frozen
+sudo -u api /home/api/.local/bin/uv sync --no-dev --frozen --prerelease=allow
 
 sudo -u sandbox pipx ensurepath
 sudo -u sandbox pipx install uv
