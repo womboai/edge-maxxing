@@ -3,7 +3,7 @@ from threading import Thread, Event, Lock
 from typing import Callable
 
 from fiber.chain.metagraph import Metagraph
-from fiber.chain.weights import set_node_weights, _normalize_and_quantize_weights
+from fiber.chain.weights import set_node_weights
 from fiber.logging_utils import get_logger
 from opentelemetry import trace
 from substrateinterface import Keypair
