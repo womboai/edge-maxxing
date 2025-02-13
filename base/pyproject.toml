@@ -9,7 +9,7 @@ requires-python = ">=3.10,<3.13"
 version = "1.0.0"
 dependencies = [
     "edge-maxxing-pipelines==1.0.0",
-    "fiber @ git+https://github.com/rayonlabs/fiber.git@2.0.1#egg=fiber[chain]",
+    "fiber @ git+https://github.com/rayonlabs/fiber.git@2.2.0#egg=fiber[chain]",
     "opentelemetry-instrumentation>=0.49b2",
     "transformers>=4.46.3",
     "diffusers>=0.31.0",
