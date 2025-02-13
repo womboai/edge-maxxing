@@ -20,7 +20,7 @@ RUN mkdir -p base/base
 RUN mkdir -p base/testing
 
 WORKDIR /api/validator
-RUN ~/.local/bin/uv sync --compile-bytecode --no-dev --frozen --no-install-project --no-install-workspace
+RUN ~/.local/bin/uv sync --compile-bytecode --no-dev --frozen --no-install-project --no-install-workspace --prerelease=allow
 WORKDIR /api
 
 COPY --chown=api:api pipelines pipelines

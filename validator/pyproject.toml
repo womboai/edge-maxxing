@@ -10,8 +10,6 @@ version = "5.9.16"
 dependencies = [
     "edge-maxxing-base",
     "wandb>=0.18.7",
-    "bt-decode>=0.4.0",
-    "bittensor-commit-reveal>=0.1.0",
     "opentelemetry-api>=1.28.2",
     "opentelemetry-sdk>=1.28.2",
     "opentelemetry-exporter-otlp>=1.28.2",

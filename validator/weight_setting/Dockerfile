@@ -19,7 +19,7 @@ RUN mkdir -p base/base
 RUN mkdir -p base/testing
 
 WORKDIR /app/validator
-RUN ~/.local/bin/uv sync --compile-bytecode --no-dev --frozen --no-install-project --no-install-workspace
+RUN ~/.local/bin/uv sync --compile-bytecode --no-dev --frozen --no-install-project --no-install-workspace --prerelease=allow
 WORKDIR /app
 
 COPY --chown=validator:validator pipelines pipelines
