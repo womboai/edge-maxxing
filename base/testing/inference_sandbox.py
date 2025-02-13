@@ -3,7 +3,7 @@ from concurrent.futures import CancelledError
 from multiprocessing.connection import Client, wait
 from os.path import abspath
 from pathlib import Path
-from subprocess import run, Popen, PIPE
+from subprocess import run, Popen, PIPE, TimeoutExpired
 from threading import Event
 from time import perf_counter
 from typing import Annotated
@@ -248,6 +248,12 @@ class InferenceSandbox:
                         check_process(process)
             finally:
                 logger.info("Exiting inference sandbox")
+                try:
+                    process.terminate()
+                    process.wait(timeout=10)
+                except TimeoutExpired:
+                    logger.info("Inference sandbox did not exit gracefully, killing...")
+                    process.kill()
 
         average_generation_time = sum(metric.generation_time for metric in metrics) / len(metrics)
         vram_used = max(metric.vram_used for metric in metrics) - start_vram
