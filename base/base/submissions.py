@@ -107,18 +107,11 @@ def get_submissions(
     for storage, commitment in commitments:
         hotkey = storage.params[1]
         try:
-            if not commitment or not commitment.value:
+            if not commitment:
                 continue
 
-            fields = commitment.value["info"]["fields"]
-            if not fields:
-                continue
-
-            field = _deserialize_commitment_field(fields[0])
-            if field is None:
-                continue
-
-            decoder = Decoder(field[1])
+            field = bytes(next(iter(commitment["info"]["fields"][0][0].values()))[0])
+            decoder = Decoder(field)
             spec_version = decoder.read_uint16()
             if spec_version != SPEC_VERSION:
                 continue
@@ -136,7 +129,7 @@ def get_submissions(
                     continue
 
                 repository_info = RepositoryInfo(url=info.repository, revision=info.revision)
-                submitted_block = int(commitment.value["block"])
+                submitted_block = int(commitment["block"])
                 submissions[hotkey] = Submission(
                     repository_info=repository_info,
                     contest_id=info.contest_id,

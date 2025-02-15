@@ -14,6 +14,9 @@ dependencies = [
 [tool.uv.sources]
 edge-maxxing-base = { path = "../base", editable = true }
 
+[tool.uv]
+override-dependencies = ["toml>=0.10.0"]
+
 [dependency-groups]
 dev = [
     "pytype==2024.10.11"

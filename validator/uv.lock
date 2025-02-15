@@ -540,7 +540,7 @@ requires-dist = [
     { name = "cachetools", specifier = ">=5.5.0" },
     { name = "diffusers", specifier = ">=0.31.0" },
     { name = "edge-maxxing-pipelines", editable = "../pipelines" },
-    { name = "fiber", git = "https://github.com/rayonlabs/fiber.git?rev=2.2.0" },
+    { name = "fiber", git = "https://github.com/rayonlabs/fiber.git?rev=2.2.3" },
     { name = "gitpython", specifier = ">=3.1.43" },
     { name = "netaddr", specifier = ">=1.3.0" },
     { name = "opencv-python", specifier = ">=4.10.0.84" },
@@ -569,7 +569,7 @@ requires-dist = [{ name = "pydantic", specifier = ">=2.9.2" }]
 
 [[package]]
 name = "edge-maxxing-validator"
-version = "5.9.17"
+version = "5.9.18"
 source = { editable = "." }
 dependencies = [
     { name = "edge-maxxing-base" },
@@ -716,8 +716,8 @@ wheels = [
 
 [[package]]
 name = "fiber"
-version = "2.2.0"
-source = { git = "https://github.com/rayonlabs/fiber.git?rev=2.2.0#50d809e8c0c43acd0ee2b97e98fc761dee7ccae2" }
+version = "2.2.2"
+source = { git = "https://github.com/rayonlabs/fiber.git?rev=2.2.3#2233086f28697b6eb3a31c8fdc040b3c3049b7ab" }
 dependencies = [
     { name = "async-substrate-interface" },
     { name = "bittensor-commit-reveal" },
