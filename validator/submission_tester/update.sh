@@ -15,6 +15,7 @@ find /api/validator -path "/api/validator/.venv" -prune -o -exec chown api:api {
 chown -R api:api /api/.git
 chown api:api /api/validator/.venv || true
 chown api:api /api/validator/uv.lock
+chown -R api:api /api/miner || true
 
 pkill -9 -u sandbox || true
 pkill -9 -u api || true
