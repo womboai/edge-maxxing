@@ -34,6 +34,7 @@ MAX_HF_MODEL_SIZE_GB = 100
 MAX_REPO_SIZE_MB = 16
 
 LOAD_TIMEOUT = 240
+EXIT_TIMEOUT = 30
 
 logger = get_logger(__name__)
 tracer = trace.get_tracer(__name__)
@@ -249,8 +250,9 @@ class InferenceSandbox:
             finally:
                 logger.info("Exiting inference sandbox")
                 try:
+                    log_process(process)
                     process.terminate()
-                    process.wait(timeout=10)
+                    process.wait(timeout=EXIT_TIMEOUT)
                 except TimeoutExpired:
                     logger.info("Inference sandbox did not exit gracefully, killing...")
                     process.kill()
@@ -279,9 +281,11 @@ def check_process(process: Popen):
 
 def log_process(process: Popen):
     logger.info("Process logs:")
-    stdout = process.stdout.read()
-    stderr = process.stderr.read()
-    if stdout:
-        logger.info(stdout)
-    if stderr:
-        logger.info(stderr)
+    try:
+        stdout, stderr = process.communicate(None, timeout=EXIT_TIMEOUT)
+        if stdout.strip():
+            logger.info(stdout)
+        if stderr.strip():
+            logger.info(stderr)
+    except TimeoutExpired:
+        logger.error("Timed out while reading logs")
