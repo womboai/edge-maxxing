@@ -1,3 +1,4 @@
+import os
 import shutil
 from concurrent.futures import CancelledError
 from multiprocessing.connection import Client, wait
@@ -106,10 +107,11 @@ class InferenceSandbox:
 
     @tracer.start_as_current_span("check_space")
     def _check_space(self):
-        free_space = shutil.disk_usage("/").free
+        cwd = os.getcwd()
+        free_space = shutil.disk_usage(cwd).free
         if free_space < STORAGE_THRESHOLD_GB * 1024 ** 3:
             self._run(CLEAR_CACHE, [])
-            new_free_space = shutil.disk_usage("/").free
+            new_free_space = shutil.disk_usage(cwd).free
             logger.info(f"Cleared {(new_free_space - free_space) / 1024 ** 3:.2f} GB of caches")
 
     @tracer.start_as_current_span("clone_repository")
@@ -282,7 +284,7 @@ def check_process(process: Popen):
 def log_process(process: Popen):
     logger.info("Process logs:")
     try:
-        stdout, stderr = process.communicate(None, timeout=EXIT_TIMEOUT)
+        stdout, stderr = process.communicate(timeout=EXIT_TIMEOUT)
         if stdout.strip():
             logger.info(stdout)
         if stderr.strip():
