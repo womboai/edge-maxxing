@@ -110,9 +110,10 @@ class InferenceSandbox:
         cwd = os.getcwd()
         free_space = shutil.disk_usage(cwd).free
         if free_space < STORAGE_THRESHOLD_GB * 1024 ** 3:
+            logger.info(f"{free_space / 1024 ** 3:.2f} GB of free space left in {cwd}, clearing caches")
             self._run(CLEAR_CACHE, [])
             new_free_space = shutil.disk_usage(cwd).free
-            logger.info(f"Cleared {(new_free_space - free_space) / 1024 ** 3:.2f} GB of caches")
+            logger.info(f"Cleared {(new_free_space - free_space) / 1024 ** 3:.2f} GB of caches. {new_free_space / 1024 ** 3:.2f} GB of free space left")
 
     @tracer.start_as_current_span("clone_repository")
     def _clone(self) -> int:
@@ -282,12 +283,11 @@ def check_process(process: Popen):
 
 
 def log_process(process: Popen):
-    logger.info("Process logs:")
     try:
         stdout, stderr = process.communicate(timeout=EXIT_TIMEOUT)
         if stdout.strip():
-            logger.info(stdout)
+            logger.info(f"STDOUT: {stdout}")
         if stderr.strip():
-            logger.info(stderr)
+            logger.info(f"STDERR: {stderr}")
     except TimeoutExpired:
         logger.error("Timed out while reading logs")
