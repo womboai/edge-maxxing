@@ -30,7 +30,7 @@ DOWNLOAD_HUGGINGFACE_MODELS = abspath(Path(__file__).parent / "download_huggingf
 NETWORK_JAIL = abspath(Path(__file__).parent / "libnetwork_jail.so")
 START_INFERENCE_SCRIPT = abspath(Path(__file__).parent / "start_inference.sh")
 
-STORAGE_THRESHOLD_GB = 50
+STORAGE_THRESHOLD_GB = 10
 MAX_HF_MODEL_SIZE_GB = 100
 MAX_REPO_SIZE_MB = 16
 
