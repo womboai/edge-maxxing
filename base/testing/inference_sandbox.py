@@ -1,4 +1,3 @@
-import os
 import shutil
 from concurrent.futures import CancelledError
 from multiprocessing.connection import Client, wait
@@ -107,12 +106,11 @@ class InferenceSandbox:
 
     @tracer.start_as_current_span("check_space")
     def _check_space(self):
-        cwd = os.getcwd()
-        free_space = shutil.disk_usage(cwd).free
+        free_space = shutil.disk_usage("/").free
         if free_space < STORAGE_THRESHOLD_GB * 1024 ** 3:
-            logger.info(f"{free_space / 1024 ** 3:.2f} GB of free space left in {cwd}, clearing caches")
+            logger.info(f"{free_space / 1024 ** 3:.2f} GB of free space left, clearing caches")
             self._run(CLEAR_CACHE, [])
-            new_free_space = shutil.disk_usage(cwd).free
+            new_free_space = shutil.disk_usage("/").free
             logger.info(f"Cleared {(new_free_space - free_space) / 1024 ** 3:.2f} GB of caches. {new_free_space / 1024 ** 3:.2f} GB of free space left")
 
     @tracer.start_as_current_span("clone_repository")

@@ -48,7 +48,7 @@ def get_system_info() -> SystemInfo:
     import torch
     gpu = torch.cuda.get_device_name(0)
 
-    disk_usage = shutil.disk_usage(os.getcwd())
+    disk_usage = shutil.disk_usage("/")
     read_speed, write_speed = calculate_ssd_speed()
 
     return SystemInfo(
